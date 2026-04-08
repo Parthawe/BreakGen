@@ -4,13 +4,16 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings
 
+# Anchor all relative paths to the server/ directory, not cwd
+SERVER_DIR = Path(__file__).resolve().parent
+
 
 class Settings(BaseSettings):
     app_name: str = "BreakGen"
     debug: bool = True
-    database_url: str = "sqlite+aiosqlite:///./breakgen.db"
-    artifacts_dir: str = "./artifacts"
-    templates_dir: str = "./templates"
+    database_url: str = f"sqlite+aiosqlite:///{SERVER_DIR / 'breakgen.db'}"
+    artifacts_dir: str = str(SERVER_DIR / "artifacts")
+    templates_dir: str = str(SERVER_DIR / "templates")
 
     # Meshy AI (Phase 3)
     meshy_api_key: str = ""

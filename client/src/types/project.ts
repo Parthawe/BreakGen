@@ -129,6 +129,7 @@ export interface UpdateProjectRequest {
   layout?: LayoutSpec;
   switch_part_id?: string;
   style_prompt?: string;
+  expected_revision?: number;
 }
 
 export interface ProjectSummary {

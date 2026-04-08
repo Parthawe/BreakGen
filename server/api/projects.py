@@ -15,6 +15,7 @@ from server.config import settings
 from server.db.database import get_db
 from server.db.models import ProjectRevisionRow, ProjectRow
 from server.models.project import KeyboardProject, LayoutSpec, ProjectStatus
+from server.models.supported_configs import SUPPORTED_SWITCHES
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
@@ -29,6 +30,10 @@ class UpdateProjectRequest(BaseModel):
     layout: Optional[LayoutSpec] = None
     switch_part_id: Optional[str] = None
     style_prompt: Optional[str] = None
+    expected_revision: Optional[int] = None  # Optimistic lock: reject if stale
+
+
+_VALID_SWITCH_IDS = frozenset(s.part_id for s in SUPPORTED_SWITCHES)
 
 
 def _generate_id() -> str:
@@ -145,6 +150,13 @@ async def update_project(
     if not row:
         raise HTTPException(status_code=404, detail="Project not found")
 
+    # Optimistic locking: reject if client's revision doesn't match
+    if req.expected_revision is not None and row.revision != req.expected_revision:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Revision conflict: expected {req.expected_revision}, current is {row.revision}",
+        )
+
     # Reconstruct project from stored data
     project = KeyboardProject(**row.data)
     changes: list[str] = []
@@ -158,6 +170,11 @@ async def update_project(
         changes.append("layout")
 
     if req.switch_part_id is not None:
+        if req.switch_part_id not in _VALID_SWITCH_IDS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported switch '{req.switch_part_id}'. Supported: {sorted(_VALID_SWITCH_IDS)}",
+            )
         project.switch_profile.part_id = req.switch_part_id
         changes.append("switch")
 
@@ -212,6 +229,15 @@ async def delete_project(project_id: str, db: AsyncSession = Depends(get_db)):
     row = result.scalar_one_or_none()
     if not row:
         raise HTTPException(status_code=404, detail="Project not found")
+
+    # Delete all revision snapshots for this project
+    rev_result = await db.execute(
+        select(ProjectRevisionRow).where(
+            ProjectRevisionRow.project_id == project_id
+        )
+    )
+    for rev_row in rev_result.scalars().all():
+        await db.delete(rev_row)
 
     await db.delete(row)
     await db.commit()

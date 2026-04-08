@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 
-from sqlalchemy import JSON, DateTime, Integer, String, Text
+from sqlalchemy import JSON, DateTime, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -35,6 +35,9 @@ class ProjectRevisionRow(Base):
     """Immutable snapshot of a project at a specific revision."""
 
     __tablename__ = "project_revisions"
+    __table_args__ = (
+        UniqueConstraint("project_id", "revision", name="uq_project_revision"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     project_id: Mapped[str] = mapped_column(String(64), index=True)

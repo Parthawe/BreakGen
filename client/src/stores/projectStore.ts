@@ -62,13 +62,15 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     const { project } = get();
     if (!project) return;
 
-    await api.projects.update(project.project_id, {
+    const updated = await api.projects.update(project.project_id, {
       name: project.name,
       layout: project.layout,
       switch_part_id: project.switch_profile.part_id ?? undefined,
       style_prompt: project.style_request.prompt ?? undefined,
+      expected_revision: project.revision,
     });
-    set({ dirty: false });
+    // Consume the authoritative server response — revision, status, timestamps
+    set({ project: updated, dirty: false });
   },
 
   updateKey: (keyId, updates) => {
