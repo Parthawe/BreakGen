@@ -1,0 +1,31 @@
+version: "3.9"
+
+services:
+  server:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../server:/app/server
+      - server-data:/app/data
+    environment:
+      - BREAKGEN_DATABASE_URL=sqlite+aiosqlite:///./data/breakgen.db
+      - BREAKGEN_ARTIFACTS_DIR=./data/artifacts
+      - BREAKGEN_DEBUG=true
+    command: uvicorn server.main:app --reload --host 0.0.0.0 --port 8000
+
+  client:
+    image: node:22-slim
+    working_dir: /app
+    ports:
+      - "5173:5173"
+    volumes:
+      - ../client:/app
+      - client-modules:/app/node_modules
+    command: sh -c "corepack enable && pnpm install && pnpm dev --host"
+
+volumes:
+  server-data:
+  client-modules:

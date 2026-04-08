@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+client/node_modules/
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Build output
+client/dist/
+*.egg-info/
+dist/
+build/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment
+.env
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Artifacts (generated files)
+server/artifacts/
+exports/
+
+# Docker
+docker/data/
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
