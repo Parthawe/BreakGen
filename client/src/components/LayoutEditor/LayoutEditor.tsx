@@ -30,17 +30,15 @@ export function LayoutEditor() {
 
   const keys = project?.layout.keys ?? [];
 
-  // Compute SVG viewBox
-  const maxX = keys.reduce(
-    (max, k) => Math.max(max, k.x_u + k.w_u),
-    0
-  );
-  const maxY = keys.reduce(
-    (max, k) => Math.max(max, k.y_u + k.h_u),
-    0
-  );
-  const svgWidth = maxX * UNIT_PX + PADDING * 2;
-  const svgHeight = maxY * UNIT_PX + PADDING * 2;
+  // Compute SVG viewBox — handle negative coordinates
+  const minX = keys.reduce((min, k) => Math.min(min, k.x_u), 0);
+  const minY = keys.reduce((min, k) => Math.min(min, k.y_u), 0);
+  const maxX = keys.reduce((max, k) => Math.max(max, k.x_u + k.w_u), 0);
+  const maxY = keys.reduce((max, k) => Math.max(max, k.y_u + k.h_u), 0);
+  const svgWidth = (maxX - minX) * UNIT_PX + PADDING * 2;
+  const svgHeight = (maxY - minY) * UNIT_PX + PADDING * 2;
+  const originOffsetX = -minX * UNIT_PX; // shift content so negative coords are visible
+  const originOffsetY = -minY * UNIT_PX;
 
   const handleKeyMouseDown = useCallback(
     (e: MouseEvent, key: KeySpec) => {
@@ -122,8 +120,8 @@ export function LayoutEditor() {
               width={UNIT_PX}
               height={UNIT_PX}
               patternUnits="userSpaceOnUse"
-              x={PADDING}
-              y={PADDING}
+              x={PADDING + originOffsetX}
+              y={PADDING + originOffsetY}
             >
               <path
                 d={`M ${UNIT_PX} 0 L 0 0 0 ${UNIT_PX}`}
@@ -139,8 +137,8 @@ export function LayoutEditor() {
           {keys.map((key) => {
             const isSelected = selectedKeyIds.includes(key.id);
             const isDragging = dragging?.keyId === key.id;
-            const x = PADDING + key.x_u * UNIT_PX + KEY_GAP / 2;
-            const y = PADDING + key.y_u * UNIT_PX + KEY_GAP / 2;
+            const x = PADDING + originOffsetX + key.x_u * UNIT_PX + KEY_GAP / 2;
+            const y = PADDING + originOffsetY + key.y_u * UNIT_PX + KEY_GAP / 2;
             const w = key.w_u * UNIT_PX - KEY_GAP;
             const h = (key.h_u ?? 1) * UNIT_PX - KEY_GAP;
 

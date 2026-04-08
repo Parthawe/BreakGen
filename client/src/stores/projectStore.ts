@@ -5,14 +5,17 @@
  */
 
 import { create } from "zustand";
-import type { KeyboardProject, KeySpec, LayoutSpec } from "../types/project";
+import type { KeyboardProject, KeySpec, LayoutSpec, UpdateProjectRequest } from "../types/project";
 import { api } from "../lib/api";
+
+type DirtyField = "name" | "layout" | "switch" | "style";
 
 interface ProjectStore {
   // State
   project: KeyboardProject | null;
   loading: boolean;
   dirty: boolean;
+  dirtyFields: Set<DirtyField>;
   selectedKeyIds: string[];
 
   // Actions
@@ -37,16 +40,23 @@ interface ProjectStore {
   setStylePrompt: (prompt: string) => void;
 }
 
+function markDirty(state: { dirtyFields: Set<DirtyField> }, field: DirtyField) {
+  const next = new Set(state.dirtyFields);
+  next.add(field);
+  return { dirty: true, dirtyFields: next };
+}
+
 export const useProjectStore = create<ProjectStore>((set, get) => ({
   project: null,
   loading: false,
   dirty: false,
+  dirtyFields: new Set(),
   selectedKeyIds: [],
 
   loadProject: async (id) => {
     set({ loading: true });
     const project = await api.projects.get(id);
-    set({ project, loading: false, dirty: false });
+    set({ project, loading: false, dirty: false, dirtyFields: new Set() });
   },
 
   createProject: async (name, templateId) => {
@@ -55,22 +65,27 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       name,
       template_id: templateId,
     });
-    set({ project, loading: false, dirty: false });
+    set({ project, loading: false, dirty: false, dirtyFields: new Set() });
   },
 
   save: async () => {
-    const { project } = get();
-    if (!project) return;
+    const { project, dirtyFields } = get();
+    if (!project || dirtyFields.size === 0) return;
 
-    const updated = await api.projects.update(project.project_id, {
-      name: project.name,
-      layout: project.layout,
-      switch_part_id: project.switch_profile.part_id ?? undefined,
-      style_prompt: project.style_request.prompt ?? undefined,
+    // Only send fields that actually changed
+    const req: UpdateProjectRequest = {
       expected_revision: project.revision,
-    });
+    };
+    if (dirtyFields.has("name")) req.name = project.name;
+    if (dirtyFields.has("layout")) req.layout = project.layout;
+    if (dirtyFields.has("switch"))
+      req.switch_part_id = project.switch_profile.part_id ?? undefined;
+    if (dirtyFields.has("style"))
+      req.style_prompt = project.style_request.prompt ?? undefined;
+
+    const updated = await api.projects.update(project.project_id, req);
     // Consume the authoritative server response — revision, status, timestamps
-    set({ project: updated, dirty: false });
+    set({ project: updated, dirty: false, dirtyFields: new Set() });
   },
 
   updateKey: (keyId, updates) => {
@@ -84,7 +99,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
           ...state.project,
           layout: { ...state.project.layout, keys },
         },
-        dirty: true,
+        ...markDirty(state, "layout"),
       };
     });
   },
@@ -100,7 +115,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
             keys: [...state.project.layout.keys, key],
           },
         },
-        dirty: true,
+        ...markDirty(state, "layout"),
       };
     });
   },
@@ -116,7 +131,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
             keys: state.project.layout.keys.filter((k) => k.id !== keyId),
           },
         },
-        dirty: true,
+        ...markDirty(state, "layout"),
         selectedKeyIds: state.selectedKeyIds.filter((id) => id !== keyId),
       };
     });
@@ -127,7 +142,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       if (!state.project) return state;
       return {
         project: { ...state.project, layout },
-        dirty: true,
+        ...markDirty(state, "layout"),
       };
     });
   },
@@ -154,7 +169,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
           ...state.project,
           switch_profile: { ...state.project.switch_profile, part_id: partId },
         },
-        dirty: true,
+        ...markDirty(state, "switch"),
       };
     });
   },
@@ -167,7 +182,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
           ...state.project,
           style_request: { ...state.project.style_request, prompt },
         },
-        dirty: true,
+        ...markDirty(state, "style"),
       };
     });
   },

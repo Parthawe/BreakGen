@@ -1,6 +1,6 @@
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Environment } from "@react-three/drei";
-import { KeyboardPreview, KeyboardPlate } from "./KeyboardPreview";
+import { KeyboardPreview } from "./KeyboardPreview";
 
 export function Scene() {
   return (
@@ -36,9 +36,8 @@ export function Scene() {
         <meshStandardMaterial color="#111113" />
       </mesh>
 
-      {/* Keyboard */}
+      {/* Keyboard — keycaps + plate rendered together */}
       <KeyboardPreview />
-      <KeyboardPlate />
     </Canvas>
   );
 }

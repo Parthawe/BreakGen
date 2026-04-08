@@ -4,30 +4,27 @@ import { useProjectStore } from "../../stores/projectStore";
 import type { KeySpec } from "../../types/project";
 
 const UNIT_MM = 19.05;
-const SCALE = 0.1; // mm to scene units (1u = 1.905 scene units)
+const S = 0.1; // mm to scene units — all geometry uses this consistently
 
-// Cherry-profile keycap dimensions (approximate, in mm)
-const KEYCAP_HEIGHT = 8;
-const KEYCAP_TOP_INSET = 1.5; // top face is smaller than bottom
+// Cherry-profile keycap dimensions in scene units
+const KEYCAP_HEIGHT = 8 * S;
+const KEYCAP_TOP_INSET = 1.5 * S;
+const KEYCAP_GAP = 1 * S; // 1mm gap between keycaps
 
 function createKeycapGeometry(widthU: number, heightU: number): THREE.BufferGeometry {
-  const w = widthU * UNIT_MM;
-  const h = heightU * UNIT_MM;
-  const gap = 1; // 1mm gap between keycaps
-  const bw = w - gap; // bottom width
-  const bh = h - gap;
-  const tw = bw - KEYCAP_TOP_INSET * 2; // top width (inset on each side)
+  const w = widthU * UNIT_MM * S;
+  const h = heightU * UNIT_MM * S;
+  const bw = w - KEYCAP_GAP;
+  const bh = h - KEYCAP_GAP;
+  const tw = bw - KEYCAP_TOP_INSET * 2;
   const th = bh - KEYCAP_TOP_INSET * 2;
   const kh = KEYCAP_HEIGHT;
 
-  // 8 vertices: bottom rect + top rect (tapered)
   const vertices = new Float32Array([
-    // Bottom face (y=0)
     -bw / 2, 0, -bh / 2,
     bw / 2, 0, -bh / 2,
     bw / 2, 0, bh / 2,
     -bw / 2, 0, bh / 2,
-    // Top face (y=kh, inset)
     -tw / 2, kh, -th / 2,
     tw / 2, kh, -th / 2,
     tw / 2, kh, th / 2,
@@ -35,17 +32,11 @@ function createKeycapGeometry(widthU: number, heightU: number): THREE.BufferGeom
   ]);
 
   const indices = [
-    // Bottom
     0, 2, 1, 0, 3, 2,
-    // Top
     4, 5, 6, 4, 6, 7,
-    // Front
     0, 1, 5, 0, 5, 4,
-    // Back
     2, 3, 7, 2, 7, 6,
-    // Left
     3, 0, 4, 3, 4, 7,
-    // Right
     1, 2, 6, 1, 6, 5,
   ];
 
@@ -63,7 +54,6 @@ function KeycapInstances({
   keys: KeySpec[];
   selectedKeyIds: string[];
 }) {
-  // Group keys by size for instancing
   const sizeGroups = useMemo(() => {
     const groups = new Map<string, KeySpec[]>();
     for (const key of keys) {
@@ -95,7 +85,6 @@ function KeycapSizeGroup({
   selectedKeyIds: string[];
 }) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
-  const colorRef = useRef<THREE.InstancedBufferAttribute | null>(null);
 
   const geometry = useMemo(
     () => createKeycapGeometry(keys[0].w_u, keys[0].h_u),
@@ -111,39 +100,27 @@ function KeycapSizeGroup({
     const colors = new Float32Array(keys.length * 3);
 
     keys.forEach((key, i) => {
-      // Position: center of key in scene coordinates
-      const x = (key.x_u + key.w_u / 2) * UNIT_MM * SCALE;
-      const z = (key.y_u + (key.h_u ?? 1) / 2) * UNIT_MM * SCALE;
-      const y = 0;
+      // Position: center of key in scene units (mm * S)
+      const x = (key.x_u + key.w_u / 2) * UNIT_MM * S;
+      const z = (key.y_u + (key.h_u ?? 1) / 2) * UNIT_MM * S;
 
       matrix.identity();
-
       if (key.rotation_deg) {
         const rad = (key.rotation_deg * Math.PI) / 180;
         matrix.makeRotationY(-rad);
       }
-
-      matrix.setPosition(x, y, z);
+      matrix.setPosition(x, 0, z);
       mesh.setMatrixAt(i, matrix);
 
-      // Color: highlight selected keys
       const isSelected = selectedKeyIds.includes(key.id);
-      if (isSelected) {
-        color.setRGB(0.4, 0.4, 0.95);
-      } else {
-        color.setRGB(0.22, 0.22, 0.24);
-      }
+      color.setRGB(isSelected ? 0.4 : 0.22, isSelected ? 0.4 : 0.22, isSelected ? 0.95 : 0.24);
       colors[i * 3] = color.r;
       colors[i * 3 + 1] = color.g;
       colors[i * 3 + 2] = color.b;
     });
 
     mesh.instanceMatrix.needsUpdate = true;
-
-    // Set instance colors
-    const attr = new THREE.InstancedBufferAttribute(colors, 3);
-    mesh.instanceColor = attr;
-    colorRef.current = attr;
+    mesh.instanceColor = new THREE.InstancedBufferAttribute(colors, 3);
   }, [keys, selectedKeyIds]);
 
   return (
@@ -153,40 +130,32 @@ function KeycapSizeGroup({
       castShadow
       receiveShadow
     >
-      <meshStandardMaterial
-        vertexColors
-        metalness={0.1}
-        roughness={0.7}
-      />
+      <meshStandardMaterial vertexColors metalness={0.1} roughness={0.7} />
     </instancedMesh>
   );
 }
 
-// Plate underneath the keycaps
 function Plate({ keys }: { keys: KeySpec[] }) {
   const bounds = useMemo(() => {
-    if (keys.length === 0) return { w: 10, h: 4 };
+    if (keys.length === 0) return { w: 10, h: 4, cx: 5, cz: 2 };
+    // Use min AND max to handle negative coordinates
+    const minX = Math.min(...keys.map((k) => k.x_u));
+    const minY = Math.min(...keys.map((k) => k.y_u));
     const maxX = Math.max(...keys.map((k) => k.x_u + k.w_u));
     const maxY = Math.max(...keys.map((k) => k.y_u + (k.h_u ?? 1)));
     const margin = 0.5; // 0.5u margin
-    return {
-      w: (maxX + margin * 2) * UNIT_MM * SCALE,
-      h: (maxY + margin * 2) * UNIT_MM * SCALE,
-      offsetX: (maxX / 2 + margin) * UNIT_MM * SCALE - margin * UNIT_MM * SCALE,
-      offsetZ: (maxY / 2 + margin) * UNIT_MM * SCALE - margin * UNIT_MM * SCALE,
-    };
+    const w = (maxX - minX + margin * 2) * UNIT_MM * S;
+    const h = (maxY - minY + margin * 2) * UNIT_MM * S;
+    const cx = ((minX + maxX) / 2) * UNIT_MM * S;
+    const cz = ((minY + maxY) / 2) * UNIT_MM * S;
+    return { w, h, cx, cz };
   }, [keys]);
 
+  const plateThickness = 1.5 * S; // 1.5mm plate
+
   return (
-    <mesh
-      position={[
-        bounds.offsetX ?? bounds.w / 2,
-        -0.3,
-        bounds.offsetZ ?? bounds.h / 2,
-      ]}
-      receiveShadow
-    >
-      <boxGeometry args={[bounds.w, 0.3, bounds.h]} />
+    <mesh position={[bounds.cx, -plateThickness / 2, bounds.cz]} receiveShadow>
+      <boxGeometry args={[bounds.w, plateThickness, bounds.h]} />
       <meshStandardMaterial color="#1a1a1c" metalness={0.4} roughness={0.6} />
     </mesh>
   );
@@ -196,15 +165,11 @@ export function KeyboardPreview() {
   const keys = useProjectStore((s) => s.project?.layout.keys ?? []);
   const selectedKeyIds = useProjectStore((s) => s.selectedKeyIds);
 
-  // Scale all geometry
+  // No wrapper group scaling — all geometry is already in scene units
   return (
-    <group scale={[SCALE, SCALE, SCALE]}>
+    <>
       <KeycapInstances keys={keys} selectedKeyIds={selectedKeyIds} />
-    </group>
+      <Plate keys={keys} />
+    </>
   );
-}
-
-export function KeyboardPlate() {
-  const keys = useProjectStore((s) => s.project?.layout.keys ?? []);
-  return <Plate keys={keys} />;
 }
