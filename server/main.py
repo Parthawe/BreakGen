@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from server.api import geometry, projects, switches, templates
+from server.api import export, generation, geometry, pcb, projects, switches, templates
 from server.db.database import engine
 from server.db.models import Base
 
@@ -39,6 +39,9 @@ app.include_router(projects.router)
 app.include_router(templates.router)
 app.include_router(switches.router)
 app.include_router(geometry.router)
+app.include_router(generation.router)
+app.include_router(pcb.router)
+app.include_router(export.router)
 
 
 @app.get("/api/health")
