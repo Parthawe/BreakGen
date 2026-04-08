@@ -19,7 +19,6 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import ezdxf
-import numpy as np
 
 from server.models.project import KeySpec, LayoutSpec
 
@@ -27,7 +26,6 @@ from server.models.project import KeySpec, LayoutSpec
 
 UNIT_MM = 19.05  # Standard key pitch
 MX_CUTOUT_MM = 14.0  # Switch cutout size (square)
-MX_CUTOUT_CORNER_R = 0.3  # Corner radius for switch cutout
 
 # Cherry stabilizer wire positions (center-to-center from key center)
 # Measured from Cherry spec and community-verified dimensions
@@ -57,7 +55,6 @@ class PlateConfig:
     kerf_compensation_mm: float = DEFAULT_KERF_MM
     include_stabilizers: bool = True
     include_mounting_holes: bool = True
-    corner_radius_mm: float = 3.0  # Board outline corner radius
 
 
 def _key_center_mm(key: KeySpec) -> tuple[float, float]:
@@ -186,19 +183,7 @@ def generate_plate_dxf(
     outline_x1 = max(xs) + margin
     outline_y1 = max(ys) + margin
 
-    # Rounded rectangle outline
-    r = config.corner_radius_mm
-    outline_pts = [
-        (outline_x0 + r, outline_y0),
-        (outline_x1 - r, outline_y0),
-        (outline_x1, outline_y0 + r),
-        (outline_x1, outline_y1 - r),
-        (outline_x1 - r, outline_y1),
-        (outline_x0 + r, outline_y1),
-        (outline_x0, outline_y1 - r),
-        (outline_x0, outline_y0 + r),
-    ]
-    # Simple rectangular outline (corners approximated with straight segments)
+    # Rectangular board outline
     msp.add_lwpolyline(
         [
             (outline_x0, outline_y0),
@@ -234,21 +219,27 @@ def generate_plate_dxf(
 
 
 def get_plate_bounds(layout: LayoutSpec, config: PlateConfig | None = None) -> dict:
-    """Get plate bounding box dimensions in mm. Useful for case generation."""
+    """Get plate bounding box dimensions in mm, accounting for rotated keys."""
     if config is None:
         config = PlateConfig()
     if not layout.keys:
         return {"width_mm": 0, "height_mm": 0, "x0": 0, "y0": 0}
 
-    all_x = []
-    all_y = []
+    # Use the same rotation-aware bounding logic as generate_plate_dxf
+    all_x: list[float] = []
+    all_y: list[float] = []
     for key in layout.keys:
         x0 = key.x_u * UNIT_MM
         y0 = key.y_u * UNIT_MM
         x1 = (key.x_u + key.w_u) * UNIT_MM
         y1 = (key.y_u + key.h_u) * UNIT_MM
-        all_x.extend([x0, x1])
-        all_y.extend([y0, y1])
+        corners = [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
+        if key.rotation_deg:
+            cx, cy = _key_center_mm(key)
+            corners = [_rotated_point(px, py, cx, cy, key.rotation_deg) for px, py in corners]
+        for px, py in corners:
+            all_x.append(px)
+            all_y.append(py)
 
     margin = config.edge_margin_mm
     x0 = min(all_x) - margin

@@ -56,7 +56,7 @@ async def export_bundle(
     project_id: str,
     db: AsyncSession = Depends(get_db),
 ):
-    """Generate and download the complete export bundle as a ZIP."""
+    """Generate and download the export bundle as a ZIP (plate DXF, firmware, validation)."""
     result = await db.execute(
         select(ProjectRow).where(ProjectRow.project_id == project_id)
     )

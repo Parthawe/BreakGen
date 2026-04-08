@@ -141,21 +141,50 @@ def generate_via_definition(
     matrix: MatrixAssignment,
 ) -> dict:
     """
-    Generate a VIA-compatible keyboard definition.
+    Generate a VIA keyboard definition.
 
-    Ref: https://www.caniusevia.com/docs/specification/
+    VIA expects layouts.keymap in KLE JSON format: an array of rows,
+    where each key is either a string (label with matrix coord) or an
+    object with position/size overrides followed by its label string.
+
+    Matrix coordinates are embedded as "row,col" in the key label.
+    Ref: https://www.caniusevia.com/docs/layouts/
     """
-    keyboard_name = project.name.lower().replace(" ", "_")
+    # Sort keys by row (y) then column (x) for KLE row grouping
+    sorted_keys = sorted(
+        [k for k in project.layout.keys if k.row is not None and k.col is not None],
+        key=lambda k: (k.y_u, k.x_u),
+    )
 
-    layout_keys = []
-    for key in project.layout.keys:
-        if key.row is not None and key.col is not None:
-            entry: dict = {"x": key.x_u, "y": key.y_u}
-            if key.w_u != 1:
-                entry["w"] = key.w_u
-            if key.h_u != 1:
-                entry["h"] = key.h_u
-            layout_keys.append(entry)
+    # Group into KLE rows by Y position (same logic as matrix compiler)
+    kle_rows: list[list] = []
+    current_row_items: list = []
+    current_y: float | None = None
+
+    for key in sorted_keys:
+        if current_y is None or abs(key.y_u - current_y) > 0.5:
+            if current_row_items:
+                kle_rows.append(current_row_items)
+            current_row_items = []
+            current_y = key.y_u
+
+        # If key has non-default position/size, emit an options object first
+        opts: dict = {}
+        if key.x_u != 0 and (not current_row_items):
+            opts["x"] = key.x_u
+        if key.w_u != 1:
+            opts["w"] = key.w_u
+        if key.h_u != 1:
+            opts["h"] = key.h_u
+
+        if opts:
+            current_row_items.append(opts)
+
+        # Key label with matrix coordinate: "row,col\nlabel"
+        current_row_items.append(f"{key.row},{key.col}\n{key.label}")
+
+    if current_row_items:
+        kle_rows.append(current_row_items)
 
     return {
         "name": project.name,
@@ -166,7 +195,7 @@ def generate_via_definition(
             "cols": matrix.matrix_cols,
         },
         "layouts": {
-            "keymap": [layout_keys],
+            "keymap": kle_rows,
         },
     }
 

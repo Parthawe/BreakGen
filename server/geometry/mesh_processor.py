@@ -1,12 +1,16 @@
 """
 Mesh normalization pipeline for AI-generated keycap assets.
 
-Handles the post-processing between raw Meshy output and usable keycap geometry:
+Currently implemented:
 1. Scale normalization — fit to standard keycap bounding box
-2. Orientation alignment — consistent Z-up, centered origin
+2. Bottom alignment — origin at center-bottom of mesh
 3. Decimation — reduce face count for real-time preview
 4. Watertight validation — check manifold status for 3D printing
-5. Stem cavity — add Cherry MX cross stem to underside
+
+Not yet implemented (deferred):
+- Orientation alignment via PCA on surface normals
+- Cherry MX stem cavity boolean (requires Manifold3D)
+- Style-on-shell approach (applying AI surface to deterministic shell)
 
 Spec reference: PRODUCT_SPEC.md section 11.4
 """

@@ -1,12 +1,18 @@
 """
 Export bundle generator.
 
-Creates a ZIP package containing all fabrication-ready files:
-- Plate DXF
-- Firmware metadata (QMK info.json, keymap.json, VIA via.json)
+Creates a ZIP package containing the currently available outputs:
+- Plate DXF (laser cutting)
+- Firmware metadata (QMK info.json, keymap.json, VIA definition)
 - Validation report
-- Manifest with artifact hashes
-- Build guide
+- Manifest with artifact hashes and toolchain versions
+- Build guide (markdown)
+
+Not yet included (requires additional subsystems):
+- Gerber files and drill data (requires KiCad backend worker)
+- BOM / component list
+- Keycap STL meshes (requires Meshy integration + mesh pipeline)
+- Case STL
 
 Spec reference: PRODUCT_SPEC.md section 15.1
 """
