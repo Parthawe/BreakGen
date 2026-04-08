@@ -16,6 +16,21 @@ const STEPS: { id: Step; label: string; desc: string; requiresProject: boolean }
   { id: "export", label: "Build", desc: "Validate & export files", requiresProject: true },
 ];
 
+function ErrorBanner() {
+  const error = useProjectStore((s) => s.error);
+  const clearError = useProjectStore((s) => s.clearError);
+  if (!error) return null;
+  return (
+    <div
+      className="fixed top-3 right-3 z-50 max-w-sm px-4 py-3 rounded-lg text-[12px] flex items-start gap-3 animate-[fadeIn_0.2s_ease]"
+      style={{ background: "rgba(239, 68, 68, 0.15)", border: "1px solid rgba(239, 68, 68, 0.3)", color: "var(--error)" }}
+    >
+      <span className="flex-1">{error}</span>
+      <button onClick={clearError} className="shrink-0 opacity-60 hover:opacity-100">x</button>
+    </div>
+  );
+}
+
 function App() {
   const [currentStep, setCurrentStep] = useState<Step>("template");
   const project = useProjectStore((s) => s.project);
@@ -26,6 +41,7 @@ function App() {
 
   return (
     <div className="flex h-screen w-screen" style={{ background: "var(--bg-root)" }}>
+      <ErrorBanner />
       {/* Sidebar */}
       <aside
         className="w-[260px] flex flex-col shrink-0"

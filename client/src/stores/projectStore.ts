@@ -17,11 +17,13 @@ interface ProjectStore {
   dirty: boolean;
   dirtyFields: Set<DirtyField>;
   selectedKeyIds: string[];
+  error: string | null;
 
   // Actions
   loadProject: (id: string) => Promise<void>;
   createProject: (name: string, templateId?: string) => Promise<void>;
   save: () => Promise<void>;
+  clearError: () => void;
 
   // Layout editing
   updateKey: (keyId: string, updates: Partial<KeySpec>) => void;
@@ -52,41 +54,55 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   dirty: false,
   dirtyFields: new Set(),
   selectedKeyIds: [],
+  error: null,
 
   loadProject: async (id) => {
-    set({ loading: true });
-    const project = await api.projects.get(id);
-    set({ project, loading: false, dirty: false, dirtyFields: new Set() });
+    set({ loading: true, error: null });
+    try {
+      const project = await api.projects.get(id);
+      set({ project, loading: false, dirty: false, dirtyFields: new Set() });
+    } catch (e) {
+      set({ loading: false, error: e instanceof Error ? e.message : "Failed to load project" });
+    }
   },
 
   createProject: async (name, templateId) => {
-    set({ loading: true });
-    const project = await api.projects.create({
-      name,
-      template_id: templateId,
-    });
-    set({ project, loading: false, dirty: false, dirtyFields: new Set() });
+    set({ loading: true, error: null });
+    try {
+      const project = await api.projects.create({
+        name,
+        template_id: templateId,
+      });
+      set({ project, loading: false, dirty: false, dirtyFields: new Set() });
+    } catch (e) {
+      set({ loading: false, error: e instanceof Error ? e.message : "Failed to create project" });
+    }
   },
 
   save: async () => {
     const { project, dirtyFields } = get();
     if (!project || dirtyFields.size === 0) return;
 
-    // Only send fields that actually changed
-    const req: UpdateProjectRequest = {
-      expected_revision: project.revision,
-    };
-    if (dirtyFields.has("name")) req.name = project.name;
-    if (dirtyFields.has("layout")) req.layout = project.layout;
-    if (dirtyFields.has("switch"))
-      req.switch_part_id = project.switch_profile.part_id ?? undefined;
-    if (dirtyFields.has("style"))
-      req.style_prompt = project.style_request.prompt ?? undefined;
+    set({ error: null });
+    try {
+      const req: UpdateProjectRequest = {
+        expected_revision: project.revision,
+      };
+      if (dirtyFields.has("name")) req.name = project.name;
+      if (dirtyFields.has("layout")) req.layout = project.layout;
+      if (dirtyFields.has("switch"))
+        req.switch_part_id = project.switch_profile.part_id ?? undefined;
+      if (dirtyFields.has("style"))
+        req.style_prompt = project.style_request.prompt ?? undefined;
 
-    const updated = await api.projects.update(project.project_id, req);
-    // Consume the authoritative server response — revision, status, timestamps
-    set({ project: updated, dirty: false, dirtyFields: new Set() });
+      const updated = await api.projects.update(project.project_id, req);
+      set({ project: updated, dirty: false, dirtyFields: new Set() });
+    } catch (e) {
+      set({ error: e instanceof Error ? e.message : "Failed to save" });
+    }
   },
+
+  clearError: () => set({ error: null }),
 
   updateKey: (keyId, updates) => {
     set((state) => {

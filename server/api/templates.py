@@ -6,6 +6,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 
 from server.config import settings
+from server.models.project import LayoutSpec
 from server.models.supported_configs import SUPPORTED_TEMPLATES
 
 router = APIRouter(prefix="/api/templates", tags=["templates"])
@@ -27,7 +28,7 @@ async def list_templates():
 
 @router.get("/{template_id}")
 async def get_template(template_id: str):
-    """Return full template data including key layout."""
+    """Return full template data including validated key layout."""
     template = next(
         (t for t in SUPPORTED_TEMPLATES if t.template_id == template_id), None
     )
@@ -36,7 +37,19 @@ async def get_template(template_id: str):
 
     template_path = Path(settings.templates_dir) / f"{template_id}.json"
     if not template_path.exists():
-        raise HTTPException(status_code=404, detail=f"Template file not found")
+        raise HTTPException(status_code=404, detail="Template file not found")
 
     with open(template_path) as f:
-        return json.load(f)
+        data = json.load(f)
+
+    # Validate layout against schema before serving
+    try:
+        layout_data = data.get("layout", {})
+        LayoutSpec(**layout_data)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Template '{template_id}' has invalid layout: {e}",
+        )
+
+    return data

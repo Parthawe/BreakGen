@@ -25,9 +25,9 @@ class ToolchainVersions(BaseModel):
     """Records versions of all tools used to produce the bundle."""
 
     breakgen: str = Field(default="0.1.0")
-    meshy_api: str = Field(default="latest")
-    kicad: str = Field(default="")
-    qmk_schema: str = Field(default="")
+    meshy_api: str = Field(default="not_used", description="Set when AI keycap generation is active")
+    kicad: str = Field(default="not_available", description="Set when KiCad backend worker is running")
+    qmk_schema: str = Field(default="data_driven_v1", description="QMK data-driven config format")
 
 
 class ExportManifest(BaseModel):

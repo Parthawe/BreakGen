@@ -41,11 +41,25 @@ async def run_validation(
     else:
         project.status = ProjectStatus.VALIDATED
 
+    now = datetime.now(timezone.utc)
     project.exports.validation_report_id = report.report_id
-    project.updated_at = datetime.now(timezone.utc)
+    project.revision += 1
+    project.updated_at = now
 
-    row.data = project.model_dump(mode="json")
+    project_dict = project.model_dump(mode="json")
+    row.revision = project.revision
+    row.data = project_dict
     row.status = project.status.value
+    row.updated_at = now
+
+    db.add(ProjectRevisionRow(
+        project_id=project_id,
+        revision=project.revision,
+        data=project_dict,
+        created_at=now,
+        change_summary=f"Validation: {report.status.value} ({len(report.checks)} checks)",
+    ))
+
     await db.commit()
 
     return report.model_dump(mode="json")

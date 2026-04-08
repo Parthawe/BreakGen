@@ -64,8 +64,8 @@ SUPPORTED_TEMPLATES: list[LayoutTemplate] = [
     LayoutTemplate(
         template_id="75_percent",
         name="75%",
-        description="Compact layout with function row and arrow keys. 84 keys.",
-        key_count=84,
+        description="Compact layout with function row and arrow keys. 82 keys.",
+        key_count=82,
         file="templates/75_percent.json",
     ),
 ]
