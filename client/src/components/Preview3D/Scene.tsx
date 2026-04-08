@@ -1,42 +1,52 @@
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, Environment } from "@react-three/drei";
+import { OrbitControls, Environment, ContactShadows } from "@react-three/drei";
 import { KeyboardPreview } from "./KeyboardPreview";
 
 export function Scene() {
   return (
     <Canvas
-      camera={{ position: [0, 6, 10], fov: 50 }}
-      gl={{ antialias: true }}
-      shadows
+      camera={{ position: [0, 5, 8], fov: 45 }}
+      gl={{ antialias: true, alpha: false }}
+      style={{ background: "#09090b" }}
     >
-      <ambientLight intensity={0.3} />
+      <color attach="background" args={["#09090b"]} />
+
+      {/* Lighting */}
+      <ambientLight intensity={0.25} />
       <directionalLight
-        position={[5, 10, 5]}
-        intensity={0.8}
-        castShadow
-        shadow-mapSize-width={1024}
-        shadow-mapSize-height={1024}
+        position={[8, 12, 6]}
+        intensity={1}
+        color="#f0f0ff"
       />
+      <directionalLight
+        position={[-5, 8, -4]}
+        intensity={0.3}
+        color="#e0e0ff"
+      />
+      <pointLight position={[0, 6, 0]} intensity={0.15} color="#6366f1" />
+
       <OrbitControls
         enableDamping
-        dampingFactor={0.05}
-        minDistance={3}
-        maxDistance={25}
-        target={[1.5, 0, 0.8]}
+        dampingFactor={0.06}
+        minDistance={2}
+        maxDistance={20}
+        minPolarAngle={0.3}
+        maxPolarAngle={Math.PI / 2.2}
+        target={[1.5, 0, 0.6]}
       />
-      <Environment preset="studio" />
+      <Environment preset="city" />
 
-      {/* Ground plane */}
-      <mesh
-        rotation={[-Math.PI / 2, 0, 0]}
-        position={[1.5, -0.6, 0.8]}
-        receiveShadow
-      >
-        <planeGeometry args={[30, 30]} />
-        <meshStandardMaterial color="#111113" />
-      </mesh>
+      {/* Contact shadow for grounding */}
+      <ContactShadows
+        position={[1.5, -0.2, 0.6]}
+        opacity={0.35}
+        scale={20}
+        blur={2.5}
+        far={4}
+        color="#000"
+      />
 
-      {/* Keyboard — keycaps + plate rendered together */}
+      {/* Keyboard */}
       <KeyboardPreview />
     </Canvas>
   );

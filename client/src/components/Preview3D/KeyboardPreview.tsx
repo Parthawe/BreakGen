@@ -113,7 +113,11 @@ function KeycapSizeGroup({
       mesh.setMatrixAt(i, matrix);
 
       const isSelected = selectedKeyIds.includes(key.id);
-      color.setRGB(isSelected ? 0.4 : 0.22, isSelected ? 0.4 : 0.22, isSelected ? 0.95 : 0.24);
+      if (isSelected) {
+        color.setRGB(0.35, 0.38, 0.92);
+      } else {
+        color.setRGB(0.16, 0.16, 0.18);
+      }
       colors[i * 3] = color.r;
       colors[i * 3 + 1] = color.g;
       colors[i * 3 + 2] = color.b;
@@ -130,7 +134,7 @@ function KeycapSizeGroup({
       castShadow
       receiveShadow
     >
-      <meshStandardMaterial vertexColors metalness={0.1} roughness={0.7} />
+      <meshStandardMaterial vertexColors metalness={0.05} roughness={0.85} />
     </instancedMesh>
   );
 }
@@ -156,7 +160,7 @@ function Plate({ keys }: { keys: KeySpec[] }) {
   return (
     <mesh position={[bounds.cx, -plateThickness / 2, bounds.cz]} receiveShadow>
       <boxGeometry args={[bounds.w, plateThickness, bounds.h]} />
-      <meshStandardMaterial color="#1a1a1c" metalness={0.4} roughness={0.6} />
+      <meshStandardMaterial color="#141416" metalness={0.6} roughness={0.45} />
     </mesh>
   );
 }
