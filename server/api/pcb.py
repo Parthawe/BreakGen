@@ -2,22 +2,19 @@
 
 from __future__ import annotations
 
-import tempfile
-from pathlib import Path
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.db.database import get_db
-from server.db.models import ProjectRow
+from server.db.models import ProjectRevisionRow, ProjectRow
 from server.eda.matrix_compiler import apply_matrix_to_layout, compile_matrix
 from server.firmware.qmk_generator import (
     generate_keymap,
     generate_qmk_info,
     generate_via_definition,
-    write_firmware_files,
 )
 from server.models.project import KeyboardProject
 
@@ -31,10 +28,7 @@ async def compile_pcb(
 ):
     """
     Compile PCB: matrix assignment + firmware metadata.
-
-    Full KiCad PCB generation (placement + routing) requires KiCad installed
-    and is deferred to a backend worker. This endpoint handles the matrix and
-    firmware compilation that can run without KiCad.
+    Bumps revision and snapshots the change.
     """
     result = await db.execute(
         select(ProjectRow).where(ProjectRow.project_id == project_id)
@@ -47,37 +41,52 @@ async def compile_pcb(
     if not project.layout.keys:
         raise HTTPException(status_code=400, detail="Layout has no keys")
 
-    # 1. Compile matrix
+    # Compile matrix
     matrix = compile_matrix(project.layout)
 
-    # Check if matrix fits RP2040 pin count
     total_pins = matrix.row_pins_needed + matrix.col_pins_needed
-    if total_pins > 26:  # RP2040 has ~26 usable GPIO
+    if total_pins > 26:
         raise HTTPException(
             status_code=400,
             detail=f"Matrix requires {total_pins} pins ({matrix.matrix_rows}R + {matrix.matrix_cols}C), exceeds RP2040 capacity (26 GPIO)",
         )
 
-    # 2. Apply matrix assignments back to layout
+    # Apply matrix assignments back to layout
     project.layout = apply_matrix_to_layout(project.layout, matrix)
-
-    # 3. Update PCB spec
     project.pcb.matrix_rows = matrix.matrix_rows
     project.pcb.matrix_cols = matrix.matrix_cols
 
-    # 4. Persist updated project
+    # Bump revision
+    now = datetime.now(timezone.utc)
+    project.revision += 1
+    project.updated_at = now
+
     project_dict = project.model_dump(mode="json")
+
+    # Persist
+    row.revision = project.revision
     row.data = project_dict
+    row.updated_at = now
+
+    # Snapshot revision
+    db.add(ProjectRevisionRow(
+        project_id=project_id,
+        revision=project.revision,
+        data=project_dict,
+        created_at=now,
+        change_summary="PCB matrix compiled",
+    ))
+
     await db.commit()
 
     return {
         "project_id": project_id,
+        "revision": project.revision,
         "matrix_rows": matrix.matrix_rows,
         "matrix_cols": matrix.matrix_cols,
         "total_keys": len(project.layout.keys),
         "pins_needed": total_pins,
         "status": "matrix_compiled",
-        "note": "Full KiCad PCB generation requires KiCad backend worker (not yet available). Matrix and firmware metadata are ready.",
     }
 
 
@@ -115,7 +124,7 @@ async def _load_project_with_matrix(
     project_id: str,
     db: AsyncSession,
 ) -> tuple[KeyboardProject, ...]:
-    """Load project and compile matrix if not already done."""
+    """Load project and compile matrix (read-only, no persistence)."""
     result = await db.execute(
         select(ProjectRow).where(ProjectRow.project_id == project_id)
     )

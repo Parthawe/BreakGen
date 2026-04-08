@@ -16,6 +16,7 @@ dependencies = [
     "ezdxf>=1.4.3",
     "trimesh>=4.11.5",
     "numpy>=2.4.4",
+    "httpx>=0.28.1",
 ]
 
 [project.optional-dependencies]

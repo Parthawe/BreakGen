@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -14,8 +15,7 @@ from server.ai.meshy_client import MeshyClient, MeshyError
 from server.ai.prompt_wrapper import get_available_presets, wrap_prompt
 from server.config import settings
 from server.db.database import get_db
-from server.db.models import ProjectRow
-from server.geometry.mesh_processor import normalize_mesh
+from server.db.models import ProjectRevisionRow, ProjectRow
 from server.models.project import KeyboardProject, KeycapAsset
 
 router = APIRouter(prefix="/api/projects", tags=["generation"])
@@ -135,7 +135,7 @@ async def apply_keycap(
     req: ApplyKeycapRequest,
     db: AsyncSession = Depends(get_db),
 ):
-    """Assign a keycap asset to keys in the project."""
+    """Assign a keycap asset to keys in the project. Bumps revision."""
     result = await db.execute(
         select(ProjectRow).where(ProjectRow.project_id == project_id)
     )
@@ -145,6 +145,15 @@ async def apply_keycap(
 
     project = KeyboardProject(**row.data)
 
+    # Validate asset_id exists in the project's keycap_assets list
+    # (shell_library assets are auto-valid as they start with "shell_")
+    known_ids = {a.asset_id for a in project.keycap_assets}
+    if not req.asset_id.startswith("shell_") and req.asset_id not in known_ids:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Asset '{req.asset_id}' not found in project keycap_assets",
+        )
+
     # Apply asset to specified keys or all keys
     applied_count = 0
     for key in project.layout.keys:
@@ -152,11 +161,28 @@ async def apply_keycap(
             key.keycap_asset_id = req.asset_id
             applied_count += 1
 
+    # Bump revision
+    now = datetime.now(timezone.utc)
+    project.revision += 1
+    project.updated_at = now
+
     project_dict = project.model_dump(mode="json")
+    row.revision = project.revision
     row.data = project_dict
+    row.updated_at = now
+
+    db.add(ProjectRevisionRow(
+        project_id=project_id,
+        revision=project.revision,
+        data=project_dict,
+        created_at=now,
+        change_summary=f"Applied keycap asset {req.asset_id} to {applied_count} keys",
+    ))
+
     await db.commit()
 
     return {
         "applied_to": applied_count,
         "asset_id": req.asset_id,
+        "revision": project.revision,
     }
