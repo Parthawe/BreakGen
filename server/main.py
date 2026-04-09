@@ -1,13 +1,16 @@
 """BreakGen API server."""
 
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from server.api import export, generation, geometry, pcb, projects, switches, templates
+from server.api import export, geometry, pcb, projects, switches, templates
 from server.db.database import engine
 from server.db.models import Base
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -34,14 +37,20 @@ app.add_middleware(
     allow_headers=["Content-Type", "Authorization"],
 )
 
-# Mount API routers
+# Core routers — always available
 app.include_router(projects.router)
 app.include_router(templates.router)
 app.include_router(switches.router)
 app.include_router(geometry.router)
-app.include_router(generation.router)
 app.include_router(pcb.router)
 app.include_router(export.router)
+
+# AI generation router — isolated so missing httpx/meshy deps don't crash the server
+try:
+    from server.api import generation
+    app.include_router(generation.router)
+except ImportError as e:
+    logger.warning(f"AI generation routes disabled: {e}")
 
 
 @app.get("/api/health")

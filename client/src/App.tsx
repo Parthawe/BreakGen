@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useProjectStore } from "./stores/projectStore";
+import type { KeyboardProject } from "./types/project";
 import { TemplateSelector } from "./components/TemplateSelector";
 import { LayoutEditor } from "./components/LayoutEditor";
 import { SwitchExplorer } from "./components/SwitchExplorer";
@@ -29,6 +30,26 @@ function ErrorBanner() {
       <button onClick={clearError} className="shrink-0 opacity-60 hover:opacity-100">x</button>
     </div>
   );
+}
+
+function isStepComplete(step: Step, project: KeyboardProject | null): boolean {
+  if (!project) return false;
+  switch (step) {
+    case "template":
+      return project.layout.keys.length > 0;
+    case "switches":
+      return !!project.switch_profile.part_id;
+    case "layout":
+      return project.layout.keys.length > 0;
+    case "keycaps":
+      return project.keycap_assets.length > 0;
+    case "pcb":
+      return project.pcb.matrix_rows !== null && project.pcb.matrix_rows > 0;
+    case "export":
+      return project.status === "exported";
+    default:
+      return false;
+  }
 }
 
 function App() {
@@ -79,7 +100,7 @@ function App() {
           {STEPS.map((step, i) => {
             const isActive = currentStep === step.id;
             const isDisabled = step.requiresProject && !hasProject;
-            const isComplete = hasProject && currentStepIndex > i;
+            const isComplete = isStepComplete(step.id, project);
 
             return (
               <button

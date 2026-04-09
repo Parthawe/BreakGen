@@ -62,29 +62,51 @@ async def generate_keycaps(
 
     positive_prompt, negative_prompt = wrap_prompt(req.prompt, req.preset)
 
-    # If no API key, return placeholder assets
+    # If no API key, create and persist placeholder assets from the shell library
     if not settings.meshy_api_key:
-        assets = []
+        project = KeyboardProject(**row.data)
+        new_assets: list[KeycapAsset] = []
         for i in range(req.variant_count):
-            asset_id = f"shell_{uuid.uuid4().hex[:8]}"
-            assets.append(
-                KeycapAsset(
-                    asset_id=asset_id,
-                    source="shell_library",
-                    provider=None,
-                    prompt=req.prompt or req.preset,
-                    mesh_path=None,
-                    preview_mesh_path=None,
-                    unit_sizes=[1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.75, 6.25],
-                    normalized=True,
-                    watertight=True,
-                ).model_dump()
+            asset = KeycapAsset(
+                asset_id=f"shell_{uuid.uuid4().hex[:8]}",
+                source="shell_library",
+                provider=None,
+                prompt=req.prompt or req.preset,
+                mesh_path=None,
+                preview_mesh_path=None,
+                unit_sizes=[1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.75, 6.25],
+                normalized=True,
+                watertight=True,
             )
+            new_assets.append(asset)
+
+        # Persist assets into canonical project state
+        project.keycap_assets.extend(new_assets)
+        project.style_request.prompt = req.prompt
+        project.style_request.preset = req.preset
+        now = datetime.now(timezone.utc)
+        project.revision += 1
+        project.updated_at = now
+
+        project_dict = project.model_dump(mode="json")
+        row.revision = project.revision
+        row.data = project_dict
+        row.updated_at = now
+
+        db.add(ProjectRevisionRow(
+            project_id=project_id,
+            revision=project.revision,
+            data=project_dict,
+            created_at=now,
+            change_summary=f"Generated {len(new_assets)} shell keycap variants",
+        ))
+        await db.commit()
+
         return {
             "status": "completed",
             "message": "No Meshy API key configured. Using shell library placeholders.",
             "prompt_used": positive_prompt,
-            "variants": assets,
+            "variants": [a.model_dump() for a in new_assets],
         }
 
     # Real Meshy generation
