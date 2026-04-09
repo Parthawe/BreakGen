@@ -4,6 +4,9 @@ import type { KeyboardProject } from "./types/project";
 import { TemplateSelector } from "./components/TemplateSelector";
 import { LayoutEditor } from "./components/LayoutEditor";
 import { SwitchExplorer } from "./components/SwitchExplorer";
+import { KeycapStyler } from "./components/KeycapStyler";
+import { PCBPanel } from "./components/PCBPanel";
+import { ExportPanel } from "./components/ExportPanel";
 import { Scene } from "./components/Preview3D";
 
 type Step = "template" | "switches" | "layout" | "keycaps" | "pcb" | "export";
@@ -274,32 +277,46 @@ function App() {
           </div>
         )}
 
-        {/* Future steps */}
-        {["keycaps", "pcb", "export"].includes(currentStep) && hasProject && (
+        {/* Step: Keycaps */}
+        {currentStep === "keycaps" && hasProject && (
           <div className="flex h-full">
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center max-w-xs">
-                <div
-                  className="w-12 h-12 rounded-xl mx-auto mb-4 flex items-center justify-center"
-                  style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)" }}
-                >
-                  <span className="text-lg" style={{ color: "var(--text-muted)" }}>
-                    {currentStep === "keycaps" ? "~" : currentStep === "pcb" ? "#" : "^"}
-                  </span>
-                </div>
-                <h3 className="text-[14px] font-medium mb-1.5" style={{ color: "var(--text-secondary)" }}>
-                  {STEPS[currentStepIndex]?.label}
-                </h3>
-                <p className="text-[12px] leading-relaxed" style={{ color: "var(--text-muted)" }}>
-                  {currentStep === "keycaps"
-                    ? "AI keycap generation will appear here. Describe your aesthetic in natural language."
-                    : currentStep === "pcb"
-                      ? "Matrix compilation and PCB generation. One click to go from layout to circuit."
-                      : "Validate your design and download fabrication-ready files."}
-                </p>
-              </div>
+            <div
+              className="w-[340px] shrink-0 overflow-y-auto"
+              style={{ borderRight: "1px solid var(--border-subtle)" }}
+            >
+              <KeycapStyler />
             </div>
-            <div className="w-[44%] shrink-0" style={{ borderLeft: "1px solid var(--border-subtle)" }}>
+            <div className="flex-1">
+              <Scene />
+            </div>
+          </div>
+        )}
+
+        {/* Step: PCB */}
+        {currentStep === "pcb" && hasProject && (
+          <div className="flex h-full">
+            <div
+              className="w-[340px] shrink-0 overflow-y-auto"
+              style={{ borderRight: "1px solid var(--border-subtle)" }}
+            >
+              <PCBPanel />
+            </div>
+            <div className="flex-1">
+              <Scene />
+            </div>
+          </div>
+        )}
+
+        {/* Step: Export */}
+        {currentStep === "export" && hasProject && (
+          <div className="flex h-full">
+            <div
+              className="w-[380px] shrink-0 overflow-y-auto"
+              style={{ borderRight: "1px solid var(--border-subtle)" }}
+            >
+              <ExportPanel />
+            </div>
+            <div className="flex-1">
               <Scene />
             </div>
           </div>
