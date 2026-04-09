@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useProjectStore } from "./stores/projectStore";
+import { useAuthStore } from "./stores/authStore";
 import type { KeyboardProject } from "./types/project";
 import { TemplateSelector } from "./components/TemplateSelector";
 import { LayoutEditor } from "./components/LayoutEditor";
@@ -60,6 +62,9 @@ function App() {
   const project = useProjectStore((s) => s.project);
   const dirty = useProjectStore((s) => s.dirty);
   const save = useProjectStore((s) => s.save);
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
+  const navigate = useNavigate();
   const hasProject = !!project;
   const currentStepIndex = STEPS.findIndex((s) => s.id === currentStep);
 
@@ -159,6 +164,29 @@ function App() {
             );
           })}
         </nav>
+
+        {/* User */}
+        {user && (
+          <div className="px-4 py-3 mx-3 mb-2 flex items-center gap-2" style={{ borderTop: "1px solid var(--border-subtle)" }}>
+            <div
+              className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-medium shrink-0"
+              style={{ background: "var(--accent-muted)", color: "var(--accent)" }}
+            >
+              {user.name.charAt(0).toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[12px] font-medium truncate" style={{ color: "var(--text-primary)" }}>{user.name}</div>
+              <div className="text-[10px] truncate" style={{ color: "var(--text-muted)" }}>{user.email}</div>
+            </div>
+            <button
+              onClick={() => { logout(); navigate("/"); }}
+              className="text-[10px] px-1.5 py-0.5 rounded shrink-0 transition-colors"
+              style={{ color: "var(--text-muted)", background: "var(--bg-elevated)" }}
+            >
+              Out
+            </button>
+          </div>
+        )}
 
         {/* Project info */}
         {hasProject && (

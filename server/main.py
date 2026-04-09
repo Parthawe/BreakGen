@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from server.api import export, geometry, pcb, projects, switches, templates
+from server.api import auth, export, geometry, pcb, projects, switches, templates
 from server.db.database import engine
 from server.db.models import Base
 
@@ -38,6 +38,7 @@ app.add_middleware(
 )
 
 # Core routers — always available
+app.include_router(auth.router)
 app.include_router(projects.router)
 app.include_router(templates.router)
 app.include_router(switches.router)
