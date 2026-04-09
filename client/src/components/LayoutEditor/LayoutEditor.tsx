@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
 import { useProjectStore } from "../../stores/projectStore";
 import type { KeySpec } from "../../types/project";
 import { KeyProperties } from "./KeyProperties";
@@ -19,6 +19,32 @@ export function LayoutEditor() {
   const selectKey = useProjectStore((s) => s.selectKey);
   const clearSelection = useProjectStore((s) => s.clearSelection);
   const updateKey = useProjectStore((s) => s.updateKey);
+  const undo = useProjectStore((s) => s.undo);
+  const redo = useProjectStore((s) => s.redo);
+  const pushUndo = useProjectStore((s) => s.pushUndo);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      }
+      if ((e.metaKey || e.ctrlKey) && (e.key === "Z" || (e.key === "z" && e.shiftKey))) {
+        e.preventDefault();
+        redo();
+      }
+      if (e.key === "Delete" || e.key === "Backspace") {
+        const sel = useProjectStore.getState().selectedKeyIds;
+        if (sel.length > 0 && document.activeElement === document.body) {
+          e.preventDefault();
+          sel.forEach((id) => useProjectStore.getState().removeKey(id));
+        }
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [undo, redo]);
 
   const svgRef = useRef<SVGSVGElement>(null);
   const [dragging, setDragging] = useState<{
@@ -44,6 +70,7 @@ export function LayoutEditor() {
     (e: MouseEvent, key: KeySpec) => {
       e.stopPropagation();
       selectKey(key.id, e.shiftKey);
+      pushUndo(); // Snapshot before drag
       if (!svgRef.current) return;
       const pt = svgRef.current.createSVGPoint();
       pt.x = e.clientX;

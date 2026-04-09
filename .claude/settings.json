@@ -36,7 +36,13 @@
       "Bash(python3 -m uv add ezdxf trimesh numpy)",
       "Bash(rm -f server/breakgen.db)",
       "Bash(PYTHONPATH=. python3 -m uv --directory server run uvicorn server.main:app --host 127.0.0.1 --port 8002)",
-      "Bash(curl -s -X POST http://127.0.0.1:8002/api/projects/ -H \"Content-Type: application/json\" -d '{\"name\":\"PlateTest\",\"template_id\":\"65_percent\"}')"
+      "Bash(curl -s -X POST http://127.0.0.1:8002/api/projects/ -H \"Content-Type: application/json\" -d '{\"name\":\"PlateTest\",\"template_id\":\"65_percent\"}')",
+      "Bash(python3 -m uv add httpx)",
+      "Bash(wc -l /Users/parthpawar/github/parthawe/BreakGen/server/templates/*.json)",
+      "Bash(grep -r \"import \" server/api/*.py)",
+      "Bash(python3)",
+      "Bash(grep -n \"revision += 1\" /Users/parthpawar/github/parthawe/BreakGen/server/api/*.py)",
+      "Bash(python3 -c ':*)"
     ]
   }
 }

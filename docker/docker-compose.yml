@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   server:
     build:
@@ -11,10 +9,11 @@ services:
       - ../server:/app/server
       - server-data:/app/data
     environment:
+      - PYTHONPATH=/app
       - BREAKGEN_DATABASE_URL=sqlite+aiosqlite:///./data/breakgen.db
       - BREAKGEN_ARTIFACTS_DIR=./data/artifacts
       - BREAKGEN_DEBUG=true
-    command: uvicorn server.main:app --reload --host 0.0.0.0 --port 8000
+    command: uv run --directory server uvicorn server.main:app --reload --host 0.0.0.0 --port 8000
 
   client:
     image: node:22-slim

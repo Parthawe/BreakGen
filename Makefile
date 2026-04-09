@@ -1,4 +1,4 @@
-.PHONY: dev dev-client dev-server install test clean
+.PHONY: dev dev-client dev-server install test build clean
 
 # Install all dependencies
 install:
@@ -17,11 +17,11 @@ dev-client:
 	cd client && pnpm dev
 
 dev-server:
-	cd server && python3 -m uv run uvicorn server.main:app --reload --host 0.0.0.0 --port 8000
+	cd server && PYTHONPATH=$(shell pwd) python3 -m uv run uvicorn server.main:app --reload --host 0.0.0.0 --port 8000
 
 # Run server tests
 test:
-	cd server && python3 -m uv run pytest -v
+	cd server && PYTHONPATH=$(shell pwd) python3 -m uv run pytest tests/ -v
 
 # Build frontend for production
 build:
@@ -29,4 +29,4 @@ build:
 
 # Clean generated files
 clean:
-	rm -rf client/dist client/node_modules server/.venv server/__pycache__ server/**/__pycache__ *.db
+	rm -rf client/dist server/__pycache__ server/**/__pycache__ server/breakgen.db server/artifacts

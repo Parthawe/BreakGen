@@ -10,6 +10,8 @@ import { api } from "../lib/api";
 
 type DirtyField = "name" | "layout" | "switch" | "style";
 
+const MAX_UNDO = 50;
+
 interface ProjectStore {
   // State
   project: KeyboardProject | null;
@@ -18,14 +20,19 @@ interface ProjectStore {
   dirtyFields: Set<DirtyField>;
   selectedKeyIds: string[];
   error: string | null;
+  undoStack: KeySpec[][];
+  redoStack: KeySpec[][];
 
   // Actions
   loadProject: (id: string) => Promise<void>;
   createProject: (name: string, templateId?: string) => Promise<void>;
   save: () => Promise<void>;
   clearError: () => void;
+  undo: () => void;
+  redo: () => void;
 
   // Layout editing
+  pushUndo: () => void;
   updateKey: (keyId: string, updates: Partial<KeySpec>) => void;
   addKey: (key: KeySpec) => void;
   removeKey: (keyId: string) => void;
@@ -55,6 +62,8 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   dirtyFields: new Set(),
   selectedKeyIds: [],
   error: null,
+  undoStack: [],
+  redoStack: [],
 
   loadProject: async (id) => {
     set({ loading: true, error: null });
@@ -104,6 +113,48 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
   clearError: () => set({ error: null }),
 
+  undo: () => {
+    set((state) => {
+      if (!state.project || state.undoStack.length === 0) return state;
+      const prev = state.undoStack[state.undoStack.length - 1];
+      return {
+        undoStack: state.undoStack.slice(0, -1),
+        redoStack: [...state.redoStack, state.project.layout.keys].slice(-MAX_UNDO),
+        project: {
+          ...state.project,
+          layout: { ...state.project.layout, keys: prev },
+        },
+        ...markDirty(state, "layout"),
+      };
+    });
+  },
+
+  redo: () => {
+    set((state) => {
+      if (!state.project || state.redoStack.length === 0) return state;
+      const next = state.redoStack[state.redoStack.length - 1];
+      return {
+        redoStack: state.redoStack.slice(0, -1),
+        undoStack: [...state.undoStack, state.project.layout.keys].slice(-MAX_UNDO),
+        project: {
+          ...state.project,
+          layout: { ...state.project.layout, keys: next },
+        },
+        ...markDirty(state, "layout"),
+      };
+    });
+  },
+
+  pushUndo: () => {
+    set((state) => {
+      if (!state.project) return state;
+      return {
+        undoStack: [...state.undoStack, state.project.layout.keys].slice(-MAX_UNDO),
+        redoStack: [],
+      };
+    });
+  },
+
   updateKey: (keyId, updates) => {
     set((state) => {
       if (!state.project) return state;
@@ -121,35 +172,39 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   },
 
   addKey: (key) => {
-    set((state) => {
-      if (!state.project) return state;
-      return {
-        project: {
-          ...state.project,
-          layout: {
-            ...state.project.layout,
-            keys: [...state.project.layout.keys, key],
-          },
+    const { project, undoStack } = get();
+    if (!project) return;
+    set({
+      undoStack: [...undoStack, project.layout.keys].slice(-MAX_UNDO),
+      redoStack: [],
+      project: {
+        ...project,
+        layout: {
+          ...project.layout,
+          keys: [...project.layout.keys, key],
         },
-        ...markDirty(state, "layout"),
-      };
+      },
+      dirty: true,
+      dirtyFields: new Set([...get().dirtyFields, "layout" as DirtyField]),
     });
   },
 
   removeKey: (keyId) => {
-    set((state) => {
-      if (!state.project) return state;
-      return {
-        project: {
-          ...state.project,
-          layout: {
-            ...state.project.layout,
-            keys: state.project.layout.keys.filter((k) => k.id !== keyId),
-          },
+    const { project, undoStack, selectedKeyIds } = get();
+    if (!project) return;
+    set({
+      undoStack: [...undoStack, project.layout.keys].slice(-MAX_UNDO),
+      redoStack: [],
+      project: {
+        ...project,
+        layout: {
+          ...project.layout,
+          keys: project.layout.keys.filter((k) => k.id !== keyId),
         },
-        ...markDirty(state, "layout"),
-        selectedKeyIds: state.selectedKeyIds.filter((id) => id !== keyId),
-      };
+      },
+      dirty: true,
+      dirtyFields: new Set([...get().dirtyFields, "layout" as DirtyField]),
+      selectedKeyIds: selectedKeyIds.filter((id) => id !== keyId),
     });
   },
 
