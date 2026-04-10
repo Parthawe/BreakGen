@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { useProjectStore } from "./stores/projectStore";
 import { useAuthStore } from "./stores/authStore";
 import type { KeyboardProject } from "./types/project";
@@ -59,14 +59,23 @@ function isStepComplete(step: Step, project: KeyboardProject | null): boolean {
 
 function App() {
   const [currentStep, setCurrentStep] = useState<Step>("template");
+  const { projectId } = useParams();
   const project = useProjectStore((s) => s.project);
   const dirty = useProjectStore((s) => s.dirty);
   const save = useProjectStore((s) => s.save);
+  const loadProject = useProjectStore((s) => s.loadProject);
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const navigate = useNavigate();
   const hasProject = !!project;
   const currentStepIndex = STEPS.findIndex((s) => s.id === currentStep);
+
+  // Load project from URL params
+  useEffect(() => {
+    if (projectId && (!project || project.project_id !== projectId)) {
+      loadProject(projectId).then(() => setCurrentStep("layout"));
+    }
+  }, [projectId]);
 
   return (
     <div className="flex h-screen w-screen" style={{ background: "var(--bg-root)" }}>
@@ -263,7 +272,11 @@ function App() {
         {/* Step: Template */}
         {currentStep === "template" && (
           <div className="flex-1 overflow-auto">
-            <TemplateSelector onSelect={() => setCurrentStep("switches")} />
+            <TemplateSelector onSelect={() => {
+              const p = useProjectStore.getState().project;
+              if (p) navigate(`/app/project/${p.project_id}`, { replace: true });
+              setCurrentStep("switches");
+            }} />
           </div>
         )}
 

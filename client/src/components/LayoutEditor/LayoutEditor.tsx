@@ -99,9 +99,74 @@ export function LayoutEditor() {
   const handleBackgroundClick = useCallback(() => { if (!dragging) clearSelection(); }, [dragging, clearSelection]);
 
   const selectedKey = keys.find((k) => selectedKeyIds.includes(k.id));
+  const addKeyStore = useProjectStore((s) => s.addKey);
+
+  const handleAddKey = () => {
+    const maxY = keys.length > 0 ? Math.max(...keys.map((k) => k.y_u + k.h_u)) : 0;
+    const id = `k_new_${Date.now().toString(36)}`;
+    addKeyStore({
+      id,
+      label: "?",
+      x_u: 0,
+      y_u: maxY + 0.25,
+      w_u: 1,
+      h_u: 1,
+      rotation_deg: 0,
+      rotation_origin_x_u: 0,
+      rotation_origin_y_u: 0,
+      stabilizer: "none",
+      keycap_asset_id: null,
+      row: null,
+      col: null,
+    });
+    useProjectStore.getState().selectKey(id);
+  };
+
+  const undoStack = useProjectStore((s) => s.undoStack);
+  const redoStack = useProjectStore((s) => s.redoStack);
 
   return (
-    <div className="flex h-full gap-0">
+    <div className="flex flex-col h-full gap-0">
+      {/* Toolbar */}
+      <div className="flex items-center gap-2 mb-3 px-1">
+        <button
+          onClick={handleAddKey}
+          className="px-3 py-1.5 text-[11px] font-medium rounded-lg transition-all flex items-center gap-1.5"
+          style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", color: "var(--text-secondary)" }}
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
+          Add Key
+        </button>
+        <button
+          onClick={undo}
+          disabled={undoStack.length === 0}
+          className="px-2 py-1.5 text-[11px] rounded-lg transition-all"
+          style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", color: undoStack.length ? "var(--text-secondary)" : "var(--text-muted)", opacity: undoStack.length ? 1 : 0.4 }}
+          title="Undo (Cmd+Z)"
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 5l-2 2 2 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M1 7h7a3 3 0 000-6H5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
+        </button>
+        <button
+          onClick={redo}
+          disabled={redoStack.length === 0}
+          className="px-2 py-1.5 text-[11px] rounded-lg transition-all"
+          style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", color: redoStack.length ? "var(--text-secondary)" : "var(--text-muted)", opacity: redoStack.length ? 1 : 0.4 }}
+          title="Redo (Cmd+Shift+Z)"
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M9 5l2 2-2 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M11 7H4a3 3 0 010-6h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
+        </button>
+
+        <div className="flex-1" />
+
+        <span className="text-[11px] font-mono" style={{ color: "var(--text-muted)" }}>
+          {keys.length} keys
+        </span>
+        <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+          Del to remove
+        </span>
+      </div>
+
+      <div className="flex flex-1 min-h-0 gap-0">
       {/* SVG Canvas */}
       <div
         className="flex-1 overflow-auto rounded-xl"
@@ -191,6 +256,7 @@ export function LayoutEditor() {
           onDelete={() => useProjectStore.getState().removeKey(selectedKey.id)}
         />
       )}
+      </div>
     </div>
   );
 }

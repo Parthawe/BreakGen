@@ -2,11 +2,15 @@
 
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from server.api import auth, export, geometry, pcb, projects, switches, templates
+from server.config import SERVER_DIR
 from server.db.database import engine
 from server.db.models import Base
 
@@ -57,3 +61,17 @@ except ImportError as e:
 @app.get("/api/health")
 async def health():
     return {"status": "ok", "version": "0.1.0"}
+
+
+# Serve built frontend in production (client/dist)
+FRONTEND_DIR = SERVER_DIR.parent / "client" / "dist"
+if FRONTEND_DIR.exists():
+    app.mount("/assets", StaticFiles(directory=str(FRONTEND_DIR / "assets")), name="static")
+
+    @app.get("/{path:path}")
+    async def serve_spa(request: Request, path: str):
+        """SPA fallback: serve index.html for all non-API routes."""
+        file_path = FRONTEND_DIR / path
+        if file_path.exists() and file_path.is_file():
+            return FileResponse(str(file_path))
+        return FileResponse(str(FRONTEND_DIR / "index.html"))

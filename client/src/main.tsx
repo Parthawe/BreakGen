@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import App from "./App";
 import { Landing } from "./pages/Landing";
 import { Login, Signup } from "./pages/Auth";
+import { ProjectList } from "./pages/ProjectList";
 import { useAuthStore } from "./stores/authStore";
 import "./index.css";
 
@@ -26,14 +27,9 @@ function Root() {
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
-        <Route
-          path="/app"
-          element={
-            <AuthGuard>
-              <App />
-            </AuthGuard>
-          }
-        />
+        <Route path="/app" element={<AuthGuard><ProjectList /></AuthGuard>} />
+        <Route path="/app/new" element={<AuthGuard><App /></AuthGuard>} />
+        <Route path="/app/project/:projectId" element={<AuthGuard><App /></AuthGuard>} />
       </Routes>
     </BrowserRouter>
   );
