@@ -5,10 +5,10 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
+import bcrypt as _bcrypt
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request
-from passlib.hash import bcrypt
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -91,7 +91,7 @@ async def signup(req: SignupRequest, db: AsyncSession = Depends(get_db)):
     user = UserRow(
         email=req.email,
         name=req.name,
-        password_hash=bcrypt.hash(req.password),
+        password_hash=_bcrypt.hashpw(req.password.encode(), _bcrypt.gensalt()).decode(),
     )
     db.add(user)
     await db.commit()
@@ -110,7 +110,7 @@ async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(UserRow).where(UserRow.email == req.email))
     user = result.scalar_one_or_none()
 
-    if not user or not bcrypt.verify(req.password, user.password_hash):
+    if not user or not _bcrypt.checkpw(req.password.encode(), user.password_hash.encode()):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
     token = _create_token(user.id, user.email)
