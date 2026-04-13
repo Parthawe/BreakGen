@@ -31,6 +31,10 @@ export function ProjectList() {
     setProjects((p) => p.filter((x) => x.project_id !== id));
   };
 
+  const familyColor: Record<string, string> = {
+    keyboard: "#6366f1", macropad: "#22c55e", streamdeck: "#f59e0b", midi: "#ec4899",
+  };
+
   const statusColor = (status: string) => {
     switch (status) {
       case "validated": return "var(--success)";
@@ -72,10 +76,10 @@ export function ProjectList() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-[22px] font-semibold" style={{ color: "var(--text-primary)" }}>
-              Your Keyboards
+              Your Projects
             </h1>
             <p className="text-[13px] mt-1" style={{ color: "var(--text-muted)" }}>
-              Design, compile, and export custom mechanical keyboards.
+              Design, compile, and export custom hardware.
             </p>
           </div>
           <button
@@ -86,7 +90,7 @@ export function ProjectList() {
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
-            New Keyboard
+            New Project
           </button>
         </div>
 
@@ -110,17 +114,17 @@ export function ProjectList() {
               </svg>
             </div>
             <h3 className="text-[15px] font-medium mb-2" style={{ color: "var(--text-primary)" }}>
-              No keyboards yet
+              No projects yet
             </h3>
             <p className="text-[13px] mb-6" style={{ color: "var(--text-muted)" }}>
-              Create your first keyboard design and export fabrication-ready files.
+              Create your first design and export fabrication-ready files.
             </p>
             <button
               onClick={handleNew}
               className="px-5 py-2.5 text-[13px] font-medium rounded-xl transition-all"
               style={{ background: "var(--accent)", color: "#fff" }}
             >
-              Create Your First Keyboard
+              Create Your First Project
             </button>
           </div>
         ) : (
@@ -139,9 +143,15 @@ export function ProjectList() {
                     <h3 className="text-[14px] font-medium" style={{ color: "var(--text-primary)" }}>
                       {p.name}
                     </h3>
-                    <span className="text-[11px] font-mono" style={{ color: "var(--text-muted)" }}>
-                      {p.template ?? "custom"} &middot; {p.key_count} keys &middot; r{p.revision}
-                    </span>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[10px] font-medium capitalize px-1.5 py-0.5 rounded"
+                        style={{ color: familyColor[p.product_family] ?? "var(--text-muted)", background: (familyColor[p.product_family] ?? "#666") + "15" }}>
+                        {p.product_family}
+                      </span>
+                      <span className="text-[11px] font-mono" style={{ color: "var(--text-muted)" }}>
+                        {p.key_count} keys &middot; r{p.revision}
+                      </span>
+                    </div>
                   </div>
                   <span
                     className="text-[10px] font-medium capitalize px-2 py-0.5 rounded-full"

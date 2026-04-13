@@ -4,62 +4,89 @@
   font-family: "Geist";
   src: url("https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/Geist-Regular.woff2") format("woff2");
   font-weight: 400;
-  font-style: normal;
   font-display: swap;
 }
-
 @font-face {
   font-family: "Geist";
   src: url("https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/Geist-Medium.woff2") format("woff2");
   font-weight: 500;
-  font-style: normal;
   font-display: swap;
 }
-
 @font-face {
   font-family: "Geist";
   src: url("https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/Geist-SemiBold.woff2") format("woff2");
   font-weight: 600;
-  font-style: normal;
   font-display: swap;
 }
-
+@font-face {
+  font-family: "Geist";
+  src: url("https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/Geist-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-display: swap;
+}
 @font-face {
   font-family: "Geist Mono";
   src: url("https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-mono/GeistMono-Regular.woff2") format("woff2");
   font-weight: 400;
-  font-style: normal;
   font-display: swap;
 }
 
 :root {
-  --bg-root: #09090b;
-  --bg-surface: #111113;
-  --bg-elevated: #18181b;
-  --bg-hover: #1f1f23;
-  --border-subtle: #27272a;
-  --border-default: #3f3f46;
-  --text-primary: #fafafa;
-  --text-secondary: #a1a1aa;
-  --text-tertiary: #71717a;
-  --text-muted: #52525b;
+  /* Surfaces */
+  --bg-root: #08080a;
+  --bg-surface: #0f0f12;
+  --bg-elevated: #16161a;
+  --bg-hover: #1c1c22;
+  --bg-active: #222228;
+
+  /* Borders */
+  --border-subtle: #1e1e24;
+  --border-default: #2a2a32;
+  --border-strong: #3a3a44;
+
+  /* Text */
+  --text-primary: #f0f0f2;
+  --text-secondary: #a0a0aa;
+  --text-tertiary: #707078;
+  --text-muted: #50505a;
+
+  /* Accents */
   --accent: #6366f1;
   --accent-hover: #818cf8;
-  --accent-muted: rgba(99, 102, 241, 0.15);
+  --accent-muted: rgba(99, 102, 241, 0.12);
+  --accent-strong: rgba(99, 102, 241, 0.25);
+
+  /* Product family colors */
+  --color-keyboard: #6366f1;
+  --color-macropad: #22c55e;
+  --color-streamdeck: #f59e0b;
+  --color-midi: #ec4899;
+
+  /* Semantic */
   --success: #22c55e;
   --warn: #f59e0b;
   --error: #ef4444;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+  --shadow-lg: 0 8px 30px rgba(0,0,0,0.5);
+  --shadow-glow: 0 0 20px rgba(99,102,241,0.15);
+
+  /* Radii */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 body {
   margin: 0;
   background: var(--bg-root);
   color: var(--text-primary);
-  font-family: "Geist", "Inter", system-ui, -apple-system, sans-serif;
+  font-family: "Geist", system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -70,30 +97,22 @@ body {
   overflow: hidden;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: var(--border-subtle);
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--border-default);
-}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-default); }
 
-/* Input resets */
 input[type="number"]::-webkit-inner-spin-button,
-input[type="number"]::-webkit-outer-spin-button {
-  opacity: 1;
-}
+input[type="number"]::-webkit-outer-spin-button { opacity: 1; }
 
-/* Focus ring */
 *:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* Utility classes for premium feel */
+.glass {
+  background: rgba(15, 15, 18, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }

@@ -19,6 +19,13 @@ from pydantic import BaseModel, Field
 # --- Enums ---
 
 
+class ProductFamily(str, Enum):
+    KEYBOARD = "keyboard"
+    MACROPAD = "macropad"
+    STREAMDECK = "streamdeck"
+    MIDI = "midi"
+
+
 class ProjectStatus(str, Enum):
     DRAFT = "draft"
     CONFIGURED = "configured"
@@ -195,7 +202,8 @@ class KeyboardProject(BaseModel):
     """
 
     project_id: str = Field(description="Unique project identifier")
-    name: str = Field(default="Untitled Keyboard")
+    product_family: ProductFamily = Field(default=ProductFamily.KEYBOARD)
+    name: str = Field(default="Untitled Project")
     revision: int = Field(default=1, ge=1)
     status: ProjectStatus = Field(default=ProjectStatus.DRAFT)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

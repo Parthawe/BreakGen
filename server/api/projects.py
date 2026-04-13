@@ -14,15 +14,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from server.config import settings
 from server.db.database import get_db
 from server.db.models import ProjectRevisionRow, ProjectRow
-from server.models.project import KeyboardProject, LayoutSpec, ProjectStatus
+from server.models.project import KeyboardProject, LayoutSpec, ProductFamily, ProjectStatus
 from server.models.supported_configs import SUPPORTED_SWITCHES
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
 
 class CreateProjectRequest(BaseModel):
-    name: str = "Untitled Keyboard"
+    name: str = "Untitled Project"
     template_id: Optional[str] = None
+    product_family: str = "keyboard"
 
 
 class UpdateProjectRequest(BaseModel):
@@ -56,8 +57,15 @@ async def create_project(req: CreateProjectRequest, db: AsyncSession = Depends(g
     project_id = _generate_id()
     now = datetime.now(timezone.utc)
 
+    # Validate product family
+    try:
+        family = ProductFamily(req.product_family)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Unknown product family: {req.product_family}")
+
     project = KeyboardProject(
         project_id=project_id,
+        product_family=family,
         name=req.name,
         revision=1,
         status=ProjectStatus.DRAFT,
@@ -78,6 +86,7 @@ async def create_project(req: CreateProjectRequest, db: AsyncSession = Depends(g
     # Persist
     row = ProjectRow(
         project_id=project_id,
+        product_family=family.value,
         name=project.name,
         revision=1,
         status=project.status.value,
@@ -112,6 +121,7 @@ async def list_projects(db: AsyncSession = Depends(get_db)):
     return [
         {
             "project_id": r.project_id,
+            "product_family": r.product_family,
             "name": r.name,
             "revision": r.revision,
             "status": r.status,

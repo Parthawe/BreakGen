@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from .project import ControllerFamily, DiodeDirection, SwitchFamily
+from .project import ControllerFamily, DiodeDirection, ProductFamily, SwitchFamily
 
 
 class SupportedSwitch(BaseModel):
@@ -29,12 +29,13 @@ class SupportedSwitch(BaseModel):
 
 
 class LayoutTemplate(BaseModel):
-    """A supported keyboard layout template."""
+    """A supported layout template for any product family."""
 
     template_id: str
     name: str
     description: str
     key_count: int
+    product_family: ProductFamily = Field(default=ProductFamily.KEYBOARD)
     file: str = Field(description="Path to template JSON file")
 
 
@@ -47,11 +48,13 @@ SUPPORTED_CONTROLLERS: list[ControllerFamily] = [ControllerFamily.RP2040]
 SUPPORTED_DIODE_DIRECTIONS: list[DiodeDirection] = [DiodeDirection.COL2ROW]
 
 SUPPORTED_TEMPLATES: list[LayoutTemplate] = [
+    # Keyboards
     LayoutTemplate(
         template_id="60_percent",
         name="60%",
         description="Compact layout without function row, arrows, or numpad. 61 keys.",
         key_count=61,
+        product_family=ProductFamily.KEYBOARD,
         file="templates/60_percent.json",
     ),
     LayoutTemplate(
@@ -59,6 +62,7 @@ SUPPORTED_TEMPLATES: list[LayoutTemplate] = [
         name="65%",
         description="Compact layout with arrow keys and a column of nav keys. 68 keys.",
         key_count=68,
+        product_family=ProductFamily.KEYBOARD,
         file="templates/65_percent.json",
     ),
     LayoutTemplate(
@@ -66,7 +70,51 @@ SUPPORTED_TEMPLATES: list[LayoutTemplate] = [
         name="75%",
         description="Compact layout with function row and arrow keys. 82 keys.",
         key_count=82,
+        product_family=ProductFamily.KEYBOARD,
         file="templates/75_percent.json",
+    ),
+    # Macro Pads
+    LayoutTemplate(
+        template_id="macropad_3x3",
+        name="3x3 Grid",
+        description="9-key macro pad. Compact grid for shortcuts and macros.",
+        key_count=9,
+        product_family=ProductFamily.MACROPAD,
+        file="templates/macropad_3x3.json",
+    ),
+    LayoutTemplate(
+        template_id="macropad_4x4",
+        name="4x4 Grid",
+        description="16-key macro pad. Standard grid for productivity and gaming.",
+        key_count=16,
+        product_family=ProductFamily.MACROPAD,
+        file="templates/macropad_4x4.json",
+    ),
+    # Stream Decks
+    LayoutTemplate(
+        template_id="streamdeck_3x5",
+        name="3x5 Deck",
+        description="15-key stream deck. Standard streaming and content control layout.",
+        key_count=15,
+        product_family=ProductFamily.STREAMDECK,
+        file="templates/streamdeck_3x5.json",
+    ),
+    LayoutTemplate(
+        template_id="streamdeck_2x3",
+        name="2x3 Mini Deck",
+        description="6-key mini deck. Compact control surface for focused workflows.",
+        key_count=6,
+        product_family=ProductFamily.STREAMDECK,
+        file="templates/streamdeck_2x3.json",
+    ),
+    # MIDI Controllers
+    LayoutTemplate(
+        template_id="midi_25key",
+        name="25-Key MIDI",
+        description="25-key MIDI controller with 4 encoder positions. Music production layout.",
+        key_count=29,
+        product_family=ProductFamily.MIDI,
+        file="templates/midi_25key.json",
     ),
 ]
 

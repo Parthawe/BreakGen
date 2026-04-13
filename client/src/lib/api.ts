@@ -52,7 +52,8 @@ export const api = {
   },
 
   templates: {
-    list: () => request<LayoutTemplate[]>("/templates/"),
+    list: (family?: string) =>
+      request<LayoutTemplate[]>(`/templates/${family ? `?family=${family}` : ""}`),
     get: (id: string) => request<Record<string, unknown>>(`/templates/${id}`),
   },
 

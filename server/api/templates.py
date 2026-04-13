@@ -2,8 +2,9 @@
 
 import json
 from pathlib import Path
+from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
 from server.config import settings
 from server.models.project import LayoutSpec
@@ -13,16 +14,21 @@ router = APIRouter(prefix="/api/templates", tags=["templates"])
 
 
 @router.get("/")
-async def list_templates():
-    """Return available layout templates."""
+async def list_templates(family: Optional[str] = Query(None)):
+    """Return available layout templates, optionally filtered by product family."""
+    templates = SUPPORTED_TEMPLATES
+    if family:
+        templates = [t for t in templates if t.product_family.value == family]
+
     return [
         {
             "template_id": t.template_id,
             "name": t.name,
             "description": t.description,
             "key_count": t.key_count,
+            "product_family": t.product_family.value,
         }
-        for t in SUPPORTED_TEMPLATES
+        for t in templates
     ]
 
 
@@ -42,7 +48,6 @@ async def get_template(template_id: str):
     with open(template_path) as f:
         data = json.load(f)
 
-    # Validate layout against schema before serving
     try:
         layout_data = data.get("layout", {})
         LayoutSpec(**layout_data)
@@ -52,4 +57,5 @@ async def get_template(template_id: str):
             detail=f"Template '{template_id}' has invalid layout: {e}",
         )
 
+    data["product_family"] = template.product_family.value
     return data

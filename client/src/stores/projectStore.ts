@@ -5,7 +5,7 @@
  */
 
 import { create } from "zustand";
-import type { KeyboardProject, KeySpec, LayoutSpec, UpdateProjectRequest } from "../types/project";
+import type { KeyboardProject, KeySpec, LayoutSpec, ProductFamily, UpdateProjectRequest } from "../types/project";
 import { api } from "../lib/api";
 
 type DirtyField = "name" | "layout" | "switch" | "style";
@@ -25,7 +25,7 @@ interface ProjectStore {
 
   // Actions
   loadProject: (id: string) => Promise<void>;
-  createProject: (name: string, templateId?: string) => Promise<void>;
+  createProject: (name: string, templateId?: string, productFamily?: ProductFamily) => Promise<void>;
   save: () => Promise<void>;
   clearError: () => void;
   undo: () => void;
@@ -75,12 +75,13 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     }
   },
 
-  createProject: async (name, templateId) => {
+  createProject: async (name, templateId, productFamily) => {
     set({ loading: true, error: null });
     try {
       const project = await api.projects.create({
         name,
         template_id: templateId,
+        product_family: productFamily,
       });
       set({ project, loading: false, dirty: false, dirtyFields: new Set() });
     } catch (e) {

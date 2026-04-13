@@ -31,7 +31,8 @@ class ProjectRow(Base):
 
     project_id: Mapped[str] = mapped_column(String(64), primary_key=True)
     user_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
-    name: Mapped[str] = mapped_column(String(256), default="Untitled Keyboard")
+    product_family: Mapped[str] = mapped_column(String(32), default="keyboard", index=True)
+    name: Mapped[str] = mapped_column(String(256), default="Untitled Project")
     revision: Mapped[int] = mapped_column(Integer, default=1)
     status: Mapped[str] = mapped_column(String(32), default="draft")
     template: Mapped[str | None] = mapped_column(String(64), nullable=True)

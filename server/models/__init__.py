@@ -2,6 +2,7 @@ from .project import (
     KeyboardProject,
     KeySpec,
     LayoutSpec,
+    ProductFamily,
     SwitchProfile,
     StyleRequest,
     KeycapAsset,

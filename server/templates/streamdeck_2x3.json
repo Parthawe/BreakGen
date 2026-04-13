@@ -1,0 +1,99 @@
+{
+  "template_id": "streamdeck_2x3",
+  "name": "Streamdeck 2X3",
+  "layout": {
+    "unit_pitch_mm": 19.05,
+    "keys": [
+      {
+        "id": "k_0_0",
+        "label": "1",
+        "x_u": 0.0,
+        "y_u": 0.0,
+        "w_u": 1.0,
+        "h_u": 1.0,
+        "rotation_deg": 0.0,
+        "rotation_origin_x_u": 0.0,
+        "rotation_origin_y_u": 0.0,
+        "stabilizer": "none",
+        "keycap_asset_id": null,
+        "row": null,
+        "col": null
+      },
+      {
+        "id": "k_0_1",
+        "label": "2",
+        "x_u": 1.26,
+        "y_u": 0.0,
+        "w_u": 1.0,
+        "h_u": 1.0,
+        "rotation_deg": 0.0,
+        "rotation_origin_x_u": 0.0,
+        "rotation_origin_y_u": 0.0,
+        "stabilizer": "none",
+        "keycap_asset_id": null,
+        "row": null,
+        "col": null
+      },
+      {
+        "id": "k_0_2",
+        "label": "3",
+        "x_u": 2.52,
+        "y_u": 0.0,
+        "w_u": 1.0,
+        "h_u": 1.0,
+        "rotation_deg": 0.0,
+        "rotation_origin_x_u": 0.0,
+        "rotation_origin_y_u": 0.0,
+        "stabilizer": "none",
+        "keycap_asset_id": null,
+        "row": null,
+        "col": null
+      },
+      {
+        "id": "k_1_0",
+        "label": "4",
+        "x_u": 0.0,
+        "y_u": 1.26,
+        "w_u": 1.0,
+        "h_u": 1.0,
+        "rotation_deg": 0.0,
+        "rotation_origin_x_u": 0.0,
+        "rotation_origin_y_u": 0.0,
+        "stabilizer": "none",
+        "keycap_asset_id": null,
+        "row": null,
+        "col": null
+      },
+      {
+        "id": "k_1_1",
+        "label": "5",
+        "x_u": 1.26,
+        "y_u": 1.26,
+        "w_u": 1.0,
+        "h_u": 1.0,
+        "rotation_deg": 0.0,
+        "rotation_origin_x_u": 0.0,
+        "rotation_origin_y_u": 0.0,
+        "stabilizer": "none",
+        "keycap_asset_id": null,
+        "row": null,
+        "col": null
+      },
+      {
+        "id": "k_1_2",
+        "label": "6",
+        "x_u": 2.52,
+        "y_u": 1.26,
+        "w_u": 1.0,
+        "h_u": 1.0,
+        "rotation_deg": 0.0,
+        "rotation_origin_x_u": 0.0,
+        "rotation_origin_y_u": 0.0,
+        "stabilizer": "none",
+        "keycap_asset_id": null,
+        "row": null,
+        "col": null
+      }
+    ]
+  }
+}

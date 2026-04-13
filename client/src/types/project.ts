@@ -7,6 +7,8 @@
 
 // --- Enums ---
 
+export type ProductFamily = "keyboard" | "macropad" | "streamdeck" | "midi";
+
 export type ProjectStatus =
   | "draft"
   | "configured"
@@ -103,6 +105,7 @@ export interface ExportState {
 
 export interface KeyboardProject {
   project_id: string;
+  product_family: ProductFamily;
   name: string;
   revision: number;
   status: ProjectStatus;
@@ -122,6 +125,7 @@ export interface KeyboardProject {
 export interface CreateProjectRequest {
   name?: string;
   template_id?: string;
+  product_family?: ProductFamily;
 }
 
 export interface UpdateProjectRequest {
@@ -134,6 +138,7 @@ export interface UpdateProjectRequest {
 
 export interface ProjectSummary {
   project_id: string;
+  product_family: ProductFamily;
   name: string;
   revision: number;
   status: ProjectStatus;
@@ -148,6 +153,7 @@ export interface LayoutTemplate {
   name: string;
   description: string;
   key_count: number;
+  product_family: ProductFamily;
 }
 
 export interface SupportedSwitch {
