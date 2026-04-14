@@ -3,11 +3,11 @@ import { useProjectStore } from "../../stores/projectStore";
 import type { KeySpec } from "../../types/project";
 import { KeyProperties } from "./KeyProperties";
 
-const UNIT_PX = 56;
-const PADDING = 24;
-const KEY_GAP = 2;
+const UNIT_PX = 62;
+const PADDING = 28;
+const KEY_GAP = 3;
 const SNAP_INCREMENT = 0.25;
-const KEY_RADIUS = 5;
+const KEY_RADIUS = 6;
 
 function snapToGrid(value: number): number {
   return Math.round(value / SNAP_INCREMENT) * SNAP_INCREMENT;
@@ -149,7 +149,7 @@ export function LayoutEditor() {
 
       <div className="flex flex-1 min-h-0 gap-4">
       {/* SVG Canvas */}
-      <div className="flex-1 overflow-auto rounded-2xl bg-[#0a0a0f] border border-white/[0.04]">
+      <div className="flex-1 overflow-auto rounded-2xl bg-[#060609] border border-white/[0.04]">
         <svg
           ref={svgRef}
           width={svgWidth}
@@ -186,28 +186,22 @@ export function LayoutEditor() {
                 className="cursor-pointer"
                 filter={isDragged ? "url(#keyShadow)" : undefined}
               >
-                {/* Outer key body */}
+                {/* Key body */}
                 <rect
                   x={x} y={y} width={w} height={h} rx={KEY_RADIUS}
-                  fill={isSelected ? "rgba(99, 102, 241, 0.2)" : "rgba(255, 255, 255, 0.04)"}
-                  stroke={isSelected ? "rgba(99, 102, 241, 0.7)" : isDragged ? "rgba(168, 85, 247, 0.5)" : "rgba(255, 255, 255, 0.08)"}
+                  fill={isSelected ? "rgba(129, 140, 248, 0.15)" : "rgba(255, 255, 255, 0.035)"}
+                  stroke={isSelected ? "rgba(129, 140, 248, 0.5)" : isDragged ? "rgba(168, 85, 247, 0.4)" : "rgba(255, 255, 255, 0.06)"}
                   strokeWidth={isSelected ? 1.5 : 1}
-                />
-                {/* Inner top face (Cherry profile taper effect) */}
-                <rect
-                  x={x + 3} y={y + 2} width={w - 6} height={h - 7} rx={KEY_RADIUS - 1}
-                  fill={isSelected ? "rgba(99, 102, 241, 0.15)" : "rgba(255, 255, 255, 0.025)"}
-                  stroke={isSelected ? "rgba(99, 102, 241, 0.3)" : "rgba(255, 255, 255, 0.04)"}
-                  strokeWidth={0.5}
                 />
                 {/* Label */}
                 <text
-                  x={x + w / 2} y={y + h / 2 - 1}
+                  x={x + w / 2} y={y + h / 2}
                   textAnchor="middle" dominantBaseline="central"
-                  fill={isSelected ? "rgba(165, 180, 252, 0.9)" : "rgba(255, 255, 255, 0.4)"}
-                  fontSize={key.w_u >= 2 ? 10 : key.w_u >= 1.5 ? 9.5 : 9}
+                  fill={isSelected ? "rgba(165, 180, 252, 0.95)" : "rgba(255, 255, 255, 0.45)"}
+                  fontSize={key.w_u >= 2.25 ? 12 : key.w_u >= 1.5 ? 11.5 : 11}
                   fontFamily="'Geist', system-ui, sans-serif"
                   fontWeight={500}
+                  letterSpacing="-0.01em"
                   pointerEvents="none"
                 >
                   {key.label}

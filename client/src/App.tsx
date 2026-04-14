@@ -68,6 +68,11 @@ function App() {
     }
   }, [projectId]);
 
+  useEffect(() => {
+    const stepLabel = STEPS[stepIdx]?.label ?? "Design";
+    document.title = project ? `${project.name} — ${stepLabel} — BreakGen` : "New Project — BreakGen";
+  }, [currentStep, project?.name]);
+
   return (
     <div className="flex h-screen w-screen bg-[#08080a]">
       <ErrorBanner />
@@ -79,9 +84,9 @@ function App() {
           <button onClick={() => navigate("/app")} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
             <div className="w-7 h-7 rounded-md bg-indigo-500/10 flex items-center justify-center">
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                <rect x="1" y="3" width="6" height="4" rx="1" fill="#6366f1" />
-                <rect x="9" y="3" width="6" height="4" rx="1" fill="#6366f1" opacity="0.5" />
-                <rect x="1" y="9" width="14" height="4" rx="1" fill="#6366f1" opacity="0.25" />
+                <rect x="1" y="3" width="6" height="4" rx="1" fill="#818cf8" />
+                <rect x="9" y="3" width="6" height="4" rx="1" fill="#818cf8" opacity="0.5" />
+                <rect x="1" y="9" width="14" height="4" rx="1" fill="#818cf8" opacity="0.25" />
               </svg>
             </div>
             <span className="text-[14px] font-semibold text-white">BreakGen</span>

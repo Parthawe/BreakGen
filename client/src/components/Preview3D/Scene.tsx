@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef, useMemo, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Environment, ContactShadows } from "@react-three/drei";
 import { KeyboardPreview } from "./KeyboardPreview";
@@ -78,17 +78,33 @@ function SceneLighting() {
 }
 
 export function Scene() {
+  const [hintVisible, setHintVisible] = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setHintVisible(false), 4000);
+    return () => clearTimeout(t);
+  }, []);
+
   return (
-    <Canvas
-      camera={{ position: [0, 5, 8], fov: 45 }}
-      gl={{ antialias: true, alpha: false }}
-      style={{ background: "#050507" }}
-    >
-      <color attach="background" args={["#050507"]} />
-      <SceneLighting />
-      <AutoTarget />
-      <Environment preset="city" />
-      <KeyboardPreview />
-    </Canvas>
+    <div className="relative w-full h-full">
+      <Canvas
+        camera={{ position: [0, 5, 8], fov: 45 }}
+        gl={{ antialias: true, alpha: false }}
+        style={{ background: "#050507" }}
+        onPointerDown={() => setHintVisible(false)}
+      >
+        <color attach="background" args={["#050507"]} />
+        <SceneLighting />
+        <AutoTarget />
+        <Environment preset="city" />
+        <KeyboardPreview />
+      </Canvas>
+      {hintVisible && (
+        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 text-[11px] text-zinc-600 pointer-events-none transition-opacity duration-1000"
+          style={{ opacity: hintVisible ? 0.7 : 0 }}>
+          Drag to orbit &middot; Scroll to zoom
+        </div>
+      )}
+    </div>
   );
 }

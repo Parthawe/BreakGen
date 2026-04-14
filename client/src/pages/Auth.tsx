@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../stores/authStore";
 
@@ -24,6 +24,7 @@ function AuthForm({ mode }: { mode: "login" | "signup" }) {
   };
 
   const isSignup = mode === "signup";
+  useEffect(() => { document.title = `${isSignup ? "Sign Up" : "Log In"} — BreakGen`; }, [isSignup]);
 
   return (
     <div className="min-h-screen bg-[#08080a] flex">
@@ -33,20 +34,20 @@ function AuthForm({ mode }: { mode: "login" | "signup" }) {
         <div className="absolute inset-0 opacity-[0.03]"
           style={{ backgroundImage: "linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full opacity-[0.06]"
-          style={{ background: "radial-gradient(circle, #6366f1 0%, transparent 70%)" }} />
+          style={{ background: "radial-gradient(circle, #818cf8 0%, transparent 70%)" }} />
 
         <div className="relative text-center px-16 max-w-md">
           <div className="flex flex-col items-center gap-4 mb-10">
             {[
-              { c: "#6366f1", r: [[1,1,1,1,1,1,1,1,1,1,1,1,1],[1.5,1,1,1,1,1,1,1,1,1,1,1,1.5],[2.25,1,1,1,1,1,1,1,1,1,1,2.75]] },
-              { c: "#22c55e", r: [[1,1,1],[1,1,1],[1,1,1]] },
-              { c: "#f59e0b", r: [[1,1,1,1,1]] },
+              { c: "#818cf8", r: [[1,1,1,1,1,1,1,1,1,1,1,1,1],[1.5,1,1,1,1,1,1,1,1,1,1,1,1.5],[2.25,1,1,1,1,1,1,1,1,1,1,2.75]] },
+              { c: "#4ade80", r: [[1,1,1,1],[1,1,1,1],[1,1,1,1]] },
+              { c: "#fbbf24", r: [[1,1,1,1,1],[1,1,1,1,1]] },
             ].map((p, i) => (
-              <div key={i} className="flex flex-col items-center" style={{ gap: "2.5px" }}>
+              <div key={i} className="flex flex-col items-center" style={{ gap: "3px" }}>
                 {p.r.map((row, ri) => (
-                  <div key={ri} className="flex" style={{ gap: "2.5px" }}>
+                  <div key={ri} className="flex" style={{ gap: "3px" }}>
                     {row.map((w, ci) => (
-                      <div key={ci} style={{ width: `${w * 9 - 2.5}px`, height: "7px", background: p.c, borderRadius: "1.5px", opacity: 0.35 + i * 0.1 }} />
+                      <div key={ci} style={{ width: `${w * 12 - 3}px`, height: "9px", background: p.c, borderRadius: "2px", opacity: 0.5 + i * 0.08 }} />
                     ))}
                   </div>
                 ))}
@@ -67,9 +68,9 @@ function AuthForm({ mode }: { mode: "login" | "signup" }) {
           <Link to="/" className="inline-flex items-center gap-2.5 mb-12">
             <div className="w-9 h-9 rounded-lg bg-indigo-500/10 flex items-center justify-center">
               <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
-                <rect x="1" y="3" width="6" height="4" rx="1" fill="#6366f1" />
-                <rect x="9" y="3" width="6" height="4" rx="1" fill="#6366f1" opacity="0.5" />
-                <rect x="1" y="9" width="14" height="4" rx="1" fill="#6366f1" opacity="0.25" />
+                <rect x="1" y="3" width="6" height="4" rx="1" fill="#818cf8" />
+                <rect x="9" y="3" width="6" height="4" rx="1" fill="#818cf8" opacity="0.5" />
+                <rect x="1" y="9" width="14" height="4" rx="1" fill="#818cf8" opacity="0.25" />
               </svg>
             </div>
             <span className="text-[16px] font-semibold text-white">BreakGen</span>

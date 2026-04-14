@@ -63,11 +63,11 @@ export function TemplateSelector({ onSelect }: TemplateSelectorProps) {
             {FAMILIES.map((f) => (
               <button key={f.id} onClick={() => setFamily(f.id)}
                 className="text-left p-6 rounded-[20px] transition-all duration-300 group hover:-translate-y-0.5 border"
-                style={{ background: `linear-gradient(180deg, ${f.color}06 0%, transparent 100%)`, borderColor: `${f.color}10` }}
+                style={{ background: `linear-gradient(180deg, ${f.color}0c 0%, transparent 100%)`, borderColor: `${f.color}15` }}
                 onMouseEnter={e => e.currentTarget.style.borderColor = `${f.color}30`}
                 onMouseLeave={e => e.currentTarget.style.borderColor = `${f.color}10`}>
-                <div className="w-16 h-12 rounded-xl flex items-center justify-center mb-4" style={{ background: `${f.color}08` }}>
-                  <Sil rows={f.icon} color={f.color} s={f.id === "keyboard" ? 4 : 6} />
+                <div className="w-20 h-14 rounded-xl flex items-center justify-center mb-4" style={{ background: `${f.color}0a` }}>
+                  <Sil rows={f.icon} color={f.color} s={f.id === "keyboard" ? 5 : 8} />
                 </div>
                 <h3 className="text-[16px] font-semibold text-white mb-1">{f.name}</h3>
                 <p className="text-[13px] text-zinc-500 leading-[1.5]">{f.desc}</p>

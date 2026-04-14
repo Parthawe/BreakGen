@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuthStore } from "../stores/authStore";
 
@@ -45,6 +46,7 @@ function Sil({ rows, color, s = 6 }: { rows: number[][]; color: string; s?: numb
 export function Landing() {
   const user = useAuthStore((s) => s.user);
   const cta = user ? "/app" : "/signup";
+  useEffect(() => { document.title = "BreakGen — Intent Compiler for Hardware"; }, []);
 
   return (
     <div className="min-h-screen bg-[#050507] text-white antialiased">
