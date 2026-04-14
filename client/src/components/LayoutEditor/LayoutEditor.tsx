@@ -126,52 +126,30 @@ export function LayoutEditor() {
   const redoStack = useProjectStore((s) => s.redoStack);
 
   return (
-    <div className="flex flex-col h-full gap-0">
+    <div className="flex flex-col h-full">
       {/* Toolbar */}
-      <div className="flex items-center gap-2 mb-3 px-1">
-        <button
-          onClick={handleAddKey}
-          className="px-3 py-1.5 text-[11px] font-medium rounded-lg transition-all flex items-center gap-1.5"
-          style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", color: "var(--text-secondary)" }}
-        >
+      <div className="flex items-center gap-3 mb-4">
+        <button onClick={handleAddKey}
+          className="h-8 px-3.5 text-[12px] font-medium rounded-xl bg-white/[0.04] border border-white/[0.06] text-zinc-300 hover:bg-white/[0.07] hover:text-white transition-all flex items-center gap-2">
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
           Add Key
         </button>
-        <button
-          onClick={undo}
-          disabled={undoStack.length === 0}
-          className="px-2 py-1.5 text-[11px] rounded-lg transition-all"
-          style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", color: undoStack.length ? "var(--text-secondary)" : "var(--text-muted)", opacity: undoStack.length ? 1 : 0.4 }}
-          title="Undo (Cmd+Z)"
-        >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 5l-2 2 2 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M1 7h7a3 3 0 000-6H5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
+        <button onClick={undo} disabled={undoStack.length === 0} title="Undo (Cmd+Z)"
+          className="h-8 w-8 rounded-xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-zinc-500 hover:text-white disabled:opacity-30 transition-all">
+          <svg width="13" height="13" viewBox="0 0 12 12" fill="none"><path d="M3 5l-2 2 2 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M1 7h7a3 3 0 000-6H5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
         </button>
-        <button
-          onClick={redo}
-          disabled={redoStack.length === 0}
-          className="px-2 py-1.5 text-[11px] rounded-lg transition-all"
-          style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", color: redoStack.length ? "var(--text-secondary)" : "var(--text-muted)", opacity: redoStack.length ? 1 : 0.4 }}
-          title="Redo (Cmd+Shift+Z)"
-        >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M9 5l2 2-2 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M11 7H4a3 3 0 010-6h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
+        <button onClick={redo} disabled={redoStack.length === 0} title="Redo (Cmd+Shift+Z)"
+          className="h-8 w-8 rounded-xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-zinc-500 hover:text-white disabled:opacity-30 transition-all">
+          <svg width="13" height="13" viewBox="0 0 12 12" fill="none"><path d="M9 5l2 2-2 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M11 7H4a3 3 0 010-6h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
         </button>
-
         <div className="flex-1" />
-
-        <span className="text-[11px] font-mono" style={{ color: "var(--text-muted)" }}>
-          {keys.length} keys
-        </span>
-        <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>
-          Del to remove
-        </span>
+        <span className="text-[12px] font-mono text-zinc-600">{keys.length} keys</span>
+        <span className="text-[11px] text-zinc-700">Del to remove</span>
       </div>
 
-      <div className="flex flex-1 min-h-0 gap-0">
+      <div className="flex flex-1 min-h-0 gap-4">
       {/* SVG Canvas */}
-      <div
-        className="flex-1 overflow-auto rounded-xl"
-        style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)" }}
-      >
+      <div className="flex-1 overflow-auto rounded-2xl bg-[#0a0a0f] border border-white/[0.04]">
         <svg
           ref={svgRef}
           width={svgWidth}

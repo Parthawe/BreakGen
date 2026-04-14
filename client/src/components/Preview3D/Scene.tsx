@@ -82,9 +82,9 @@ export function Scene() {
     <Canvas
       camera={{ position: [0, 5, 8], fov: 45 }}
       gl={{ antialias: true, alpha: false }}
-      style={{ background: "#09090b" }}
+      style={{ background: "#050507" }}
     >
-      <color attach="background" args={["#09090b"]} />
+      <color attach="background" args={["#050507"]} />
       <SceneLighting />
       <AutoTarget />
       <Environment preset="city" />
