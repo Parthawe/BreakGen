@@ -27,12 +27,11 @@ function ErrorBanner() {
   const clearError = useProjectStore((s) => s.clearError);
   if (!error) return null;
   return (
-    <div
-      className="fixed top-3 right-3 z-50 max-w-sm px-4 py-3 rounded-lg text-[12px] flex items-start gap-3 animate-[fadeIn_0.2s_ease]"
-      style={{ background: "rgba(239, 68, 68, 0.15)", border: "1px solid rgba(239, 68, 68, 0.3)", color: "var(--error)" }}
-    >
+    <div className="fixed top-4 right-4 z-50 max-w-sm px-4 py-3 rounded-xl text-[13px] flex items-start gap-3 bg-red-500/10 border border-red-500/20 text-red-400">
       <span className="flex-1">{error}</span>
-      <button onClick={clearError} className="shrink-0 opacity-60 hover:opacity-100">x</button>
+      <button onClick={clearError} className="text-red-400/50 hover:text-red-400 transition-colors">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M4 4l6 6M10 4l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
+      </button>
     </div>
   );
 }
@@ -40,20 +39,13 @@ function ErrorBanner() {
 function isStepComplete(step: Step, project: KeyboardProject | null): boolean {
   if (!project) return false;
   switch (step) {
-    case "template":
-      return project.layout.keys.length > 0;
-    case "switches":
-      return !!project.switch_profile.part_id;
-    case "layout":
-      return project.layout.keys.length > 0;
-    case "keycaps":
-      return project.keycap_assets.length > 0;
-    case "pcb":
-      return project.pcb.matrix_rows !== null && project.pcb.matrix_rows > 0;
-    case "export":
-      return project.status === "exported";
-    default:
-      return false;
+    case "template": return project.layout.keys.length > 0;
+    case "switches": return !!project.switch_profile.part_id;
+    case "layout": return project.layout.keys.length > 0;
+    case "keycaps": return project.keycap_assets.length > 0;
+    case "pcb": return project.pcb.matrix_rows !== null && project.pcb.matrix_rows > 0;
+    case "export": return project.status === "exported";
+    default: return false;
   }
 }
 
@@ -68,9 +60,8 @@ function App() {
   const logout = useAuthStore((s) => s.logout);
   const navigate = useNavigate();
   const hasProject = !!project;
-  const currentStepIndex = STEPS.findIndex((s) => s.id === currentStep);
+  const stepIdx = STEPS.findIndex((s) => s.id === currentStep);
 
-  // Load project from URL params
   useEffect(() => {
     if (projectId && (!project || project.project_id !== projectId)) {
       loadProject(projectId).then(() => setCurrentStep("layout"));
@@ -78,96 +69,50 @@ function App() {
   }, [projectId]);
 
   return (
-    <div className="flex h-screen w-screen" style={{ background: "var(--bg-root)" }}>
+    <div className="flex h-screen w-screen bg-[#08080a]">
       <ErrorBanner />
-      {/* Sidebar */}
-      <aside
-        className="w-[260px] flex flex-col shrink-0"
-        style={{ background: "var(--bg-surface)", borderRight: "1px solid var(--border-subtle)" }}
-      >
-        {/* Logo */}
-        <div className="px-5 pt-6 pb-5">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{ background: "var(--accent-muted)" }}>
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <rect x="1" y="3" width="6" height="4" rx="1" fill="var(--accent)" />
-                <rect x="9" y="3" width="6" height="4" rx="1" fill="var(--accent)" opacity="0.6" />
-                <rect x="1" y="9" width="14" height="4" rx="1" fill="var(--accent)" opacity="0.3" />
+
+      {/* ---- SIDEBAR ---- */}
+      <aside className="w-[256px] flex flex-col shrink-0 bg-[#0b0b0f] border-r border-white/[0.04]">
+        {/* Logo + back */}
+        <div className="h-14 flex items-center gap-2.5 px-5 border-b border-white/[0.04]">
+          <button onClick={() => navigate("/app")} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
+            <div className="w-7 h-7 rounded-md bg-indigo-500/10 flex items-center justify-center">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <rect x="1" y="3" width="6" height="4" rx="1" fill="#6366f1" />
+                <rect x="9" y="3" width="6" height="4" rx="1" fill="#6366f1" opacity="0.5" />
+                <rect x="1" y="9" width="14" height="4" rx="1" fill="#6366f1" opacity="0.25" />
               </svg>
             </div>
-            <div>
-              <h1 className="text-[15px] font-semibold leading-tight" style={{ color: "var(--text-primary)" }}>
-                BreakGen
-              </h1>
-              <p className="text-[11px] leading-tight mt-0.5" style={{ color: "var(--text-muted)" }}>
-                Intent Compiler
-              </p>
-            </div>
-          </div>
+            <span className="text-[14px] font-semibold text-white">BreakGen</span>
+          </button>
         </div>
 
         {/* Steps */}
-        <nav className="flex-1 px-3 space-y-0.5">
-          <div className="px-2 pb-2 pt-1">
-            <span className="text-[10px] font-medium uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
-              Workflow
-            </span>
+        <nav className="flex-1 px-3 pt-4 space-y-0.5 overflow-y-auto">
+          <div className="px-2 pb-3">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-600">Workflow</span>
           </div>
           {STEPS.map((step, i) => {
-            const isActive = currentStep === step.id;
-            const isDisabled = step.requiresProject && !hasProject;
-            const isComplete = isStepComplete(step.id, project);
+            const active = currentStep === step.id;
+            const disabled = step.requiresProject && !hasProject;
+            const complete = isStepComplete(step.id, project);
 
             return (
-              <button
-                key={step.id}
-                onClick={() => !isDisabled && setCurrentStep(step.id)}
-                disabled={isDisabled}
-                className="w-full text-left px-3 py-2.5 rounded-lg transition-all duration-150 flex items-center gap-3 group"
-                style={{
-                  background: isActive ? "var(--bg-hover)" : "transparent",
-                  opacity: isDisabled ? 0.35 : 1,
-                  cursor: isDisabled ? "not-allowed" : "pointer",
-                }}
-              >
-                <div
-                  className="w-6 h-6 rounded-md flex items-center justify-center text-[11px] font-medium shrink-0 transition-all duration-150"
-                  style={{
-                    background: isComplete
-                      ? "rgba(34, 197, 94, 0.15)"
-                      : isActive
-                        ? "var(--accent-muted)"
-                        : "var(--bg-elevated)",
-                    color: isComplete
-                      ? "var(--success)"
-                      : isActive
-                        ? "var(--accent-hover)"
-                        : "var(--text-muted)",
-                    border: `1px solid ${isComplete ? "rgba(34, 197, 94, 0.25)" : isActive ? "rgba(99, 102, 241, 0.3)" : "var(--border-subtle)"}`,
-                  }}
-                >
-                  {isComplete ? (
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                      <path d="M2.5 6L5 8.5L9.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  ) : (
-                    i + 1
-                  )}
+              <button key={step.id} onClick={() => !disabled && setCurrentStep(step.id)} disabled={disabled}
+                className={`w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 transition-all duration-150 ${
+                  active ? "bg-white/[0.05]" : "hover:bg-white/[0.02]"} ${disabled ? "opacity-30 cursor-not-allowed" : "cursor-pointer"}`}>
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-semibold shrink-0 border ${
+                  complete ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/25"
+                  : active ? "bg-indigo-500/15 text-indigo-400 border-indigo-500/25"
+                  : "bg-white/[0.03] text-zinc-600 border-white/[0.06]"}`}>
+                  {complete ? (
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                  ) : i + 1}
                 </div>
                 <div className="min-w-0">
-                  <div
-                    className="text-[13px] font-medium leading-tight"
-                    style={{ color: isActive ? "var(--text-primary)" : "var(--text-secondary)" }}
-                  >
-                    {step.label}
-                  </div>
-                  <div
-                    className="text-[11px] leading-tight mt-0.5 truncate"
-                    style={{ color: "var(--text-muted)" }}
-                  >
-                    {step.desc}
-                  </div>
+                  <div className={`text-[13px] font-medium leading-tight ${active ? "text-white" : "text-zinc-400"}`}>{step.label}</div>
+                  <div className="text-[11px] text-zinc-600 leading-tight mt-0.5 truncate">{step.desc}</div>
                 </div>
               </button>
             );
@@ -176,100 +121,59 @@ function App() {
 
         {/* User */}
         {user && (
-          <div className="px-4 py-3 mx-3 mb-2 flex items-center gap-2" style={{ borderTop: "1px solid var(--border-subtle)" }}>
-            <div
-              className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-medium shrink-0"
-              style={{ background: "var(--accent-muted)", color: "var(--accent)" }}
-            >
+          <div className="px-4 py-3 border-t border-white/[0.04] flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-full bg-indigo-500/15 flex items-center justify-center text-[11px] font-semibold text-indigo-400 shrink-0">
               {user.name.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-[12px] font-medium truncate" style={{ color: "var(--text-primary)" }}>{user.name}</div>
-              <div className="text-[10px] truncate" style={{ color: "var(--text-muted)" }}>{user.email}</div>
+              <div className="text-[12px] font-medium text-zinc-300 truncate">{user.name}</div>
             </div>
-            <button
-              onClick={() => { logout(); navigate("/"); }}
-              className="text-[10px] px-1.5 py-0.5 rounded shrink-0 transition-colors"
-              style={{ color: "var(--text-muted)", background: "var(--bg-elevated)" }}
-            >
-              Out
+            <button onClick={() => { logout(); navigate("/"); }}
+              className="text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 1h3v12H9M6 7h6M10 5l2 2-2 2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </button>
           </div>
         )}
 
         {/* Project info */}
         {hasProject && (
-          <div className="px-4 py-4 mx-3 mb-3 rounded-lg" style={{ background: "var(--bg-elevated)" }}>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[12px] font-medium truncate" style={{ color: "var(--text-primary)" }}>
-                {project.name}
-              </span>
-              <span
-                className="text-[10px] font-mono px-1.5 py-0.5 rounded"
-                style={{ background: "var(--bg-hover)", color: "var(--text-muted)" }}
-              >
-                r{project.revision}
-              </span>
+          <div className="px-3 pb-3">
+            <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[12px] font-medium text-zinc-300 truncate">{project.name}</span>
+                <span className="text-[10px] font-mono text-zinc-600">r{project.revision}</span>
+              </div>
+              <div className="flex items-center gap-2 text-[11px] text-zinc-600 mb-3">
+                <span>{project.layout.keys.length} keys</span>
+                <span>&middot;</span>
+                <span className={`capitalize ${project.status === "validated" ? "text-emerald-400" : project.status === "exported" ? "text-indigo-400" : ""}`}>
+                  {project.status}
+                </span>
+              </div>
+              {dirty && (
+                <button onClick={() => save()}
+                  className="w-full h-8 text-[12px] font-medium rounded-lg bg-indigo-500 text-white hover:bg-indigo-400 transition-colors">
+                  Save Changes
+                </button>
+              )}
             </div>
-            <div className="flex items-center gap-3 mb-3">
-              <span className="text-[11px]" style={{ color: "var(--text-tertiary)" }}>
-                {project.layout.keys.length} keys
-              </span>
-              <span className="w-1 h-1 rounded-full" style={{ background: "var(--border-default)" }} />
-              <span
-                className="text-[11px] capitalize"
-                style={{
-                  color: project.status === "validated"
-                    ? "var(--success)"
-                    : project.status === "exported"
-                      ? "var(--accent)"
-                      : "var(--text-tertiary)",
-                }}
-              >
-                {project.status}
-              </span>
-            </div>
-            {dirty && (
-              <button
-                onClick={() => save()}
-                className="w-full py-2 text-[12px] font-medium rounded-md transition-all duration-150"
-                style={{
-                  background: "var(--accent)",
-                  color: "#fff",
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "var(--accent-hover)")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "var(--accent)")}
-              >
-                Save Changes
-              </button>
-            )}
           </div>
         )}
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col overflow-hidden" style={{ background: "var(--bg-root)" }}>
+      {/* ---- MAIN ---- */}
+      <main className="flex-1 flex flex-col overflow-hidden">
         {/* Top bar */}
-        <div
-          className="h-11 flex items-center px-5 shrink-0"
-          style={{ borderBottom: "1px solid var(--border-subtle)" }}
-        >
-          <span className="text-[13px] font-medium" style={{ color: "var(--text-secondary)" }}>
-            {STEPS[currentStepIndex]?.label}
-          </span>
-          <span className="mx-2 text-[11px]" style={{ color: "var(--text-muted)" }}>/</span>
-          <span className="text-[13px]" style={{ color: "var(--text-muted)" }}>
-            {STEPS[currentStepIndex]?.desc}
-          </span>
-
+        <div className="h-11 flex items-center px-5 shrink-0 border-b border-white/[0.04]">
+          <span className="text-[13px] font-medium text-zinc-400">{STEPS[stepIdx]?.label}</span>
+          <span className="mx-2.5 text-zinc-700">/</span>
+          <span className="text-[13px] text-zinc-600">{STEPS[stepIdx]?.desc}</span>
           {currentStep === "layout" && hasProject && (
-            <span className="ml-auto text-[11px] font-mono" style={{ color: "var(--text-muted)" }}>
-              {project.layout.keys.length} keys
-            </span>
+            <span className="ml-auto text-[11px] font-mono text-zinc-600">{project.layout.keys.length} keys</span>
           )}
         </div>
 
-        {/* Step: Template */}
+        {/* Template */}
         {currentStep === "template" && (
           <div className="flex-1 overflow-auto">
             <TemplateSelector onSelect={() => {
@@ -280,86 +184,51 @@ function App() {
           </div>
         )}
 
-        {/* Step: Switches */}
+        {/* Switches */}
         {currentStep === "switches" && hasProject && (
           <div className="flex h-full">
-            <div
-              className="w-[340px] shrink-0 overflow-y-auto flex flex-col"
-              style={{ borderRight: "1px solid var(--border-subtle)" }}
-            >
+            <div className="w-[340px] shrink-0 overflow-y-auto border-r border-white/[0.04] flex flex-col">
               <SwitchExplorer />
               <div className="p-5 mt-auto">
-                <button
-                  onClick={() => setCurrentStep("layout")}
-                  className="w-full py-2.5 text-[13px] font-medium rounded-lg transition-all duration-150"
-                  style={{ background: "var(--accent)", color: "#fff" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--accent-hover)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "var(--accent)")}
-                >
+                <button onClick={() => setCurrentStep("layout")}
+                  className="w-full h-10 text-[13px] font-medium rounded-xl bg-white text-black hover:bg-zinc-200 transition-colors">
                   Continue to Design
                 </button>
               </div>
             </div>
-            <div className="flex-1">
-              <Scene />
-            </div>
+            <div className="flex-1"><Scene /></div>
           </div>
         )}
 
-        {/* Step: Layout */}
+        {/* Layout */}
         {currentStep === "layout" && hasProject && (
           <div className="flex h-full">
-            <div className="flex-1 p-4 overflow-hidden">
-              <LayoutEditor />
-            </div>
-            <div className="w-[44%] shrink-0" style={{ borderLeft: "1px solid var(--border-subtle)" }}>
-              <Scene />
-            </div>
+            <div className="flex-1 p-4 overflow-hidden"><LayoutEditor /></div>
+            <div className="w-[44%] shrink-0 border-l border-white/[0.04]"><Scene /></div>
           </div>
         )}
 
-        {/* Step: Keycaps */}
+        {/* Keycaps */}
         {currentStep === "keycaps" && hasProject && (
           <div className="flex h-full">
-            <div
-              className="w-[340px] shrink-0 overflow-y-auto"
-              style={{ borderRight: "1px solid var(--border-subtle)" }}
-            >
-              <KeycapStyler />
-            </div>
-            <div className="flex-1">
-              <Scene />
-            </div>
+            <div className="w-[340px] shrink-0 overflow-y-auto border-r border-white/[0.04]"><KeycapStyler /></div>
+            <div className="flex-1"><Scene /></div>
           </div>
         )}
 
-        {/* Step: PCB */}
+        {/* PCB */}
         {currentStep === "pcb" && hasProject && (
           <div className="flex h-full">
-            <div
-              className="w-[340px] shrink-0 overflow-y-auto"
-              style={{ borderRight: "1px solid var(--border-subtle)" }}
-            >
-              <PCBPanel />
-            </div>
-            <div className="flex-1">
-              <Scene />
-            </div>
+            <div className="w-[340px] shrink-0 overflow-y-auto border-r border-white/[0.04]"><PCBPanel /></div>
+            <div className="flex-1"><Scene /></div>
           </div>
         )}
 
-        {/* Step: Export */}
+        {/* Export */}
         {currentStep === "export" && hasProject && (
           <div className="flex h-full">
-            <div
-              className="w-[380px] shrink-0 overflow-y-auto"
-              style={{ borderRight: "1px solid var(--border-subtle)" }}
-            >
-              <ExportPanel />
-            </div>
-            <div className="flex-1">
-              <Scene />
-            </div>
+            <div className="w-[380px] shrink-0 overflow-y-auto border-r border-white/[0.04]"><ExportPanel /></div>
+            <div className="flex-1"><Scene /></div>
           </div>
         )}
       </main>

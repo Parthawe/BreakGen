@@ -19,124 +19,113 @@ function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     clearError();
-    const success = mode === "signup"
-      ? await signup(email, name, password)
-      : await login(email, password);
-    if (success) navigate("/app");
+    const ok = mode === "signup" ? await signup(email, name, password) : await login(email, password);
+    if (ok) navigate("/app");
   };
 
   const isSignup = mode === "signup";
 
   return (
-    <div className="min-h-screen flex" style={{ background: "var(--bg-root)" }}>
-      {/* Left — Visual */}
-      <div className="hidden md:flex flex-1 items-center justify-center relative overflow-hidden"
-        style={{ background: "var(--bg-surface)", borderRight: "1px solid var(--border-subtle)" }}>
-        <div className="absolute inset-0">
-          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[400px] h-[400px] rounded-full opacity-[0.06]"
-            style={{ background: "radial-gradient(circle, var(--accent) 0%, transparent 70%)" }} />
-        </div>
-        <div className="relative text-center px-12">
-          <div className="flex flex-col items-center gap-3 mb-8">
-            {/* Product silhouettes */}
+    <div className="min-h-screen bg-[#08080a] flex">
+      {/* Left panel */}
+      <div className="hidden lg:flex flex-1 items-center justify-center relative overflow-hidden bg-[#0a0a0f]"
+        style={{ borderRight: "1px solid rgba(255,255,255,0.04)" }}>
+        <div className="absolute inset-0 opacity-[0.03]"
+          style={{ backgroundImage: "linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full opacity-[0.06]"
+          style={{ background: "radial-gradient(circle, #6366f1 0%, transparent 70%)" }} />
+
+        <div className="relative text-center px-16 max-w-md">
+          <div className="flex flex-col items-center gap-4 mb-10">
             {[
-              { color: "#6366f1", rows: [[1,1,1,1,1,1,1,1,1,1],[1.5,1,1,1,1,1,1,1,1,1.5]] },
-              { color: "#22c55e", rows: [[1,1,1,1],[1,1,1,1]] },
-              { color: "#f59e0b", rows: [[1,1,1,1,1]] },
-            ].map((p, pi) => (
-              <div key={pi} className="flex flex-col items-center" style={{ gap: "2px", opacity: 0.4 + pi * 0.1 }}>
-                {p.rows.map((row, ri) => (
-                  <div key={ri} className="flex" style={{ gap: "2px" }}>
+              { c: "#6366f1", r: [[1,1,1,1,1,1,1,1,1,1,1,1,1],[1.5,1,1,1,1,1,1,1,1,1,1,1,1.5],[2.25,1,1,1,1,1,1,1,1,1,1,2.75]] },
+              { c: "#22c55e", r: [[1,1,1],[1,1,1],[1,1,1]] },
+              { c: "#f59e0b", r: [[1,1,1,1,1]] },
+            ].map((p, i) => (
+              <div key={i} className="flex flex-col items-center" style={{ gap: "2.5px" }}>
+                {p.r.map((row, ri) => (
+                  <div key={ri} className="flex" style={{ gap: "2.5px" }}>
                     {row.map((w, ci) => (
-                      <div key={ci} style={{ width: `${w * 8 - 2}px`, height: "6px", background: p.color, borderRadius: "1px", opacity: 0.5 }} />
+                      <div key={ci} style={{ width: `${w * 9 - 2.5}px`, height: "7px", background: p.c, borderRadius: "1.5px", opacity: 0.35 + i * 0.1 }} />
                     ))}
                   </div>
                 ))}
               </div>
             ))}
           </div>
-          <h2 className="text-[18px] font-semibold mb-2" style={{ color: "var(--text-primary)" }}>
-            Intent compiler for hardware
-          </h2>
-          <p className="text-[12px] leading-relaxed" style={{ color: "var(--text-muted)" }}>
-            Design keyboards, macro pads, stream decks, and MIDI controllers.
-            Export fabrication-ready files.
+          <h2 className="text-[22px] font-bold text-white mb-3">Intent compiler for hardware</h2>
+          <p className="text-[14px] leading-[1.7] text-zinc-500">
+            Keyboards, macro pads, stream decks, MIDI controllers.
+            Design visually, export fabrication files.
           </p>
         </div>
       </div>
 
-      {/* Right — Form */}
-      <div className="flex-1 flex items-center justify-center px-6">
-        <div className="w-full max-w-sm">
-          <Link to="/" className="inline-flex items-center gap-2 mb-10">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "var(--accent-muted)" }}>
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <rect x="1" y="3" width="6" height="4" rx="1" fill="var(--accent)" />
-                <rect x="9" y="3" width="6" height="4" rx="1" fill="var(--accent)" opacity="0.6" />
-                <rect x="1" y="9" width="14" height="4" rx="1" fill="var(--accent)" opacity="0.3" />
+      {/* Right panel — form */}
+      <div className="flex-1 flex items-center justify-center px-8">
+        <div className="w-full max-w-[380px]">
+          <Link to="/" className="inline-flex items-center gap-2.5 mb-12">
+            <div className="w-9 h-9 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+              <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
+                <rect x="1" y="3" width="6" height="4" rx="1" fill="#6366f1" />
+                <rect x="9" y="3" width="6" height="4" rx="1" fill="#6366f1" opacity="0.5" />
+                <rect x="1" y="9" width="14" height="4" rx="1" fill="#6366f1" opacity="0.25" />
               </svg>
             </div>
-            <span className="text-[15px] font-semibold" style={{ color: "var(--text-primary)" }}>BreakGen</span>
+            <span className="text-[16px] font-semibold text-white">BreakGen</span>
           </Link>
 
-          <h2 className="text-[20px] font-semibold mb-1" style={{ color: "var(--text-primary)" }}>
+          <h1 className="text-[26px] font-bold text-white mb-2">
             {isSignup ? "Create your account" : "Welcome back"}
-          </h2>
-          <p className="text-[13px] mb-8" style={{ color: "var(--text-muted)" }}>
+          </h1>
+          <p className="text-[14px] text-zinc-500 mb-10">
             {isSignup ? "Start designing hardware in minutes." : "Sign in to continue building."}
           </p>
 
           {error && (
-            <div className="text-[12px] mb-5 px-4 py-3 rounded-lg"
-              style={{ background: "rgba(239,68,68,0.08)", color: "var(--error)", border: "1px solid rgba(239,68,68,0.15)" }}>
+            <div className="text-[13px] mb-6 px-4 py-3 rounded-xl bg-red-500/8 text-red-400 border border-red-500/15">
               {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {isSignup && (
-              <FormField label="Name">
+              <Field label="Name">
                 <input type="text" value={name} onChange={(e) => setName(e.target.value)} required placeholder="Your name"
-                  className="w-full rounded-lg px-4 py-2.5 text-[13px] focus:outline-none"
-                  style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)", color: "var(--text-primary)" }} />
-              </FormField>
+                  className="w-full h-11 rounded-xl px-4 text-[14px] bg-white/[0.04] border border-white/[0.08] text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50 transition-colors" />
+              </Field>
             )}
-            <FormField label="Email">
+            <Field label="Email">
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="you@example.com"
-                className="w-full rounded-lg px-4 py-2.5 text-[13px] focus:outline-none"
-                style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)", color: "var(--text-primary)" }} />
-            </FormField>
-            <FormField label="Password">
+                className="w-full h-11 rounded-xl px-4 text-[14px] bg-white/[0.04] border border-white/[0.08] text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50 transition-colors" />
+            </Field>
+            <Field label="Password">
               <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6}
-                placeholder={isSignup ? "6+ characters" : "Your password"}
-                className="w-full rounded-lg px-4 py-2.5 text-[13px] focus:outline-none"
-                style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)", color: "var(--text-primary)" }} />
-            </FormField>
+                placeholder={isSignup ? "6+ characters" : "Enter password"}
+                className="w-full h-11 rounded-xl px-4 text-[14px] bg-white/[0.04] border border-white/[0.08] text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50 transition-colors" />
+            </Field>
             <button type="submit" disabled={loading}
-              className="w-full py-2.5 text-[13px] font-medium rounded-lg transition-all"
-              style={{ background: loading ? "var(--bg-elevated)" : "var(--accent)", color: loading ? "var(--text-muted)" : "#fff" }}>
+              className="w-full h-11 text-[14px] font-medium rounded-xl transition-all bg-white text-black hover:bg-zinc-200 disabled:bg-zinc-800 disabled:text-zinc-500">
               {loading ? "..." : isSignup ? "Create Account" : "Sign In"}
             </button>
           </form>
 
-          <div className="text-center mt-6">
-            <span className="text-[13px]" style={{ color: "var(--text-muted)" }}>
-              {isSignup ? "Already have an account? " : "Don't have an account? "}
-            </span>
-            <Link to={isSignup ? "/login" : "/signup"} className="text-[13px] font-medium" style={{ color: "var(--accent)" }}>
+          <p className="text-center mt-8 text-[14px] text-zinc-500">
+            {isSignup ? "Already have an account? " : "Don't have an account? "}
+            <Link to={isSignup ? "/login" : "/signup"} className="text-white font-medium hover:text-indigo-400 transition-colors">
               {isSignup ? "Sign in" : "Sign up"}
             </Link>
-          </div>
+          </p>
         </div>
       </div>
     </div>
   );
 }
 
-function FormField({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="text-[11px] font-medium uppercase tracking-wider block mb-1.5" style={{ color: "var(--text-muted)" }}>{label}</label>
+      <label className="text-[12px] font-medium text-zinc-400 block mb-2">{label}</label>
       {children}
     </div>
   );
