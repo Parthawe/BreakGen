@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from server.api import auth, export, geometry, pcb, projects, switches, templates
+from server.api import auth, export, geometry, pcb, platform, projects, records, switches, templates
 from server.config import SERVER_DIR
 from server.db.database import engine
 from server.db.models import Base
@@ -27,7 +27,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="BreakGen",
-    description="Keyboard intent compiler — API",
+    description="Creative and engineering platform for custom electronic products — API",
     version="0.1.0",
     lifespan=lifespan,
 )
@@ -49,6 +49,8 @@ app.include_router(switches.router)
 app.include_router(geometry.router)
 app.include_router(pcb.router)
 app.include_router(export.router)
+app.include_router(records.router)
+app.include_router(platform.router)
 
 # AI generation router — isolated so missing httpx/meshy deps don't crash the server
 try:

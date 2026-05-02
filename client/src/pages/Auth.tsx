@@ -27,38 +27,40 @@ function AuthForm({ mode }: { mode: "login" | "signup" }) {
   useEffect(() => { document.title = `${isSignup ? "Sign Up" : "Log In"} — BreakGen`; }, [isSignup]);
 
   return (
-    <div className="min-h-screen bg-[#08080a] flex">
+    <div className="app-shell min-h-screen flex">
       {/* Left panel */}
       <div className="hidden lg:flex flex-1 items-center justify-center relative overflow-hidden bg-[#0a0a0f]"
         style={{ borderRight: "1px solid rgba(255,255,255,0.04)" }}>
         <div className="absolute inset-0 opacity-[0.03]"
           style={{ backgroundImage: "linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full opacity-[0.06]"
-          style={{ background: "radial-gradient(circle, #818cf8 0%, transparent 70%)" }} />
+        <div className="absolute left-[8%] top-[14%] h-[22rem] w-[22rem] rounded-full opacity-[0.14] blur-3xl"
+          style={{ background: "radial-gradient(circle, rgba(139,124,255,0.9) 0%, rgba(139,124,255,0.1) 52%, transparent 74%)" }} />
+        <div className="absolute bottom-[10%] right-[6%] h-[18rem] w-[18rem] rounded-full opacity-[0.12] blur-3xl"
+          style={{ background: "radial-gradient(circle, rgba(122,219,255,0.72) 0%, rgba(122,219,255,0.08) 52%, transparent 72%)" }} />
 
-        <div className="relative text-center px-16 max-w-md">
-          <div className="flex flex-col items-center gap-4 mb-10">
+        <div className="relative max-w-[520px] px-16">
+          <div className="mb-6 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#a39bff]">
+            Creative 3D environment
+          </div>
+          <h2 className="text-[42px] font-semibold leading-[0.96] tracking-[-0.05em] text-white mb-5">
+            Sign in to keep building the object, not the toolchain.
+          </h2>
+          <p className="text-[15px] leading-[1.9] text-zinc-500 max-w-[420px]">
+            BreakGen keeps layout, 3D assets, electronics, validation, and export history inside one project record for programmable hardware.
+          </p>
+
+          <div className="mt-10 grid gap-4">
             {[
-              { c: "#818cf8", r: [[1,1,1,1,1,1,1,1,1,1,1,1,1],[1.5,1,1,1,1,1,1,1,1,1,1,1,1.5],[2.25,1,1,1,1,1,1,1,1,1,1,2.75]] },
-              { c: "#4ade80", r: [[1,1,1,1],[1,1,1,1],[1,1,1,1]] },
-              { c: "#fbbf24", r: [[1,1,1,1,1],[1,1,1,1,1]] },
-            ].map((p, i) => (
-              <div key={i} className="flex flex-col items-center" style={{ gap: "3px" }}>
-                {p.r.map((row, ri) => (
-                  <div key={ri} className="flex" style={{ gap: "3px" }}>
-                    {row.map((w, ci) => (
-                      <div key={ci} style={{ width: `${w * 12 - 3}px`, height: "9px", background: p.c, borderRadius: "2px", opacity: 0.5 + i * 0.08 }} />
-                    ))}
-                  </div>
-                ))}
+              { title: "One environment", copy: "Creative direction, 2D layout, 3D preview, and manufacturing outputs stay connected." },
+              { title: "Five live families", copy: "Keyboards, macro pads, stream decks, MIDI controllers, and gamepads now share one platform backbone." },
+              { title: "Real outputs", copy: "Validation, plate geometry, firmware metadata, and export bundles are part of the product lifecycle." },
+            ].map((item) => (
+              <div key={item.title} className="glass glass-soft rounded-[22px] px-5 py-4">
+                <div className="text-[13px] font-medium text-white mb-1.5">{item.title}</div>
+                <div className="text-[13px] leading-[1.75] text-zinc-500">{item.copy}</div>
               </div>
             ))}
           </div>
-          <h2 className="text-[22px] font-bold text-white mb-3">Intent compiler for hardware</h2>
-          <p className="text-[14px] leading-[1.7] text-zinc-500">
-            Keyboards, macro pads, stream decks, MIDI controllers.
-            Design visually, export fabrication files.
-          </p>
         </div>
       </div>
 
@@ -66,7 +68,7 @@ function AuthForm({ mode }: { mode: "login" | "signup" }) {
       <div className="flex-1 flex items-center justify-center px-8">
         <div className="w-full max-w-[380px]">
           <Link to="/" className="inline-flex items-center gap-2.5 mb-12">
-            <div className="w-9 h-9 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+            <div className="glass-chip w-9 h-9 rounded-lg flex items-center justify-center">
               <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
                 <rect x="1" y="3" width="6" height="4" rx="1" fill="#818cf8" />
                 <rect x="9" y="3" width="6" height="4" rx="1" fill="#818cf8" opacity="0.5" />
@@ -84,7 +86,7 @@ function AuthForm({ mode }: { mode: "login" | "signup" }) {
           </p>
 
           {error && (
-            <div className="text-[13px] mb-6 px-4 py-3 rounded-xl bg-red-500/8 text-red-400 border border-red-500/15">
+            <div className="glass-danger text-[13px] mb-6 px-4 py-3 rounded-xl text-red-300">
               {error}
             </div>
           )}
@@ -93,20 +95,20 @@ function AuthForm({ mode }: { mode: "login" | "signup" }) {
             {isSignup && (
               <Field label="Name">
                 <input type="text" value={name} onChange={(e) => setName(e.target.value)} required placeholder="Your name"
-                  className="w-full h-11 rounded-xl px-4 text-[14px] bg-white/[0.04] border border-white/[0.08] text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50 transition-colors" />
+                  className="glass-input w-full h-11 rounded-xl px-4 text-[14px] text-white placeholder:text-zinc-600 focus:outline-none transition-colors" />
               </Field>
             )}
             <Field label="Email">
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="you@example.com"
-                className="w-full h-11 rounded-xl px-4 text-[14px] bg-white/[0.04] border border-white/[0.08] text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50 transition-colors" />
+                className="glass-input w-full h-11 rounded-xl px-4 text-[14px] text-white placeholder:text-zinc-600 focus:outline-none transition-colors" />
             </Field>
             <Field label="Password">
               <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6}
                 placeholder={isSignup ? "6+ characters" : "Enter password"}
-                className="w-full h-11 rounded-xl px-4 text-[14px] bg-white/[0.04] border border-white/[0.08] text-white placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500/50 transition-colors" />
+                className="glass-input w-full h-11 rounded-xl px-4 text-[14px] text-white placeholder:text-zinc-600 focus:outline-none transition-colors" />
             </Field>
             <button type="submit" disabled={loading}
-              className="w-full h-11 text-[14px] font-medium rounded-xl transition-all bg-white text-black hover:bg-zinc-200 disabled:bg-zinc-800 disabled:text-zinc-500">
+              className="glass-button-primary w-full h-11 text-[14px] font-medium rounded-xl transition-all disabled:opacity-40">
               {loading ? "..." : isSignup ? "Create Account" : "Sign In"}
             </button>
           </form>

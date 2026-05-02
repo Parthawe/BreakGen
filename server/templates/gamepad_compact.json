@@ -1,0 +1,20 @@
+{
+  "template_id": "gamepad_compact",
+  "name": "Compact Gamepad",
+  "layout": {
+    "unit_pitch_mm": 19.05,
+    "elements": [
+      { "id": "dpad_up", "element_type": "button", "label": "Up", "footprint_id": "tact_button", "x_mm": 19.05, "y_mm": 0, "w_mm": 19.05, "h_mm": 19.05 },
+      { "id": "dpad_left", "element_type": "button", "label": "Left", "footprint_id": "tact_button", "x_mm": 0, "y_mm": 19.05, "w_mm": 19.05, "h_mm": 19.05 },
+      { "id": "dpad_right", "element_type": "button", "label": "Right", "footprint_id": "tact_button", "x_mm": 38.1, "y_mm": 19.05, "w_mm": 19.05, "h_mm": 19.05 },
+      { "id": "dpad_down", "element_type": "button", "label": "Down", "footprint_id": "tact_button", "x_mm": 19.05, "y_mm": 38.1, "w_mm": 19.05, "h_mm": 19.05 },
+      { "id": "face_y", "element_type": "button", "label": "Y", "footprint_id": "tact_button", "x_mm": 95.25, "y_mm": 0, "w_mm": 19.05, "h_mm": 19.05 },
+      { "id": "face_x", "element_type": "button", "label": "X", "footprint_id": "tact_button", "x_mm": 76.2, "y_mm": 19.05, "w_mm": 19.05, "h_mm": 19.05 },
+      { "id": "face_b", "element_type": "button", "label": "B", "footprint_id": "tact_button", "x_mm": 114.3, "y_mm": 19.05, "w_mm": 19.05, "h_mm": 19.05 },
+      { "id": "face_a", "element_type": "button", "label": "A", "footprint_id": "tact_button", "x_mm": 95.25, "y_mm": 38.1, "w_mm": 19.05, "h_mm": 19.05 },
+      { "id": "shoulder_l", "element_type": "button", "label": "L1", "footprint_id": "tact_button", "x_mm": 9.525, "y_mm": -20.955, "w_mm": 28.575, "h_mm": 14.2875 },
+      { "id": "shoulder_r", "element_type": "button", "label": "R1", "footprint_id": "tact_button", "x_mm": 95.25, "y_mm": -20.955, "w_mm": 28.575, "h_mm": 14.2875 },
+      { "id": "thumb_stick", "element_type": "joystick", "label": "Stick", "footprint_id": "thumb_joystick", "x_mm": 57.15, "y_mm": 47.625, "w_mm": 24.0, "h_mm": 24.0 }
+    ]
+  }
+}

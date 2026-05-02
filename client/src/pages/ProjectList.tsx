@@ -9,6 +9,7 @@ const FAMILY_META: Record<string, { color: string; label: string; icon: number[]
   macropad: { color: "#4ade80", label: "Macro Pad", icon: [[1,1,1],[1,1,1],[1,1,1]] },
   streamdeck: { color: "#fbbf24", label: "Stream Deck", icon: [[1,1,1,1,1],[1,1,1,1,1]] },
   midi: { color: "#f472b6", label: "MIDI", icon: [[0,1,0,1,0],[1,1,1,1,1,1]] },
+  gamepad: { color: "#38bdf8", label: "Gamepad", icon: [[0,1,0,1,0],[1,1,1,1,1],[0,1,0,1,0]] },
 };
 
 function MiniSil({ rows, color }: { rows: number[][]; color: string }) {
@@ -44,12 +45,12 @@ export function ProjectList() {
   };
 
   return (
-    <div className="min-h-screen bg-[#08080a]">
+    <div className="app-shell min-h-screen">
       {/* Nav */}
-      <nav className="border-b border-white/[0.04]">
+      <nav className="glass-toolbar glass-divider border-b">
         <div className="max-w-5xl mx-auto flex items-center justify-between h-14 px-6">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+            <div className="glass-chip w-8 h-8 rounded-lg flex items-center justify-center">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <rect x="1" y="3" width="6" height="4" rx="1" fill="#818cf8" />
                 <rect x="9" y="3" width="6" height="4" rx="1" fill="#818cf8" opacity="0.5" />
@@ -61,7 +62,7 @@ export function ProjectList() {
           <div className="flex items-center gap-3">
             {user && <span className="text-[13px] text-zinc-500">{user.name}</span>}
             <button onClick={() => { logout(); navigate("/"); }}
-              className="h-8 px-3 text-[12px] font-medium text-zinc-400 rounded-lg border border-white/[0.06] hover:border-white/[0.12] hover:text-white transition-all">
+              className="glass-chip h-8 px-3 text-[12px] font-medium text-zinc-400 rounded-lg hover:text-white transition-all">
               Log out
             </button>
           </div>
@@ -76,7 +77,7 @@ export function ProjectList() {
             <p className="text-[14px] text-zinc-500">Design, compile, and export custom hardware.</p>
           </div>
           <button onClick={() => navigate("/app/new")}
-            className="h-10 px-5 text-[13px] font-medium rounded-xl bg-white text-black hover:bg-zinc-200 transition-colors flex items-center gap-2">
+            className="glass-button-primary h-10 px-5 text-[13px] font-medium rounded-xl transition-colors flex items-center gap-2">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
@@ -89,8 +90,8 @@ export function ProjectList() {
             <div className="w-6 h-6 border-2 rounded-full animate-spin border-zinc-700 border-t-indigo-500" />
           </div>
         ) : projects.length === 0 ? (
-          <div className="rounded-2xl p-16 text-center bg-[#0f0f12] border border-white/[0.04]">
-            <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 mx-auto mb-5 flex items-center justify-center">
+          <div className="glass glass-strong rounded-2xl p-16 text-center">
+            <div className="glass-chip w-16 h-16 rounded-2xl mx-auto mb-5 flex items-center justify-center">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#818cf8" strokeWidth="1.5" strokeLinecap="round">
                 <rect x="2" y="6" width="20" height="12" rx="2" /><path d="M6 10h1M9 10h1M12 10h1M15 10h1M18 10h1M7 14h10" />
               </svg>
@@ -100,7 +101,7 @@ export function ProjectList() {
               Create your first design — pick a product family, choose a template, and start building.
             </p>
             <button onClick={() => navigate("/app/new")}
-              className="h-11 px-7 text-[14px] font-medium rounded-xl bg-white text-black hover:bg-zinc-200 transition-colors">
+              className="glass-button-primary h-11 px-7 text-[14px] font-medium rounded-xl transition-colors">
               Create Your First Project
             </button>
           </div>
@@ -110,7 +111,7 @@ export function ProjectList() {
               const fm = FAMILY_META[p.product_family] ?? { color: "#71717a", label: p.product_family };
               return (
                 <button key={p.project_id} onClick={() => navigate(`/app/project/${p.project_id}`)}
-                  className="text-left rounded-2xl p-6 transition-all duration-200 group bg-[#0f0f12] border border-white/[0.04] hover:border-white/[0.1] hover:-translate-y-0.5">
+                  className="glass glass-soft text-left rounded-2xl p-6 transition-all duration-200 group hover:border-white/[0.12] hover:-translate-y-0.5">
                   <div className="flex items-start gap-4 mb-3">
                     {/* Mini silhouette */}
                     <div className="w-12 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5" style={{ background: fm.color + "0a" }}>
@@ -121,7 +122,7 @@ export function ProjectList() {
                       <div className="flex items-center gap-2">
                         <span className="text-[11px] font-medium" style={{ color: fm.color }}>{fm.label}</span>
                         <span className="text-zinc-700">&middot;</span>
-                        <span className="text-[11px] font-mono text-zinc-600">{p.key_count} keys</span>
+                        <span className="text-[11px] font-mono text-zinc-600">{p.key_count} controls</span>
                       </div>
                     </div>
                   </div>
@@ -135,7 +136,7 @@ export function ProjectList() {
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-medium capitalize px-2 py-0.5 rounded-full"
+                      <span className="glass-badge text-[10px] font-medium capitalize px-2 py-0.5 rounded-full"
                         style={{ color: p.status === "exported" ? "#818cf8" : p.status === "validated" ? "#22c55e" : "#52525b",
                           background: p.status === "exported" ? "#818cf815" : p.status === "validated" ? "#22c55e15" : "#52525b10" }}>
                         {p.status}

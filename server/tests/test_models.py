@@ -5,6 +5,7 @@ from pathlib import Path
 
 from server.models.project import (
     KeyboardProject,
+    ProductDomain,
     KeySpec,
     LayoutSpec,
     ProjectStatus,
@@ -23,6 +24,8 @@ def test_keyboard_project_defaults():
     assert p.revision == 1
     assert p.status == ProjectStatus.DRAFT
     assert p.layout.keys == []
+    assert p.layout.elements == []
+    assert p.product_domain == ProductDomain.CONTROL_SURFACE
     assert p.switch_profile.family == SwitchFamily.MX
     assert p.pcb.matrix_rows is None
 
@@ -46,6 +49,41 @@ def test_key_spec_defaults():
     assert k.col is None
 
 
+def test_layout_compatibility_generates_elements_from_keys():
+    layout = LayoutSpec(
+        keys=[KeySpec(id="k1", label="A", x_u=0, y_u=0)],
+    )
+    assert len(layout.elements) == 1
+    assert layout.elements[0].element_type.value == "key_switch"
+
+
+def test_layout_compatibility_excludes_encoders_from_legacy_keys():
+    layout = LayoutSpec(
+        elements=[
+            {
+                "id": "enc_1",
+                "element_type": "encoder",
+                "label": "E1",
+                "x_mm": 0,
+                "y_mm": 0,
+                "w_mm": 19.05,
+                "h_mm": 19.05,
+            },
+            {
+                "id": "k1",
+                "element_type": "key_switch",
+                "label": "A",
+                "x_mm": 19.05,
+                "y_mm": 0,
+                "w_mm": 19.05,
+                "h_mm": 19.05,
+            },
+        ],
+    )
+    assert len(layout.elements) == 2
+    assert [key.id for key in layout.keys] == ["k1"]
+
+
 def test_template_key_counts_match():
     """Every template's actual key count must match SUPPORTED_TEMPLATES declaration."""
     for tmpl in SUPPORTED_TEMPLATES:
@@ -54,8 +92,9 @@ def test_template_key_counts_match():
         with open(path) as f:
             data = json.load(f)
         layout = LayoutSpec(**data["layout"])
-        assert len(layout.keys) == tmpl.key_count, (
-            f"{tmpl.template_id}: declared {tmpl.key_count}, actual {len(layout.keys)}"
+        actual_count = len(layout.elements) if layout.elements else len(layout.keys)
+        assert actual_count == tmpl.key_count, (
+            f"{tmpl.template_id}: declared {tmpl.key_count}, actual {actual_count}"
         )
 
 
@@ -65,7 +104,8 @@ def test_template_no_duplicate_key_ids():
         path = TEMPLATES_DIR / f"{tmpl.template_id}.json"
         with open(path) as f:
             data = json.load(f)
-        ids = [k["id"] for k in data["layout"]["keys"]]
+        raw_items = data["layout"].get("elements") or data["layout"].get("keys") or []
+        ids = [k["id"] for k in raw_items]
         assert len(ids) == len(set(ids)), f"{tmpl.template_id} has duplicate key IDs"
 
 

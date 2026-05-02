@@ -1,16 +1,22 @@
-import { StrictMode, useEffect } from "react";
+import { StrictMode, Suspense, lazy, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import App from "./App";
 import { Landing } from "./pages/Landing";
 import { Login, Signup } from "./pages/Auth";
 import { ProjectList } from "./pages/ProjectList";
+import { PUBLIC_DEMO_PATH, PUBLIC_SITE, ROUTER_BASENAME } from "./lib/runtime";
 import { useAuthStore } from "./stores/authStore";
 import "./index.css";
+
+const LazyPublicDemo = lazy(async () => ({
+  default: (await import("./pages/PublicDemo")).PublicDemo,
+}));
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const user = useAuthStore((s) => s.user);
   const token = useAuthStore((s) => s.token);
+  if (PUBLIC_SITE) return <Navigate to={PUBLIC_DEMO_PATH} replace />;
   if (!user && !token) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
@@ -18,19 +24,37 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 function Root() {
   const loadSession = useAuthStore((s) => s.loadSession);
   useEffect(() => {
-    loadSession();
+    if (!PUBLIC_SITE) {
+      loadSession();
+    }
   }, [loadSession]);
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/app" element={<AuthGuard><ProjectList /></AuthGuard>} />
-        <Route path="/app/new" element={<AuthGuard><App /></AuthGuard>} />
-        <Route path="/app/project/:projectId" element={<AuthGuard><App /></AuthGuard>} />
-      </Routes>
+    <BrowserRouter basename={ROUTER_BASENAME}>
+      <Suspense fallback={<div className="min-h-screen bg-[#050507]" />}>
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path={PUBLIC_DEMO_PATH} element={<LazyPublicDemo />} />
+          {PUBLIC_SITE ? (
+            <>
+              <Route path="/login" element={<Navigate to={PUBLIC_DEMO_PATH} replace />} />
+              <Route path="/signup" element={<Navigate to={PUBLIC_DEMO_PATH} replace />} />
+              <Route path="/app" element={<Navigate to={PUBLIC_DEMO_PATH} replace />} />
+              <Route path="/app/new" element={<Navigate to={PUBLIC_DEMO_PATH} replace />} />
+              <Route path="/app/project/:projectId" element={<Navigate to={PUBLIC_DEMO_PATH} replace />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </>
+          ) : (
+            <>
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/app" element={<AuthGuard><ProjectList /></AuthGuard>} />
+              <Route path="/app/new" element={<AuthGuard><App /></AuthGuard>} />
+              <Route path="/app/project/:projectId" element={<AuthGuard><App /></AuthGuard>} />
+            </>
+          )}
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

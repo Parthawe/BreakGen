@@ -72,8 +72,8 @@
       {"id": "k_lalt",   "label": "Alt",   "x_u": 2.5,   "y_u": 4, "w_u": 1.25},
       {"id": "k_space",  "label": "Space", "x_u": 3.75,  "y_u": 4, "w_u": 6.25, "stabilizer": "cherry"},
       {"id": "k_ralt",   "label": "Alt",   "x_u": 10,    "y_u": 4, "w_u": 1.25},
-      {"id": "k_fn",     "label": "Fn",    "x_u": 11.25, "y_u": 4, "w_u": 1.25},
-      {"id": "k_rctrl",  "label": "Ctrl",  "x_u": 12.5,  "y_u": 4, "w_u": 1.25},
+      {"id": "k_fn",     "label": "Fn",    "x_u": 11.25, "y_u": 4, "w_u": 1},
+      {"id": "k_rctrl",  "label": "Ctrl",  "x_u": 12.25, "y_u": 4, "w_u": 1},
       {"id": "k_left",   "label": "Left",  "x_u": 13.25, "y_u": 4, "w_u": 1},
       {"id": "k_down",   "label": "Down",  "x_u": 14.25, "y_u": 4, "w_u": 1},
       {"id": "k_right",  "label": "Right", "x_u": 15.25, "y_u": 4, "w_u": 1}

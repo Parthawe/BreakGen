@@ -2,35 +2,44 @@ import { useEffect, useRef, useMemo, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Environment, ContactShadows } from "@react-three/drei";
 import { KeyboardPreview } from "./KeyboardPreview";
+import { getEditableElements } from "../../lib/projectCompat";
 import { useProjectStore } from "../../stores/projectStore";
 
-const UNIT_MM = 19.05;
 const S = 0.1;
+
+function useSceneBounds() {
+  const layout = useProjectStore((s) => s.project?.layout ?? null);
+
+  return useMemo(() => {
+    const elements = layout ? getEditableElements(layout) : [];
+    if (elements.length === 0) {
+      return { centerX: 0, centerZ: 0, shadowScale: 25 };
+    }
+    const minX = Math.min(...elements.map((element) => element.x_mm));
+    const minY = Math.min(...elements.map((element) => element.y_mm));
+    const maxX = Math.max(...elements.map((element) => element.x_mm + element.w_mm));
+    const maxY = Math.max(...elements.map((element) => element.y_mm + element.h_mm));
+    const width = (maxX - minX) * S;
+    const height = (maxY - minY) * S;
+    return {
+      centerX: ((minX + maxX) / 2) * S,
+      centerZ: ((minY + maxY) / 2) * S,
+      shadowScale: Math.max(18, Math.max(width, height) * 1.35),
+    };
+  }, [layout]);
+}
 
 function AutoTarget() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const controlsRef = useRef<any>(null);
-  const keys = useProjectStore((s) => s.project?.layout.keys ?? []);
-
-  const center = useMemo(() => {
-    if (keys.length === 0) return [0, 0, 0] as const;
-    const minX = Math.min(...keys.map((k) => k.x_u));
-    const minY = Math.min(...keys.map((k) => k.y_u));
-    const maxX = Math.max(...keys.map((k) => k.x_u + k.w_u));
-    const maxY = Math.max(...keys.map((k) => k.y_u + (k.h_u ?? 1)));
-    return [
-      ((minX + maxX) / 2) * UNIT_MM * S,
-      0,
-      ((minY + maxY) / 2) * UNIT_MM * S,
-    ] as const;
-  }, [keys.length]);
+  const bounds = useSceneBounds();
 
   useEffect(() => {
     if (controlsRef.current) {
-      controlsRef.current.target.set(center[0], center[1], center[2]);
+      controlsRef.current.target.set(bounds.centerX, 0, bounds.centerZ);
       controlsRef.current.update();
     }
-  }, [center]);
+  }, [bounds.centerX, bounds.centerZ]);
 
   return (
     <OrbitControls
@@ -46,29 +55,18 @@ function AutoTarget() {
 }
 
 function SceneLighting() {
-  const keys = useProjectStore((s) => s.project?.layout.keys ?? []);
-  const center = useMemo(() => {
-    if (keys.length === 0) return { x: 0, z: 0 };
-    const minX = Math.min(...keys.map((k) => k.x_u));
-    const maxX = Math.max(...keys.map((k) => k.x_u + k.w_u));
-    const minY = Math.min(...keys.map((k) => k.y_u));
-    const maxY = Math.max(...keys.map((k) => k.y_u + (k.h_u ?? 1)));
-    return {
-      x: ((minX + maxX) / 2) * UNIT_MM * S,
-      z: ((minY + maxY) / 2) * UNIT_MM * S,
-    };
-  }, [keys.length]);
+  const bounds = useSceneBounds();
 
   return (
     <>
       <ambientLight intensity={0.25} />
-      <directionalLight position={[center.x + 6, 12, center.z + 4]} intensity={1} color="#f0f0ff" />
-      <directionalLight position={[center.x - 4, 8, center.z - 3]} intensity={0.3} color="#e0e0ff" />
-      <pointLight position={[center.x, 6, center.z]} intensity={0.15} color="#6366f1" />
+      <directionalLight position={[bounds.centerX + 6, 12, bounds.centerZ + 4]} intensity={1} color="#f0f0ff" />
+      <directionalLight position={[bounds.centerX - 4, 8, bounds.centerZ - 3]} intensity={0.3} color="#e0e0ff" />
+      <pointLight position={[bounds.centerX, 6, bounds.centerZ]} intensity={0.15} color="#6366f1" />
       <ContactShadows
-        position={[center.x, -0.18, center.z]}
+        position={[bounds.centerX, -0.18, bounds.centerZ]}
         opacity={0.35}
-        scale={25}
+        scale={bounds.shadowScale}
         blur={2.5}
         far={4}
         color="#000"

@@ -1,11 +1,20 @@
-"""Tests for the export bundler."""
+"""Tests for export bundling and export endpoint semantics."""
 
 import json
 import zipfile
 from pathlib import Path
 
+import pytest
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
+from server.api.export import export_bundle
+from server.db.models import Base, ProjectArtifactRow, ProjectRow
 from server.export.bundler import create_export_bundle
 from server.models.project import KeyboardProject, LayoutSpec
+from server.models.validation_schema import CheckStatus
+from server.services.project_state import create_project_record
+from server.validation.engine import validate_project
 
 
 TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "templates"
@@ -14,13 +23,35 @@ TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "templates"
 def _project_65() -> KeyboardProject:
     with open(TEMPLATES_DIR / "65_percent.json") as f:
         data = json.load(f)
-    p = KeyboardProject(
+    project = KeyboardProject(
         project_id="export_test",
         name="Export Test",
         layout=LayoutSpec(**data["layout"]),
     )
-    p.switch_profile.part_id = "cherry_mx_red"
-    return p
+    project.switch_profile.part_id = "cherry_mx_red"
+    return project
+
+
+def _project_handheld() -> KeyboardProject:
+    with open(TEMPLATES_DIR / "handheld_companion_compact.json") as f:
+        data = json.load(f)
+    project = KeyboardProject(
+        project_id="handheld_export_test",
+        name="Handheld Export Test",
+        product_family="handheld_companion",
+        product_domain="handheld",
+        layout=LayoutSpec(**data["layout"]),
+    )
+    return project
+
+
+async def _make_session(tmp_path: Path):
+    db_path = tmp_path / "export.db"
+    engine = create_async_engine(f"sqlite+aiosqlite:///{db_path}")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    return engine, session_factory
 
 
 def test_bundle_creates_zip():
@@ -41,40 +72,100 @@ def test_bundle_contains_expected_files():
         "BreakGen_Export/firmware/info.json",
         "BreakGen_Export/firmware/keymap.json",
         "BreakGen_Export/firmware/via.json",
+        "BreakGen_Export/firmware/control-map.json",
         "BreakGen_Export/manifest.json",
         "BreakGen_Export/validation_report.json",
         "BreakGen_Export/BUILD_GUIDE.md",
     ]
-    for f in expected:
-        assert f in names, f"Missing: {f}"
+    for file_name in expected:
+        assert file_name in names, f"Missing: {file_name}"
 
 
-def test_manifest_has_artifact_hashes():
+def test_manifest_has_artifact_hashes_and_readiness():
     project = _project_65()
     _, zip_path = create_export_bundle(project)
     with zipfile.ZipFile(zip_path) as zf:
         manifest = json.loads(zf.read("BreakGen_Export/manifest.json"))
     assert manifest["project_id"] == "export_test"
     assert manifest["revision"] == 1
+    assert manifest["validation_status"] == "pass"
+    assert manifest["export_readiness"] == "production_ready"
     assert len(manifest["artifacts"]) >= 5
     for artifact in manifest["artifacts"]:
         assert "sha256" in artifact
-        assert len(artifact["sha256"]) == 64  # SHA-256 hex length
+        assert len(artifact["sha256"]) == 64
 
 
-def test_validation_report_in_bundle():
+def test_bundle_uses_supplied_validation_report():
     project = _project_65()
-    _, zip_path = create_export_bundle(project)
+    report = validate_project(project)
+    bundle_id, zip_path = create_export_bundle(
+        project,
+        validation_report=report,
+        export_readiness="candidate",
+    )
+    assert bundle_id.startswith("bundle_")
     with zipfile.ZipFile(zip_path) as zf:
-        report = json.loads(zf.read("BreakGen_Export/validation_report.json"))
-    assert "checks" in report
-    assert report["project_id"] == "export_test"
-
-
-def test_build_guide_contains_project_name():
-    project = _project_65()
-    _, zip_path = create_export_bundle(project)
-    with zipfile.ZipFile(zip_path) as zf:
+        manifest = json.loads(zf.read("BreakGen_Export/manifest.json"))
+        bundled_report = json.loads(zf.read("BreakGen_Export/validation_report.json"))
         guide = zf.read("BreakGen_Export/BUILD_GUIDE.md").decode()
-    assert "Export Test" in guide
-    assert "cherry_mx_red" in guide
+    assert manifest["validation_report_id"] == report.report_id
+    assert manifest["validation_status"] == report.status.value
+    assert manifest["export_readiness"] == "candidate"
+    assert bundled_report["report_id"] == report.report_id
+    assert "candidate" in guide
+
+
+def test_handheld_bundle_contains_shell_artifacts():
+    project = _project_handheld()
+    _, zip_path = create_export_bundle(project, export_readiness="candidate")
+    with zipfile.ZipFile(zip_path) as zf:
+        names = zf.namelist()
+        guide = zf.read("BreakGen_Export/BUILD_GUIDE.md").decode()
+    expected = [
+        "BreakGen_Export/shell/front_shell_panel.dxf",
+        "BreakGen_Export/shell/back_shell_reference.dxf",
+        "BreakGen_Export/shell/shell_spec.json",
+        "BreakGen_Export/firmware/control-map.json",
+        "BreakGen_Export/manifest.json",
+    ]
+    for file_name in expected:
+        assert file_name in names, f"Missing: {file_name}"
+    assert "deterministic enclosure baseline" in guide
+
+
+@pytest.mark.anyio
+async def test_export_with_warnings_stays_validated_and_records_candidate_bundle(tmp_path: Path, monkeypatch):
+    engine, session_factory = await _make_session(tmp_path)
+    monkeypatch.setattr("server.services.artifact_registry.settings.artifacts_dir", str(tmp_path))
+    monkeypatch.setattr("server.export.bundler.settings.artifacts_dir", str(tmp_path))
+
+    try:
+        async with session_factory() as db:
+            project = _project_65()
+            project.switch_profile.part_id = None
+            await create_project_record(db, project, change_summary="Project created")
+
+            response = await export_bundle(project.project_id, db)
+            row = (
+                await db.execute(
+                    select(ProjectRow).where(ProjectRow.project_id == project.project_id)
+                )
+            ).scalar_one()
+            artifact = (
+                await db.execute(
+                    select(ProjectArtifactRow).where(
+                        ProjectArtifactRow.project_id == project.project_id,
+                        ProjectArtifactRow.kind == "export_bundle",
+                    )
+                )
+            ).scalar_one()
+
+            assert response.headers["X-Validation-Status"] == CheckStatus.WARN.value
+            assert response.headers["X-Export-Readiness"] == "candidate"
+            assert row.status == "validated"
+            assert row.data["exports"]["bundle_id"]
+            assert artifact.details["acceptance_state"] == "candidate"
+            assert artifact.details["validation_status"] == CheckStatus.WARN.value
+    finally:
+        await engine.dispose()

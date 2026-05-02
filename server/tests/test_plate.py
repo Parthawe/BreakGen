@@ -11,7 +11,7 @@ from server.geometry.plate_generator import (
     MX_CUTOUT_MM,
     UNIT_MM,
 )
-from server.models.project import KeySpec, LayoutSpec
+from server.models.project import ElementType, KeySpec, LayoutSpec, PlacedElementSpec
 
 
 TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "templates"
@@ -117,3 +117,66 @@ def test_bounds_match_between_dxf_and_metadata():
     dxf_h = abs(pts[2][1] - pts[1][1])
     assert abs(dxf_w - bounds["width_mm"]) < 0.1
     assert abs(dxf_h - bounds["height_mm"]) < 0.1
+
+
+def test_midi_panel_includes_encoder_holes_and_switch_cutouts():
+    layout = _load_layout("midi_25key")
+    doc = generate_plate_dxf(layout, PlateConfig())
+    msp = doc.modelspace()
+    circles = [e for e in msp if e.dxf.layer == "Cutouts" and e.dxftype() == "CIRCLE"]
+    rects = [e for e in msp if e.dxf.layer == "Cutouts" and e.dxftype() == "LWPOLYLINE"]
+    assert len(circles) == 4
+    assert len(rects) == 25
+
+
+def test_gamepad_panel_includes_button_and_joystick_cutouts():
+    layout = _load_layout("gamepad_compact")
+    doc = generate_plate_dxf(layout, PlateConfig())
+    msp = doc.modelspace()
+    circles = [e for e in msp if e.dxf.layer == "Cutouts" and e.dxftype() == "CIRCLE"]
+    rects = [e for e in msp if e.dxf.layer == "Cutouts" and e.dxftype() == "LWPOLYLINE"]
+    holes = [e for e in msp if e.dxf.layer == "MountingHoles" and e.dxftype() == "CIRCLE"]
+    assert len(circles) == 9  # 8 face/d-pad buttons + 1 joystick shaft
+    assert len(rects) == 2  # shoulder button slots
+    assert len(holes) == 9  # 5 board holes + 4 joystick mounting holes
+
+
+def test_streamdeck_display_panel_includes_display_and_encoder_cutouts():
+    layout = _load_layout("streamdeck_display_3x5")
+    doc = generate_plate_dxf(layout, PlateConfig())
+    msp = doc.modelspace()
+    circles = [e for e in msp if e.dxf.layer == "Cutouts" and e.dxftype() == "CIRCLE"]
+    rects = [e for e in msp if e.dxf.layer == "Cutouts" and e.dxftype() == "LWPOLYLINE"]
+    assert len(circles) == 1  # encoder shaft
+    assert len(rects) == 16  # 15 switch cutouts + 1 display window
+
+
+def test_handheld_panel_includes_speaker_and_usb_access_cutouts():
+    layout = _load_layout("handheld_companion_compact")
+    doc = generate_plate_dxf(layout, PlateConfig())
+    msp = doc.modelspace()
+    circles = [e for e in msp if e.dxf.layer == "Cutouts" and e.dxftype() == "CIRCLE"]
+    rects = [e for e in msp if e.dxf.layer == "Cutouts" and e.dxftype() == "LWPOLYLINE"]
+    assert len(circles) == 15  # 8 button apertures + 7 speaker grille holes
+    assert len(rects) == 2  # display window + usb port slot
+
+
+def test_display_element_generates_panel_window_cutout():
+    layout = LayoutSpec(
+        elements=[
+            PlacedElementSpec(
+                id="status_oled",
+                element_type=ElementType.DISPLAY,
+                label="Status",
+                x_mm=0,
+                y_mm=0,
+                w_mm=40,
+                h_mm=20,
+            )
+        ]
+    )
+    doc = generate_plate_dxf(layout, PlateConfig())
+    msp = doc.modelspace()
+    cutouts = [e for e in msp if e.dxf.layer == "Cutouts"]
+    assert len(cutouts) == 1
+    assert cutouts[0].dxftype() == "LWPOLYLINE"

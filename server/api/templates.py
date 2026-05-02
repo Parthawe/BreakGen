@@ -7,18 +7,27 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Query
 
 from server.config import settings
-from server.models.project import LayoutSpec
+from server.models.project import LayoutSpec, ProductDomain
 from server.models.supported_configs import SUPPORTED_TEMPLATES
 
 router = APIRouter(prefix="/api/templates", tags=["templates"])
 
 
 @router.get("/")
-async def list_templates(family: Optional[str] = Query(None)):
+async def list_templates(
+    family: Optional[str] = Query(None),
+    domain: Optional[str] = Query(None),
+):
     """Return available layout templates, optionally filtered by product family."""
     templates = SUPPORTED_TEMPLATES
     if family:
         templates = [t for t in templates if t.product_family.value == family]
+    if domain:
+        try:
+            selected_domain = ProductDomain(domain)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=f"Unknown product domain: {domain}") from exc
+        templates = [t for t in templates if t.resolved_domain == selected_domain]
 
     return [
         {
@@ -26,6 +35,7 @@ async def list_templates(family: Optional[str] = Query(None)):
             "name": t.name,
             "description": t.description,
             "key_count": t.key_count,
+            "product_domain": t.resolved_domain.value,
             "product_family": t.product_family.value,
         }
         for t in templates
@@ -58,4 +68,5 @@ async def get_template(template_id: str):
         )
 
     data["product_family"] = template.product_family.value
+    data["product_domain"] = template.resolved_domain.value
     return data

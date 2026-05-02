@@ -1,0 +1,187 @@
+"""Static reusable hardware module catalog."""
+
+from __future__ import annotations
+
+from server.models.platform import HardwareModuleManifest
+from server.models.project import ProductDomain, ProductFamily, domain_for_family
+
+
+HARDWARE_MODULES: list[HardwareModuleManifest] = [
+    HardwareModuleManifest(
+        module_id="mx_switch",
+        module_type="input_switch",
+        display_name="MX Switch",
+        description="Standard mechanical keyswitch footprint for keyboards and pads.",
+        mechanical_constraints={"cutout_mm": [14.0, 14.0], "pitch_mm": 19.05},
+        electrical_constraints={"matrix_capable": True},
+        mounting_requirements={"plate": "mx_plate"},
+        supported_families=[
+            ProductFamily.KEYBOARD,
+            ProductFamily.MACROPAD,
+            ProductFamily.STREAMDECK,
+            ProductFamily.MIDI,
+        ],
+        export_implications=["switch_cutout", "matrix_assignment"],
+    ),
+    HardwareModuleManifest(
+        module_id="tact_button",
+        module_type="input_button",
+        display_name="Tactile Button",
+        description="Low-profile digital button for gamepads and compact control surfaces.",
+        mechanical_constraints={"min_spacing_mm": 14.0},
+        electrical_constraints={"matrix_capable": True},
+        mounting_requirements={"panel_mount": True},
+        supported_families=[
+            ProductFamily.GAMEPAD,
+            ProductFamily.HANDHELD_COMPANION,
+            ProductFamily.RETRO_HANDHELD,
+        ],
+        export_implications=["panel_cutout", "button_mapping"],
+    ),
+    HardwareModuleManifest(
+        module_id="rotary_encoder",
+        module_type="input_encoder",
+        display_name="Rotary Encoder",
+        description="Incremental encoder for MIDI and dashboard controls.",
+        mechanical_constraints={"shaft_hole_mm": 7.0, "knob_clearance_mm": 24.0},
+        electrical_constraints={"gpio_required": 2},
+        mounting_requirements={"panel_nut": True},
+        supported_families=[
+            ProductFamily.MIDI,
+            ProductFamily.STREAMDECK,
+            ProductFamily.MACROPAD,
+        ],
+        export_implications=["panel_hole", "encoder_mapping"],
+    ),
+    HardwareModuleManifest(
+        module_id="thumb_joystick",
+        module_type="input_joystick",
+        display_name="Thumb Joystick",
+        description="Analog thumbstick module for gamepad-style inputs.",
+        mechanical_constraints={"body_mm": [18.0, 18.0], "travel_clearance_mm": 24.0},
+        electrical_constraints={"analog_axes": 2, "button": 1},
+        mounting_requirements={"standoff_pattern": "psp_thumbstick"},
+        supported_families=[ProductFamily.GAMEPAD, ProductFamily.HANDHELD_COMPANION],
+        export_implications=["panel_cutout", "joystick_mapping"],
+    ),
+    HardwareModuleManifest(
+        module_id="oled_128x64",
+        module_type="output_display",
+        display_name="0.96in OLED",
+        description="Small monochrome OLED for status and mapping feedback.",
+        mechanical_constraints={"view_area_mm": [21.7, 10.9], "bezel_margin_mm": 2.0},
+        electrical_constraints={"interface": "i2c"},
+        mounting_requirements={"window_cutout": True},
+        supported_families=[
+            ProductFamily.MACROPAD,
+            ProductFamily.MIDI,
+            ProductFamily.HANDHELD_COMPANION,
+            ProductFamily.SENSOR_POD,
+        ],
+        export_implications=["display_window", "ui_mapping"],
+    ),
+    HardwareModuleManifest(
+        module_id="tft_round_240",
+        module_type="output_display",
+        display_name="Round TFT",
+        description="Round color display for dashboard and ambient interfaces.",
+        mechanical_constraints={"diameter_mm": 39.0, "depth_mm": 6.0},
+        electrical_constraints={"interface": "spi"},
+        mounting_requirements={"retention_ring": True},
+        supported_families=[ProductFamily.STREAMDECK, ProductFamily.SMART_LAMP],
+        export_implications=["display_window"],
+    ),
+    HardwareModuleManifest(
+        module_id="rp2040_devboard",
+        module_type="compute",
+        display_name="RP2040 Dev Board",
+        description="Primary microcontroller baseline for current BreakGen devices.",
+        mechanical_constraints={"board_mm": [51.0, 21.0]},
+        electrical_constraints={"usb": "usb-c", "firmware": ["qmk", "hid", "midi"]},
+        mounting_requirements={"standoffs": 2},
+        supported_families=[
+            ProductFamily.KEYBOARD,
+            ProductFamily.MACROPAD,
+            ProductFamily.STREAMDECK,
+            ProductFamily.MIDI,
+            ProductFamily.GAMEPAD,
+            ProductFamily.HANDHELD_COMPANION,
+            ProductFamily.SENSOR_POD,
+        ],
+        export_implications=["controller_mount", "firmware_target"],
+    ),
+    HardwareModuleManifest(
+        module_id="usb_c_port",
+        module_type="io_port",
+        display_name="USB-C Port",
+        description="USB-C breakout or panel-mount port for charging and data access.",
+        mechanical_constraints={"slot_mm": [10.0, 4.0], "edge_clearance_mm": 3.0},
+        electrical_constraints={"usb": "usb-c", "power": True, "data": True},
+        mounting_requirements={"edge_mount": True},
+        supported_families=[
+            ProductFamily.HANDHELD_COMPANION,
+            ProductFamily.RETRO_HANDHELD,
+            ProductFamily.SENSOR_POD,
+        ],
+        export_implications=["port_cutout", "charging_access"],
+    ),
+    HardwareModuleManifest(
+        module_id="lipo_1000mah",
+        module_type="power",
+        display_name="1000mAh LiPo",
+        description="Battery pack for handheld and ambient portable devices.",
+        mechanical_constraints={"body_mm": [50.0, 34.0, 6.0], "service_gap_mm": 2.0},
+        electrical_constraints={"voltage_nominal": 3.7},
+        mounting_requirements={"strap_or_cage": True},
+        supported_families=[
+            ProductFamily.HANDHELD_COMPANION,
+            ProductFamily.RETRO_HANDHELD,
+            ProductFamily.SMART_LAMP,
+        ],
+        export_implications=["battery_compartment", "power_validation"],
+    ),
+    HardwareModuleManifest(
+        module_id="speaker_40mm",
+        module_type="audio_output",
+        display_name="40mm Speaker",
+        description="Compact speaker for handheld and desktop sound products.",
+        mechanical_constraints={"diameter_mm": 40.0, "depth_mm": 5.2},
+        electrical_constraints={"amplifier_required": True},
+        mounting_requirements={"grille": True},
+        supported_families=[
+            ProductFamily.HANDHELD_COMPANION,
+            ProductFamily.RETRO_HANDHELD,
+            ProductFamily.DESKTOP_SPEAKER,
+        ],
+        export_implications=["speaker_grille", "acoustic_clearance"],
+    ),
+    HardwareModuleManifest(
+        module_id="neopixel_ring_16",
+        module_type="lighting",
+        display_name="NeoPixel Ring 16",
+        description="Addressable LED ring for ambient or status-driven products.",
+        mechanical_constraints={"diameter_mm": 44.5},
+        electrical_constraints={"power_budget_ma": 960},
+        mounting_requirements={"diffuser_recommended": True},
+        supported_families=[ProductFamily.SMART_LAMP, ProductFamily.SENSOR_POD],
+        export_implications=["diffuser_geometry", "power_budget"],
+    ),
+]
+
+
+def list_hardware_modules(
+    *,
+    family: ProductFamily | None = None,
+    domain: ProductDomain | None = None,
+) -> list[HardwareModuleManifest]:
+    """Return hardware modules filtered by family and/or domain."""
+    modules = HARDWARE_MODULES
+    if family is not None:
+        modules = [module for module in modules if family in module.supported_families]
+    if domain is not None:
+        modules = [
+            module
+            for module in modules
+            if any(domain_for_family(item) == domain for item in module.supported_families)
+        ]
+    return modules

@@ -57,6 +57,7 @@ Once running, API docs are at http://localhost:8000/docs
 |--------|------|-------------|
 | GET | /api/projects/presets/keycap-styles | List style presets |
 | POST | /api/projects/{id}/generate-keycaps | Generate keycap variants |
+| GET | /api/projects/{id}/generation-status/{task_id} | Check Meshy task status |
 | POST | /api/projects/{id}/apply-keycap | Apply keycap to keys |
 
 ### PCB + Firmware
@@ -75,9 +76,21 @@ Once running, API docs are at http://localhost:8000/docs
 | POST | /api/projects/{id}/validate | Run validation checks |
 | POST | /api/projects/{id}/export | Download export bundle ZIP |
 
+### Provenance
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | /api/projects/{id}/artifacts | List durable artifact records |
+| GET | /api/projects/{id}/jobs | List persistent job records |
+
 ## Architecture
 
-Every stateful mutation follows one contract: validate inputs, mutate canonical `KeyboardProject`, bump revision, update `ProjectRow`, insert `ProjectRevisionRow`, commit.
+Spec-changing mutations follow one contract: validate inputs, mutate canonical `KeyboardProject`, bump revision, update `ProjectRow`, insert `ProjectRevisionRow`, commit.
+
+Validation, export, and generation provenance are also persisted separately:
+
+- `project_artifacts` stores durable files and hashes such as validation reports and export bundles
+- `project_jobs` stores long-running or provider-backed work such as keycap generation tasks
 
 The AI generation router is lazy-loaded. If `httpx` or Meshy dependencies are unavailable, the server boots normally with generation routes disabled.
 

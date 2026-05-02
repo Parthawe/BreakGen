@@ -1,22 +1,41 @@
-"""AI keycap generation endpoints."""
+"""Provider-backed keycap generation endpoints."""
 
 from __future__ import annotations
 
-import uuid
-from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.ai.meshy_client import MeshyClient, MeshyError
+from server.ai.meshy_client import MeshyError
+from server.ai.providers.base import GenerateAssetRequest
+from server.ai.providers.registry import provider_registry
 from server.ai.prompt_wrapper import get_available_presets, wrap_prompt
-from server.config import settings
 from server.db.database import get_db
-from server.db.models import ProjectRevisionRow, ProjectRow
-from server.models.project import KeyboardProject, KeycapAsset
+from server.models.project import (
+    AcceptanceState,
+    ElementType,
+    LayoutSpec,
+    ProjectStatus,
+)
+from server.services.keycap_ingestion import (
+    KeycapIngestionError,
+    ingest_completed_keycap_generation,
+)
+from server.services.job_registry import (
+    create_project_job,
+    get_project_job_by_external_ref,
+    is_terminal_job_status,
+    list_project_jobs,
+    update_job_by_external_ref,
+)
+from server.services.project_state import (
+    commit_project_mutation,
+    invalidate_derived_state,
+    load_project_state,
+    persist_project_metadata,
+)
 
 router = APIRouter(prefix="/api/projects", tags=["generation"])
 
@@ -25,11 +44,234 @@ class GenerateKeycapsRequest(BaseModel):
     prompt: Optional[str] = None
     preset: Optional[str] = None
     variant_count: int = 4
+    provider: Optional[str] = None
+
+
+class GenerationJobRequest(GenerateKeycapsRequest):
+    asset_type: str = "keycap"
 
 
 class ApplyKeycapRequest(BaseModel):
     asset_id: str
-    key_ids: list[str] | None = None  # None = apply to all keys
+    expected_revision: int
+    element_ids: list[str] | None = None
+    key_ids: list[str] | None = None  # Deprecated compatibility alias
+
+
+class UpdateKeycapAssetRequest(BaseModel):
+    acceptance_state: AcceptanceState
+    expected_revision: int | None = None
+
+
+_CANONICAL_ASSET_STATES = {
+    AcceptanceState.ACCEPTED,
+    AcceptanceState.PRODUCTION_READY,
+}
+_MANUAL_ASSET_STATES = {
+    AcceptanceState.ACCEPTED,
+    AcceptanceState.REJECTED,
+    AcceptanceState.PRODUCTION_READY,
+}
+
+
+def _sync_asset_registry_metadata(project) -> None:
+    accepted_asset_ids = [
+        asset.asset_id
+        for asset in project.keycap_assets
+        if asset.acceptance_state in _CANONICAL_ASSET_STATES
+    ]
+    project.assets["accepted_asset_ids"] = accepted_asset_ids
+    project.assets["rejected_asset_ids"] = [
+        asset.asset_id
+        for asset in project.keycap_assets
+        if asset.acceptance_state == AcceptanceState.REJECTED
+    ]
+    project.assets["asset_counts"] = {
+        "accepted": len(
+            [asset for asset in project.keycap_assets if asset.acceptance_state == AcceptanceState.ACCEPTED]
+        ),
+        "production_ready": len(
+            [asset for asset in project.keycap_assets if asset.acceptance_state == AcceptanceState.PRODUCTION_READY]
+        ),
+        "candidate": len(
+            [asset for asset in project.keycap_assets if asset.acceptance_state == AcceptanceState.CANDIDATE]
+        ),
+        "preview_only": len(
+            [asset for asset in project.keycap_assets if asset.acceptance_state == AcceptanceState.PREVIEW_ONLY]
+        ),
+        "rejected": len(
+            [asset for asset in project.keycap_assets if asset.acceptance_state == AcceptanceState.REJECTED]
+        ),
+    }
+
+
+def _find_keycap_asset(project, asset_id: str):
+    asset = next((item for item in project.keycap_assets if item.asset_id == asset_id), None)
+    if asset is None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Asset '{asset_id}' not found in project keycap_assets",
+        )
+    return asset
+
+
+def _asset_is_applied(project, asset_id: str) -> bool:
+    return any(
+        element.keycap_asset_id == asset_id or element.appearance_ref == asset_id
+        for element in project.layout.elements
+    )
+
+
+def _sync_layout_keys_from_elements(project) -> None:
+    project.layout = LayoutSpec(
+        unit_pitch_mm=project.layout.unit_pitch_mm,
+        elements=[element.model_dump(mode="json") for element in project.layout.elements],
+    )
+
+
+async def _reconcile_generation_project_status(
+    db: AsyncSession,
+    row,
+    project_id: str,
+) -> str | None:
+    """Recompute project status from current generation jobs and assets."""
+    _, project = await load_project_state(db, project_id)
+    generation_jobs = [
+        job for job in await list_project_jobs(db, project_id)
+        if job.job_type == "keycap_generation"
+    ]
+    if not generation_jobs:
+        return None
+
+    if project.keycap_assets:
+        desired = ProjectStatus.PREVIEWABLE
+    elif any(not is_terminal_job_status(job.status) for job in generation_jobs):
+        desired = ProjectStatus.GENERATING
+    else:
+        desired = ProjectStatus.CONFIGURED
+
+    if project.status != desired:
+        project.status = desired
+        await persist_project_metadata(db, row, project)
+    return desired.value
+
+
+def _build_generate_request_payload(
+    req: GenerateKeycapsRequest,
+    *,
+    positive_prompt: str,
+    negative_prompt: str,
+) -> GenerateAssetRequest:
+    return GenerateAssetRequest(
+        prompt=req.prompt,
+        preset=req.preset,
+        positive_prompt=positive_prompt,
+        negative_prompt=negative_prompt,
+        variant_count=req.variant_count,
+    )
+
+
+async def _submit_keycap_generation_request(
+    project_id: str,
+    req: GenerateKeycapsRequest,
+    db: AsyncSession,
+):
+    row, project = await load_project_state(db, project_id)
+
+    if not req.prompt and not req.preset:
+        raise HTTPException(status_code=400, detail="Provide prompt or preset")
+
+    positive_prompt, negative_prompt = wrap_prompt(req.prompt, req.preset)
+    current_revision = project.revision
+    preferred_provider = req.provider
+    if preferred_provider is None:
+        stored_provider = project.style_request.provider
+        default_provider = provider_registry.default_keycap_provider_id()
+        if stored_provider and not (stored_provider == "meshy" and default_provider != "meshy"):
+            preferred_provider = stored_provider
+    provider = provider_registry.resolve_submit_provider(preferred_provider)
+
+    try:
+        submission = await provider.submit_keycap_generation(
+            _build_generate_request_payload(
+                req,
+                positive_prompt=positive_prompt,
+                negative_prompt=negative_prompt,
+            )
+        )
+    except MeshyError as e:
+        raise HTTPException(status_code=502, detail=f"Provider API error: {e}") from e
+
+    project.style_request.provider = submission.provider_id
+    project.style_request.prompt = req.prompt
+    project.style_request.preset = req.preset
+    project.style_request.variant_count = req.variant_count
+
+    if submission.status == "completed":
+        project.keycap_assets.extend(submission.assets)
+        _sync_asset_registry_metadata(project)
+        project.status = ProjectStatus.PREVIEWABLE
+        job = create_project_job(
+            db,
+            project_id=project.project_id,
+            revision=current_revision,
+            job_type="keycap_generation",
+            status="completed",
+            provider=submission.provider_id,
+            input_data={
+                "prompt": req.prompt,
+                "preset": req.preset,
+                "variant_count": req.variant_count,
+                "provider": submission.provider_id,
+            },
+            output_data={"asset_ids": [asset.asset_id for asset in submission.assets]},
+        )
+        await persist_project_metadata(
+            db,
+            row,
+            project,
+        )
+        return {
+            "status": "completed",
+            "message": submission.message,
+            "provider": submission.provider_id,
+            "job_id": job.job_id,
+            "revision": project.revision,
+            "prompt_used": positive_prompt,
+            "variants": [asset.model_dump() for asset in submission.assets],
+        }
+
+    project.status = ProjectStatus.GENERATING
+    job_ids: list[str] = []
+    task_ids: list[str] = []
+    for provider_job in submission.jobs:
+        job = create_project_job(
+            db,
+            project_id=project.project_id,
+            revision=current_revision,
+            job_type="keycap_generation",
+            status="submitted",
+            provider=submission.provider_id,
+            external_ref=provider_job.external_ref,
+            input_data=provider_job.input_data,
+        )
+        job_ids.append(job.job_id)
+        task_ids.append(provider_job.external_ref)
+
+    await persist_project_metadata(
+        db,
+        row,
+        project,
+    )
+    return {
+        "status": "generating",
+        "provider": submission.provider_id,
+        "job_ids": job_ids,
+        "task_ids": task_ids,
+        "revision": project.revision,
+        "prompt_used": positive_prompt,
+        "variant_count": len(submission.jobs),
+    }
 
 
 @router.get("/presets/keycap-styles")
@@ -44,109 +286,114 @@ async def generate_keycaps(
     req: GenerateKeycapsRequest,
     db: AsyncSession = Depends(get_db),
 ):
-    """
-    Submit a keycap generation job.
+    """Submit a provider-backed keycap generation request."""
+    return await _submit_keycap_generation_request(project_id, req, db)
 
-    If no Meshy API key is configured, returns a stub response with
-    shell-library assets so the rest of the flow can be tested.
-    """
-    result = await db.execute(
-        select(ProjectRow).where(ProjectRow.project_id == project_id)
-    )
-    row = result.scalar_one_or_none()
-    if not row:
-        raise HTTPException(status_code=404, detail="Project not found")
 
-    if not req.prompt and not req.preset:
-        raise HTTPException(status_code=400, detail="Provide prompt or preset")
-
-    positive_prompt, negative_prompt = wrap_prompt(req.prompt, req.preset)
-
-    # If no API key, create and persist placeholder assets from the shell library
-    if not settings.meshy_api_key:
-        project = KeyboardProject(**row.data)
-        new_assets: list[KeycapAsset] = []
-        for i in range(req.variant_count):
-            asset = KeycapAsset(
-                asset_id=f"shell_{uuid.uuid4().hex[:8]}",
-                source="shell_library",
-                provider=None,
-                prompt=req.prompt or req.preset,
-                mesh_path=None,
-                preview_mesh_path=None,
-                unit_sizes=[1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.75, 6.25],
-                normalized=True,
-                watertight=True,
-            )
-            new_assets.append(asset)
-
-        # Persist assets into canonical project state
-        project.keycap_assets.extend(new_assets)
-        project.style_request.prompt = req.prompt
-        project.style_request.preset = req.preset
-        now = datetime.now(timezone.utc)
-        project.revision += 1
-        project.updated_at = now
-
-        project_dict = project.model_dump(mode="json")
-        row.revision = project.revision
-        row.data = project_dict
-        row.updated_at = now
-
-        db.add(ProjectRevisionRow(
-            project_id=project_id,
-            revision=project.revision,
-            data=project_dict,
-            created_at=now,
-            change_summary=f"Generated {len(new_assets)} shell keycap variants",
-        ))
-        await db.commit()
-
-        return {
-            "status": "completed",
-            "message": "No Meshy API key configured. Using shell library placeholders.",
-            "prompt_used": positive_prompt,
-            "variants": [a.model_dump() for a in new_assets],
-        }
-
-    # Real Meshy generation
-    client = MeshyClient()
-    task_ids = []
-    for i in range(req.variant_count):
-        try:
-            task_id = await client.create_text_to_3d_task(
-                prompt=positive_prompt,
-                negative_prompt=negative_prompt,
-            )
-            task_ids.append(task_id)
-        except MeshyError as e:
-            raise HTTPException(status_code=502, detail=f"Meshy API error: {e}")
-
-    return {
-        "status": "generating",
-        "task_ids": task_ids,
-        "prompt_used": positive_prompt,
-        "variant_count": len(task_ids),
-    }
+@router.post("/{project_id}/generation/jobs")
+async def create_generation_job(
+    project_id: str,
+    req: GenerationJobRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Submit a provider-backed generation job through the platform contract."""
+    if req.asset_type != "keycap":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported asset type '{req.asset_type}'",
+        )
+    return await _submit_keycap_generation_request(project_id, req, db)
 
 
 @router.get("/{project_id}/generation-status/{task_id}")
 async def get_generation_status(
     project_id: str,
     task_id: str,
+    db: AsyncSession = Depends(get_db),
 ):
-    """Check status of a Meshy generation task."""
-    if not settings.meshy_api_key:
-        return {"status": "completed", "message": "Stub mode — no Meshy API key"}
+    """Check status of a provider-backed generation task."""
+    row, project = await load_project_state(db, project_id)
+    job = await get_project_job_by_external_ref(db, project_id, task_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail=f"Generation task '{task_id}' not found")
 
-    client = MeshyClient()
-    try:
-        result = await client.get_task_status(task_id)
-        return {
-            "status": result.get("status", "UNKNOWN"),
-            "progress": result.get("progress", 0),
-            "model_urls": result.get("model_urls", {}),
+    if is_terminal_job_status(job.status):
+        project_status = await _reconcile_generation_project_status(db, row, project_id)
+        payload = {
+            "status": job.status.upper(),
+            "progress": job.output_data.get("progress", 100 if job.status == "completed" else 0),
+            "model_urls": job.output_data.get("model_urls", {}),
+            "provider": job.provider,
         }
+        if project_status is not None:
+            payload["project_status"] = project_status
+        asset_id = job.output_data.get("asset_id")
+        if asset_id:
+            asset = next((item for item in project.keycap_assets if item.asset_id == asset_id), None)
+            if asset is not None:
+                payload["asset"] = asset.model_dump()
+        await db.commit()
+        return payload
+
+    provider = provider_registry.require(
+        job.provider or provider_registry.default_keycap_provider_id()
+    )
+    try:
+        result = await provider.poll_keycap_generation(task_id)
+        status = result.status
+
+        asset = None
+        if status == "SUCCEEDED":
+            try:
+                asset = await ingest_completed_keycap_generation(
+                    db,
+                    row,
+                    project,
+                    task_id=task_id,
+                    result=result.output_data,
+                    client=provider,
+                )
+            except KeycapIngestionError as exc:
+                await update_job_by_external_ref(
+                    db,
+                    project_id=project_id,
+                    external_ref=task_id,
+                    status="FAILED",
+                    output_data={**result.output_data, "ingestion_error": str(exc)},
+                )
+                await db.commit()
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Mesh ingestion failed for task {task_id}: {exc}",
+                ) from exc
+
+        await update_job_by_external_ref(
+            db,
+            project_id=project_id,
+            external_ref=task_id,
+            status=status,
+            output_data={
+                **result.output_data,
+                **(
+                    {"asset_id": asset.asset_id, "preview_mesh_path": asset.preview_mesh_path}
+                    if asset is not None
+                    else {}
+                ),
+            },
+        )
+        project_status = await _reconcile_generation_project_status(db, row, project_id)
+        await db.commit()
+        payload = {
+            "status": status,
+            "progress": result.progress or 0,
+            "model_urls": result.output_data.get("model_urls", {}),
+            "provider": provider.provider_id,
+        }
+        if project_status is not None:
+            payload["project_status"] = project_status
+        if asset is not None:
+            payload["asset"] = asset.model_dump()
+        return payload
     except MeshyError as e:
         raise HTTPException(status_code=502, detail=str(e))
 
@@ -158,53 +405,126 @@ async def apply_keycap(
     db: AsyncSession = Depends(get_db),
 ):
     """Assign a keycap asset to keys in the project. Bumps revision."""
-    result = await db.execute(
-        select(ProjectRow).where(ProjectRow.project_id == project_id)
+    row, project = await load_project_state(
+        db,
+        project_id,
+        expected_revision=req.expected_revision,
     )
-    row = result.scalar_one_or_none()
-    if not row:
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    project = KeyboardProject(**row.data)
-
-    # Validate asset_id exists in the project's keycap_assets list
-    # (shell_library assets are auto-valid as they start with "shell_")
-    known_ids = {a.asset_id for a in project.keycap_assets}
-    if not req.asset_id.startswith("shell_") and req.asset_id not in known_ids:
+    asset = _find_keycap_asset(project, req.asset_id)
+    if asset.acceptance_state not in _CANONICAL_ASSET_STATES:
         raise HTTPException(
             status_code=400,
-            detail=f"Asset '{req.asset_id}' not found in project keycap_assets",
+            detail=(
+                f"Asset '{req.asset_id}' is {asset.acceptance_state.value}. "
+                "Accept it before applying it to the canonical layout."
+            ),
         )
 
-    # Apply asset to specified keys or all keys
+    target_ids = set(req.element_ids or req.key_ids or [])
     applied_count = 0
-    for key in project.layout.keys:
-        if req.key_ids is None or key.id in req.key_ids:
-            key.keycap_asset_id = req.asset_id
+    for element in project.layout.elements:
+        if element.element_type not in {ElementType.KEY_SWITCH, ElementType.BUTTON}:
+            continue
+        if target_ids and element.id not in target_ids:
+            continue
+        if element.keycap_asset_id != req.asset_id or element.appearance_ref != req.asset_id:
+            element.keycap_asset_id = req.asset_id
+            element.appearance_ref = req.asset_id
             applied_count += 1
 
-    # Bump revision
-    now = datetime.now(timezone.utc)
-    project.revision += 1
-    project.updated_at = now
+    if applied_count == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="No compatible layout elements matched this apply request",
+        )
 
-    project_dict = project.model_dump(mode="json")
-    row.revision = project.revision
-    row.data = project_dict
-    row.updated_at = now
-
-    db.add(ProjectRevisionRow(
-        project_id=project_id,
-        revision=project.revision,
-        data=project_dict,
-        created_at=now,
-        change_summary=f"Applied keycap asset {req.asset_id} to {applied_count} keys",
-    ))
-
-    await db.commit()
+    _sync_layout_keys_from_elements(project)
+    invalidate_derived_state(project)
+    await commit_project_mutation(
+        db,
+        row,
+        project,
+        change_summary=f"Applied keycap asset {req.asset_id} to {applied_count} controls",
+    )
 
     return {
         "applied_to": applied_count,
         "asset_id": req.asset_id,
+        "revision": project.revision,
+    }
+
+
+@router.post("/{project_id}/keycap-assets/{asset_id}/acceptance")
+async def update_keycap_asset_acceptance(
+    project_id: str,
+    asset_id: str,
+    req: UpdateKeycapAssetRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Update asset acceptance state with revision-safe semantics."""
+    if req.acceptance_state not in _MANUAL_ASSET_STATES:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Manual asset updates only support accepted, rejected, "
+                "or production_ready states"
+            ),
+        )
+
+    row, project = await load_project_state(
+        db,
+        project_id,
+        expected_revision=req.expected_revision,
+    )
+    asset = _find_keycap_asset(project, asset_id)
+    if asset.acceptance_state == req.acceptance_state:
+        return {
+            "asset_id": asset.asset_id,
+            "acceptance_state": asset.acceptance_state.value,
+            "revision": project.revision,
+        }
+
+    asset_is_applied = _asset_is_applied(project, asset_id)
+    current_state = asset.acceptance_state
+    next_state = req.acceptance_state
+    touches_canonical_state = (
+        current_state in _CANONICAL_ASSET_STATES
+        or next_state in _CANONICAL_ASSET_STATES
+        or asset_is_applied
+    )
+    if touches_canonical_state and req.expected_revision is None:
+        raise HTTPException(
+            status_code=400,
+            detail="expected_revision is required for canonical asset state changes",
+        )
+
+    if next_state == AcceptanceState.REJECTED and asset_is_applied:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"Asset '{asset_id}' is applied to the layout. "
+                "Reassign or clear it before rejecting it."
+            ),
+        )
+
+    asset.acceptance_state = next_state
+    _sync_asset_registry_metadata(project)
+
+    if touches_canonical_state:
+        invalidate_derived_state(project)
+        await commit_project_mutation(
+            db,
+            row,
+            project,
+            change_summary=(
+                f"Marked keycap asset {asset_id} as {next_state.value}"
+            ),
+        )
+    else:
+        await persist_project_metadata(db, row, project)
+
+    return {
+        "asset_id": asset.asset_id,
+        "acceptance_state": asset.acceptance_state.value,
         "revision": project.revision,
     }

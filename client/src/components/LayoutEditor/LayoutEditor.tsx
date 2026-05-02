@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { getEditableElements } from "../../lib/projectCompat";
 import { useProjectStore } from "../../stores/projectStore";
-import type { KeySpec } from "../../types/project";
+import type { PlacedElementSpec } from "../../types/project";
 import { KeyProperties } from "./KeyProperties";
 
 const UNIT_PX = 62;
@@ -8,22 +9,52 @@ const PADDING = 28;
 const KEY_GAP = 3;
 const SNAP_INCREMENT = 0.25;
 const KEY_RADIUS = 6;
+const DEFAULT_UNIT_MM = 19.05;
+
+const ELEMENT_TONES: Record<string, { fill: string; stroke: string; accent: string }> = {
+  key_switch: { fill: "rgba(255,255,255,0.035)", stroke: "rgba(255,255,255,0.06)", accent: "rgba(255,255,255,0.45)" },
+  button: { fill: "rgba(74, 222, 128, 0.08)", stroke: "rgba(74, 222, 128, 0.22)", accent: "rgba(134, 239, 172, 0.95)" },
+  encoder: { fill: "rgba(251, 191, 36, 0.08)", stroke: "rgba(251, 191, 36, 0.24)", accent: "rgba(253, 224, 71, 0.95)" },
+  display: { fill: "rgba(56, 189, 248, 0.08)", stroke: "rgba(56, 189, 248, 0.24)", accent: "rgba(125, 211, 252, 0.95)" },
+  joystick: { fill: "rgba(236, 72, 153, 0.08)", stroke: "rgba(236, 72, 153, 0.24)", accent: "rgba(249, 168, 212, 0.95)" },
+  speaker: { fill: "rgba(244, 114, 182, 0.08)", stroke: "rgba(244, 114, 182, 0.24)", accent: "rgba(251, 207, 232, 0.95)" },
+  battery: { fill: "rgba(250, 204, 21, 0.08)", stroke: "rgba(250, 204, 21, 0.24)", accent: "rgba(254, 240, 138, 0.95)" },
+  usb_port: { fill: "rgba(96, 165, 250, 0.08)", stroke: "rgba(96, 165, 250, 0.24)", accent: "rgba(191, 219, 254, 0.95)" },
+};
 
 function snapToGrid(value: number): number {
   return Math.round(value / SNAP_INCREMENT) * SNAP_INCREMENT;
 }
 
+function elementU(element: PlacedElementSpec, unitPitchMm: number) {
+  return {
+    x_u: element.x_mm / unitPitchMm,
+    y_u: element.y_mm / unitPitchMm,
+    w_u: element.w_mm / unitPitchMm,
+    h_u: element.h_mm / unitPitchMm,
+  };
+}
+
 export function LayoutEditor() {
   const project = useProjectStore((s) => s.project);
-  const selectedKeyIds = useProjectStore((s) => s.selectedKeyIds);
-  const selectKey = useProjectStore((s) => s.selectKey);
+  const selectedElementIds = useProjectStore((s) => s.selectedElementIds);
+  const selectElement = useProjectStore((s) => s.selectElement);
   const clearSelection = useProjectStore((s) => s.clearSelection);
-  const updateKey = useProjectStore((s) => s.updateKey);
+  const updateElement = useProjectStore((s) => s.updateElement);
+  const removeElement = useProjectStore((s) => s.removeElement);
+  const addElement = useProjectStore((s) => s.addElement);
   const undo = useProjectStore((s) => s.undo);
   const redo = useProjectStore((s) => s.redo);
   const pushUndo = useProjectStore((s) => s.pushUndo);
+  const undoStack = useProjectStore((s) => s.undoStack);
+  const redoStack = useProjectStore((s) => s.redoStack);
 
-  // Keyboard shortcuts
+  const unitPitchMm = project?.layout.unit_pitch_mm ?? DEFAULT_UNIT_MM;
+  const elements = useMemo(
+    () => (project ? getEditableElements(project.layout) : []),
+    [project],
+  );
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
@@ -35,10 +66,10 @@ export function LayoutEditor() {
         redo();
       }
       if (e.key === "Delete" || e.key === "Backspace") {
-        const sel = useProjectStore.getState().selectedKeyIds;
+        const sel = useProjectStore.getState().selectedElementIds;
         if (sel.length > 0 && document.activeElement === document.body) {
           e.preventDefault();
-          sel.forEach((id) => useProjectStore.getState().removeKey(id));
+          sel.forEach((id) => useProjectStore.getState().removeElement(id));
         }
       }
     };
@@ -48,37 +79,48 @@ export function LayoutEditor() {
 
   const svgRef = useRef<SVGSVGElement>(null);
   const [dragging, setDragging] = useState<{
-    keyId: string;
+    elementId: string;
     startX: number;
     startY: number;
     origX: number;
     origY: number;
   } | null>(null);
 
-  const keys = project?.layout.keys ?? [];
-
-  const minX = keys.reduce((min, k) => Math.min(min, k.x_u), 0);
-  const minY = keys.reduce((min, k) => Math.min(min, k.y_u), 0);
-  const maxX = keys.reduce((max, k) => Math.max(max, k.x_u + k.w_u), 0);
-  const maxY = keys.reduce((max, k) => Math.max(max, k.y_u + k.h_u), 0);
+  const minX = elements.reduce((min, element) => Math.min(min, elementU(element, unitPitchMm).x_u), 0);
+  const minY = elements.reduce((min, element) => Math.min(min, elementU(element, unitPitchMm).y_u), 0);
+  const maxX = elements.reduce((max, element) => {
+    const u = elementU(element, unitPitchMm);
+    return Math.max(max, u.x_u + u.w_u);
+  }, 0);
+  const maxY = elements.reduce((max, element) => {
+    const u = elementU(element, unitPitchMm);
+    return Math.max(max, u.y_u + u.h_u);
+  }, 0);
   const svgWidth = (maxX - minX) * UNIT_PX + PADDING * 2;
   const svgHeight = (maxY - minY) * UNIT_PX + PADDING * 2;
   const ox = -minX * UNIT_PX;
   const oy = -minY * UNIT_PX;
 
-  const handleKeyMouseDown = useCallback(
-    (e: MouseEvent, key: KeySpec) => {
+  const handleElementMouseDown = useCallback(
+    (e: MouseEvent, element: PlacedElementSpec) => {
       e.stopPropagation();
-      selectKey(key.id, e.shiftKey);
-      pushUndo(); // Snapshot before drag
+      selectElement(element.id, e.shiftKey);
+      pushUndo();
       if (!svgRef.current) return;
       const pt = svgRef.current.createSVGPoint();
       pt.x = e.clientX;
       pt.y = e.clientY;
       const svgPt = pt.matrixTransform(svgRef.current.getScreenCTM()!.inverse());
-      setDragging({ keyId: key.id, startX: svgPt.x, startY: svgPt.y, origX: key.x_u, origY: key.y_u });
+      const u = elementU(element, unitPitchMm);
+      setDragging({
+        elementId: element.id,
+        startX: svgPt.x,
+        startY: svgPt.y,
+        origX: u.x_u,
+        origY: u.y_u,
+      });
     },
-    [selectKey]
+    [pushUndo, selectElement, unitPitchMm],
   );
 
   const handleMouseMove = useCallback(
@@ -90,144 +132,223 @@ export function LayoutEditor() {
       const svgPt = pt.matrixTransform(svgRef.current.getScreenCTM()!.inverse());
       const newX = snapToGrid(dragging.origX + (svgPt.x - dragging.startX) / UNIT_PX);
       const newY = snapToGrid(dragging.origY + (svgPt.y - dragging.startY) / UNIT_PX);
-      updateKey(dragging.keyId, { x_u: Math.max(0, newX), y_u: Math.max(0, newY) });
+      updateElement(dragging.elementId, {
+        x_mm: Math.max(0, newX) * unitPitchMm,
+        y_mm: Math.max(0, newY) * unitPitchMm,
+      });
     },
-    [dragging, updateKey]
+    [dragging, unitPitchMm, updateElement],
   );
 
   const handleMouseUp = useCallback(() => setDragging(null), []);
   const handleBackgroundClick = useCallback(() => { if (!dragging) clearSelection(); }, [dragging, clearSelection]);
 
-  const selectedKey = keys.find((k) => selectedKeyIds.includes(k.id));
-  const addKeyStore = useProjectStore((s) => s.addKey);
+  const selectedElement = elements.find((element) => selectedElementIds.includes(element.id));
 
-  const handleAddKey = () => {
-    const maxY = keys.length > 0 ? Math.max(...keys.map((k) => k.y_u + k.h_u)) : 0;
-    const id = `k_new_${Date.now().toString(36)}`;
-    addKeyStore({
+  const handleAddElement = () => {
+      const maxElementY = elements.length > 0
+      ? Math.max(...elements.map((element) => element.y_mm + element.h_mm))
+      : 0;
+    const id = `el_${Date.now().toString(36)}`;
+    const buttonFamilies = new Set(["gamepad", "handheld_companion", "retro_handheld"]);
+    const buttonLike = buttonFamilies.has(project?.product_family ?? "");
+    addElement({
       id,
-      label: "?",
-      x_u: 0,
-      y_u: maxY + 0.25,
-      w_u: 1,
-      h_u: 1,
+      element_type: buttonLike ? "button" : "key_switch",
+      label: buttonLike ? "Btn" : "?",
+      footprint_id: buttonLike ? "tact_button" : "mx_switch",
+      x_mm: 0,
+      y_mm: maxElementY + unitPitchMm * 0.25,
+      w_mm: unitPitchMm,
+      h_mm: unitPitchMm,
       rotation_deg: 0,
-      rotation_origin_x_u: 0,
-      rotation_origin_y_u: 0,
+      mounting: {},
+      appearance_ref: null,
+      electrical_ref: null,
+      metadata: {},
       stabilizer: "none",
       keycap_asset_id: null,
       row: null,
       col: null,
     });
-    useProjectStore.getState().selectKey(id);
   };
-
-  const undoStack = useProjectStore((s) => s.undoStack);
-  const redoStack = useProjectStore((s) => s.redoStack);
 
   return (
     <div className="flex flex-col h-full">
-      {/* Toolbar */}
       <div className="flex items-center gap-3 mb-4">
-        <button onClick={handleAddKey}
-          className="h-8 px-3.5 text-[12px] font-medium rounded-xl bg-white/[0.04] border border-white/[0.06] text-zinc-300 hover:bg-white/[0.07] hover:text-white transition-all flex items-center gap-2">
+        <button
+          onClick={handleAddElement}
+          className="glass-chip h-8 px-3.5 text-[12px] font-medium rounded-xl text-zinc-300 hover:text-white transition-all flex items-center gap-2"
+        >
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
-          Add Key
+          Add Element
         </button>
-        <button onClick={undo} disabled={undoStack.length === 0} title="Undo (Cmd+Z)"
-          className="h-8 w-8 rounded-xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-zinc-500 hover:text-white disabled:opacity-30 transition-all">
+        <button
+          onClick={undo}
+          disabled={undoStack.length === 0}
+          title="Undo (Cmd+Z)"
+          className="glass-chip h-8 w-8 rounded-xl flex items-center justify-center text-zinc-500 hover:text-white disabled:opacity-30 transition-all"
+        >
           <svg width="13" height="13" viewBox="0 0 12 12" fill="none"><path d="M3 5l-2 2 2 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M1 7h7a3 3 0 000-6H5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
         </button>
-        <button onClick={redo} disabled={redoStack.length === 0} title="Redo (Cmd+Shift+Z)"
-          className="h-8 w-8 rounded-xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-zinc-500 hover:text-white disabled:opacity-30 transition-all">
+        <button
+          onClick={redo}
+          disabled={redoStack.length === 0}
+          title="Redo (Cmd+Shift+Z)"
+          className="glass-chip h-8 w-8 rounded-xl flex items-center justify-center text-zinc-500 hover:text-white disabled:opacity-30 transition-all"
+        >
           <svg width="13" height="13" viewBox="0 0 12 12" fill="none"><path d="M9 5l2 2-2 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M11 7H4a3 3 0 010-6h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
         </button>
         <div className="flex-1" />
-        <span className="text-[12px] font-mono text-zinc-600">{keys.length} keys</span>
+        <span className="text-[12px] font-mono text-zinc-600">{elements.length} elements</span>
         <span className="text-[11px] text-zinc-700">Del to remove</span>
       </div>
 
       <div className="flex flex-1 min-h-0 gap-4">
-      {/* SVG Canvas */}
-      <div className="flex-1 overflow-auto rounded-2xl bg-[#060609] border border-white/[0.04]">
-        <svg
-          ref={svgRef}
-          width={svgWidth}
-          height={svgHeight}
-          className="select-none"
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-          onClick={handleBackgroundClick}
-        >
-          <defs>
-            <pattern id="grid" width={UNIT_PX} height={UNIT_PX} patternUnits="userSpaceOnUse" x={PADDING + ox} y={PADDING + oy}>
-              <circle cx={UNIT_PX} cy={UNIT_PX} r="0.5" fill="rgba(255,255,255,0.06)" />
-            </pattern>
-            <filter id="keyShadow">
-              <feDropShadow dx="0" dy="1" stdDeviation="1.5" floodColor="#000" floodOpacity="0.25" />
-            </filter>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#grid)" />
+        <div className="glass glass-strong flex-1 overflow-auto rounded-2xl">
+          <svg
+            ref={svgRef}
+            width={svgWidth}
+            height={svgHeight}
+            className="select-none"
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            onClick={handleBackgroundClick}
+          >
+            <defs>
+              <pattern id="grid" width={UNIT_PX} height={UNIT_PX} patternUnits="userSpaceOnUse" x={PADDING + ox} y={PADDING + oy}>
+                <circle cx={UNIT_PX} cy={UNIT_PX} r="0.5" fill="rgba(255,255,255,0.06)" />
+              </pattern>
+              <filter id="keyShadow">
+                <feDropShadow dx="0" dy="1" stdDeviation="1.5" floodColor="#000" floodOpacity="0.25" />
+              </filter>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#grid)" />
 
-          {keys.map((key) => {
-            const isSelected = selectedKeyIds.includes(key.id);
-            const isDragged = dragging?.keyId === key.id;
-            const x = PADDING + ox + key.x_u * UNIT_PX + KEY_GAP / 2;
-            const y = PADDING + oy + key.y_u * UNIT_PX + KEY_GAP / 2;
-            const w = key.w_u * UNIT_PX - KEY_GAP;
-            const h = (key.h_u ?? 1) * UNIT_PX - KEY_GAP;
+            {elements.map((element) => {
+              const isSelected = selectedElementIds.includes(element.id);
+              const isDragged = dragging?.elementId === element.id;
+              const tone = ELEMENT_TONES[element.element_type] ?? ELEMENT_TONES.key_switch;
+              const u = elementU(element, unitPitchMm);
+              const x = PADDING + ox + u.x_u * UNIT_PX + KEY_GAP / 2;
+              const y = PADDING + oy + u.y_u * UNIT_PX + KEY_GAP / 2;
+              const w = u.w_u * UNIT_PX - KEY_GAP;
+              const h = u.h_u * UNIT_PX - KEY_GAP;
 
-            return (
-              <g
-                key={key.id}
-                transform={key.rotation_deg ? `rotate(${key.rotation_deg}, ${x + w / 2}, ${y + h / 2})` : undefined}
-                onMouseDown={(e) => handleKeyMouseDown(e, key)}
-                className="cursor-pointer"
-                filter={isDragged ? "url(#keyShadow)" : undefined}
-              >
-                {/* Key body */}
-                <rect
-                  x={x} y={y} width={w} height={h} rx={KEY_RADIUS}
-                  fill={isSelected ? "rgba(129, 140, 248, 0.15)" : "rgba(255, 255, 255, 0.035)"}
-                  stroke={isSelected ? "rgba(129, 140, 248, 0.5)" : isDragged ? "rgba(168, 85, 247, 0.4)" : "rgba(255, 255, 255, 0.06)"}
-                  strokeWidth={isSelected ? 1.5 : 1}
-                />
-                {/* Label */}
-                <text
-                  x={x + w / 2} y={y + h / 2}
-                  textAnchor="middle" dominantBaseline="central"
-                  fill={isSelected ? "rgba(165, 180, 252, 0.95)" : "rgba(255, 255, 255, 0.45)"}
-                  fontSize={key.w_u >= 2.25 ? 12 : key.w_u >= 1.5 ? 11.5 : 11}
-                  fontFamily="'Geist', system-ui, sans-serif"
-                  fontWeight={500}
-                  letterSpacing="-0.01em"
-                  pointerEvents="none"
+              return (
+                <g
+                  key={element.id}
+                  transform={element.rotation_deg ? `rotate(${element.rotation_deg}, ${x + w / 2}, ${y + h / 2})` : undefined}
+                  onMouseDown={(e) => handleElementMouseDown(e, element)}
+                  className="cursor-pointer"
+                  filter={isDragged ? "url(#keyShadow)" : undefined}
                 >
-                  {key.label}
-                </text>
-                {/* Stab indicator */}
-                {key.stabilizer !== "none" && (
                   <rect
-                    x={x + 6} y={y + h - 5} width={w - 12} height={1.5} rx={0.75}
-                    fill="rgba(251, 191, 36, 0.25)"
-                    pointerEvents="none"
+                    x={x}
+                    y={y}
+                    width={w}
+                    height={h}
+                    rx={element.element_type === "button" ? Math.min(w, h) / 2.5 : KEY_RADIUS}
+                    fill={isSelected ? "rgba(129, 140, 248, 0.15)" : tone.fill}
+                    stroke={isSelected ? "rgba(129, 140, 248, 0.5)" : isDragged ? "rgba(168, 85, 247, 0.4)" : tone.stroke}
+                    strokeWidth={isSelected ? 1.5 : 1}
                   />
-                )}
-              </g>
-            );
-          })}
-        </svg>
-      </div>
+                  {element.element_type === "encoder" && (
+                    <>
+                      <circle cx={x + w / 2} cy={y + h / 2} r={Math.min(w, h) * 0.28} fill="rgba(251,191,36,0.22)" stroke="rgba(251,191,36,0.4)" />
+                      <path d={`M ${x + w / 2} ${y + h / 2} L ${x + w / 2} ${y + h * 0.28}`} stroke="rgba(253,224,71,0.95)" strokeWidth="1.5" strokeLinecap="round" />
+                    </>
+                  )}
+                  {element.element_type === "display" && (
+                    <rect
+                      x={x + 6}
+                      y={y + 6}
+                      width={Math.max(0, w - 12)}
+                      height={Math.max(0, h - 12)}
+                      rx={4}
+                      fill="rgba(14, 165, 233, 0.18)"
+                      stroke="rgba(125, 211, 252, 0.35)"
+                    />
+                  )}
+                  {element.element_type === "speaker" && (
+                    <>
+                      <circle cx={x + w / 2} cy={y + h / 2} r={Math.min(w, h) * 0.22} fill="rgba(244,114,182,0.14)" stroke="rgba(244,114,182,0.24)" />
+                      {[0, 60, 120, 180, 240, 300].map((angle) => {
+                        const rad = (angle * Math.PI) / 180;
+                        const r = Math.min(w, h) * 0.28;
+                        return (
+                          <circle
+                            key={angle}
+                            cx={x + w / 2 + Math.cos(rad) * r}
+                            cy={y + h / 2 + Math.sin(rad) * r}
+                            r={1.6}
+                            fill="rgba(251, 207, 232, 0.55)"
+                          />
+                        );
+                      })}
+                    </>
+                  )}
+                  {element.element_type === "usb_port" && (
+                    <rect
+                      x={x + 6}
+                      y={y + h / 2 - 4}
+                      width={Math.max(0, w - 12)}
+                      height={8}
+                      rx={3}
+                      fill="rgba(96, 165, 250, 0.16)"
+                      stroke="rgba(191, 219, 254, 0.35)"
+                    />
+                  )}
+                  <text
+                    x={x + w / 2}
+                    y={y + h / 2}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fill={isSelected ? "rgba(165, 180, 252, 0.95)" : tone.accent}
+                    fontSize={u.w_u >= 2.25 ? 12 : u.w_u >= 1.5 ? 11.5 : 11}
+                    fontFamily="'Geist', system-ui, sans-serif"
+                    fontWeight={500}
+                    letterSpacing="-0.01em"
+                    pointerEvents="none"
+                  >
+                    {element.label}
+                  </text>
+                  <text
+                    x={x + 8}
+                    y={y + 14}
+                    fill="rgba(255,255,255,0.28)"
+                    fontSize={9}
+                    fontFamily="'Geist Mono', monospace"
+                    pointerEvents="none"
+                  >
+                    {element.element_type}
+                  </text>
+                  {element.stabilizer !== "none" && (
+                    <rect
+                      x={x + 6}
+                      y={y + h - 5}
+                      width={w - 12}
+                      height={1.5}
+                      rx={0.75}
+                      fill="rgba(251, 191, 36, 0.25)"
+                      pointerEvents="none"
+                    />
+                  )}
+                </g>
+              );
+            })}
+          </svg>
+        </div>
 
-      {/* Property Panel */}
-      {selectedKey && (
-        <KeyProperties
-          keySpec={selectedKey}
-          onUpdate={(updates) => updateKey(selectedKey.id, updates)}
-          onDelete={() => useProjectStore.getState().removeKey(selectedKey.id)}
-        />
-      )}
+        {selectedElement && (
+          <KeyProperties
+            element={selectedElement}
+            unitPitchMm={unitPitchMm}
+            onUpdate={(updates) => updateElement(selectedElement.id, updates)}
+            onDelete={() => removeElement(selectedElement.id)}
+          />
+        )}
       </div>
     </div>
   );

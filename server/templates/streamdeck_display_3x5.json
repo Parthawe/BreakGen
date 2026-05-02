@@ -1,0 +1,26 @@
+{
+  "template_id": "streamdeck_display_3x5",
+  "name": "Streamdeck Display 3X5",
+  "layout": {
+    "unit_pitch_mm": 19.05,
+    "elements": [
+      { "id": "k_0_0", "element_type": "key_switch", "label": "1", "footprint_id": "mx_switch", "x_mm": 0.0, "y_mm": 0.0, "w_mm": 19.05, "h_mm": 19.05 },
+      { "id": "k_0_1", "element_type": "key_switch", "label": "2", "footprint_id": "mx_switch", "x_mm": 24.0, "y_mm": 0.0, "w_mm": 19.05, "h_mm": 19.05 },
+      { "id": "k_0_2", "element_type": "key_switch", "label": "3", "footprint_id": "mx_switch", "x_mm": 48.0, "y_mm": 0.0, "w_mm": 19.05, "h_mm": 19.05 },
+      { "id": "k_0_3", "element_type": "key_switch", "label": "4", "footprint_id": "mx_switch", "x_mm": 72.0, "y_mm": 0.0, "w_mm": 19.05, "h_mm": 19.05 },
+      { "id": "k_0_4", "element_type": "key_switch", "label": "5", "footprint_id": "mx_switch", "x_mm": 96.0, "y_mm": 0.0, "w_mm": 19.05, "h_mm": 19.05 },
+      { "id": "k_1_0", "element_type": "key_switch", "label": "6", "footprint_id": "mx_switch", "x_mm": 0.0, "y_mm": 24.0, "w_mm": 19.05, "h_mm": 19.05 },
+      { "id": "k_1_1", "element_type": "key_switch", "label": "7", "footprint_id": "mx_switch", "x_mm": 24.0, "y_mm": 24.0, "w_mm": 19.05, "h_mm": 19.05 },
+      { "id": "k_1_2", "element_type": "key_switch", "label": "8", "footprint_id": "mx_switch", "x_mm": 48.0, "y_mm": 24.0, "w_mm": 19.05, "h_mm": 19.05 },
+      { "id": "k_1_3", "element_type": "key_switch", "label": "9", "footprint_id": "mx_switch", "x_mm": 72.0, "y_mm": 24.0, "w_mm": 19.05, "h_mm": 19.05 },
+      { "id": "k_1_4", "element_type": "key_switch", "label": "10", "footprint_id": "mx_switch", "x_mm": 96.0, "y_mm": 24.0, "w_mm": 19.05, "h_mm": 19.05 },
+      { "id": "k_2_0", "element_type": "key_switch", "label": "11", "footprint_id": "mx_switch", "x_mm": 0.0, "y_mm": 48.0, "w_mm": 19.05, "h_mm": 19.05 },
+      { "id": "k_2_1", "element_type": "key_switch", "label": "12", "footprint_id": "mx_switch", "x_mm": 24.0, "y_mm": 48.0, "w_mm": 19.05, "h_mm": 19.05 },
+      { "id": "k_2_2", "element_type": "key_switch", "label": "13", "footprint_id": "mx_switch", "x_mm": 48.0, "y_mm": 48.0, "w_mm": 19.05, "h_mm": 19.05 },
+      { "id": "k_2_3", "element_type": "key_switch", "label": "14", "footprint_id": "mx_switch", "x_mm": 72.0, "y_mm": 48.0, "w_mm": 19.05, "h_mm": 19.05 },
+      { "id": "k_2_4", "element_type": "key_switch", "label": "15", "footprint_id": "mx_switch", "x_mm": 96.0, "y_mm": 48.0, "w_mm": 19.05, "h_mm": 19.05 },
+      { "id": "status_display", "element_type": "display", "label": "Status", "footprint_id": "tft_round_240", "x_mm": 29.53, "y_mm": -40.0, "w_mm": 56.0, "h_mm": 28.0 },
+      { "id": "scene_encoder", "element_type": "encoder", "label": "Scene", "footprint_id": "rotary_encoder", "x_mm": 93.05, "y_mm": -37.0, "w_mm": 22.0, "h_mm": 22.0 }
+    ]
+  }
+}

@@ -2,21 +2,27 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.db.database import get_db
-from server.db.models import ProjectRevisionRow, ProjectRow
-from server.eda.matrix_compiler import apply_matrix_to_layout, compile_matrix
+from server.eda.control_surface_electronics import (
+    apply_project_matrix,
+    compile_control_surface_electronics,
+    compile_project_matrix,
+)
 from server.firmware.qmk_generator import (
+    generate_control_map,
     generate_keymap,
     generate_qmk_info,
     generate_via_definition,
 )
 from server.models.project import KeyboardProject
+from server.services.project_state import (
+    commit_project_mutation,
+    invalidate_derived_state,
+    load_project_state,
+)
 
 router = APIRouter(prefix="/api/projects", tags=["pcb"])
 
@@ -30,63 +36,53 @@ async def compile_pcb(
     Compile PCB: matrix assignment + firmware metadata.
     Bumps revision and snapshots the change.
     """
-    result = await db.execute(
-        select(ProjectRow).where(ProjectRow.project_id == project_id)
-    )
-    row = result.scalar_one_or_none()
-    if not row:
-        raise HTTPException(status_code=404, detail="Project not found")
+    row, project = await load_project_state(db, project_id)
+    if not project.layout.elements:
+        raise HTTPException(status_code=400, detail="Layout has no placed elements")
 
-    project = KeyboardProject(**row.data)
-    if not project.layout.keys:
-        raise HTTPException(status_code=400, detail="Layout has no keys")
-
-    # Compile matrix
-    matrix = compile_matrix(project.layout)
-
-    total_pins = matrix.row_pins_needed + matrix.col_pins_needed
-    if total_pins > 26:
+    electronics = compile_control_surface_electronics(project)
+    if electronics.total_pins > electronics.gpio_budget:
         raise HTTPException(
             status_code=400,
-            detail=f"Matrix requires {total_pins} pins ({matrix.matrix_rows}R + {matrix.matrix_cols}C), exceeds RP2040 capacity (26 GPIO)",
+            detail=(
+                f"Electronics compile requires {electronics.total_pins} GPIO "
+                f"({electronics.matrix_pins} matrix + {electronics.direct_pins} direct), "
+                f"exceeds {project.pcb.controller.value.upper()} capacity "
+                f"({electronics.gpio_budget})"
+            ),
         )
 
     # Apply matrix assignments back to layout
-    project.layout = apply_matrix_to_layout(project.layout, matrix)
-    project.pcb.matrix_rows = matrix.matrix_rows
-    project.pcb.matrix_cols = matrix.matrix_cols
+    apply_project_matrix(project, electronics.matrix)
+    project.pcb.matrix_rows = electronics.matrix.matrix_rows
+    project.pcb.matrix_cols = electronics.matrix.matrix_cols
+    project.derived["electronics"] = electronics.model_dump()
+    invalidate_derived_state(project)
 
-    # Bump revision
-    now = datetime.now(timezone.utc)
-    project.revision += 1
-    project.updated_at = now
-
-    project_dict = project.model_dump(mode="json")
-
-    # Persist
-    row.revision = project.revision
-    row.data = project_dict
-    row.updated_at = now
-
-    # Snapshot revision
-    db.add(ProjectRevisionRow(
-        project_id=project_id,
-        revision=project.revision,
-        data=project_dict,
-        created_at=now,
-        change_summary="PCB matrix compiled",
-    ))
-
-    await db.commit()
+    await commit_project_mutation(
+        db,
+        row,
+        project,
+        change_summary="Electronics metadata compiled",
+    )
 
     return {
         "project_id": project_id,
         "revision": project.revision,
-        "matrix_rows": matrix.matrix_rows,
-        "matrix_cols": matrix.matrix_cols,
-        "total_keys": len(project.layout.keys),
-        "pins_needed": total_pins,
-        "status": "matrix_compiled",
+        "matrix_rows": electronics.matrix.matrix_rows,
+        "matrix_cols": electronics.matrix.matrix_cols,
+        "matrix_strategy": electronics.matrix_strategy,
+        "matrix_controls": electronics.matrix_control_count,
+        "direct_controls": electronics.direct_control_count,
+        "matrix_pins": electronics.matrix_pins,
+        "direct_pins": electronics.direct_pins,
+        "pins_needed": electronics.total_pins,
+        "gpio_budget": electronics.gpio_budget,
+        "gpio_remaining": electronics.gpio_remaining,
+        "firmware_target": electronics.firmware_target,
+        "control_protocol": electronics.control_protocol,
+        "direct_pin_usage": electronics.model_dump()["direct_pin_usage"],
+        "status": "electronics_compiled",
     }
 
 
@@ -120,23 +116,26 @@ async def get_via_definition(
     return generate_via_definition(project, matrix)
 
 
+@router.get("/{project_id}/firmware/control-map.json")
+async def get_control_map(
+    project_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Get family-native control mapping metadata for this project."""
+    project, matrix = await _load_project_with_matrix(project_id, db)
+    return generate_control_map(project, matrix)
+
+
 async def _load_project_with_matrix(
     project_id: str,
     db: AsyncSession,
 ) -> tuple[KeyboardProject, ...]:
     """Load project and compile matrix (read-only, no persistence)."""
-    result = await db.execute(
-        select(ProjectRow).where(ProjectRow.project_id == project_id)
-    )
-    row = result.scalar_one_or_none()
-    if not row:
-        raise HTTPException(status_code=404, detail="Project not found")
+    _, project = await load_project_state(db, project_id)
+    if not project.layout.elements:
+        raise HTTPException(status_code=400, detail="Layout has no placed elements")
 
-    project = KeyboardProject(**row.data)
-    if not project.layout.keys:
-        raise HTTPException(status_code=400, detail="Layout has no keys")
-
-    matrix = compile_matrix(project.layout)
-    project.layout = apply_matrix_to_layout(project.layout, matrix)
+    matrix, _ = compile_project_matrix(project)
+    apply_project_matrix(project, matrix)
 
     return project, matrix

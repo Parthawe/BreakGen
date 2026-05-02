@@ -63,3 +63,48 @@ class ProjectRevisionRow(Base):
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
     change_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class ProjectArtifactRow(Base):
+    """Durable artifact registry entry for a project revision."""
+
+    __tablename__ = "project_artifacts"
+
+    artifact_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    project_id: Mapped[str] = mapped_column(String(64), index=True)
+    revision: Mapped[int] = mapped_column(Integer, index=True)
+    kind: Mapped[str] = mapped_column(String(64), index=True)
+    path: Mapped[str] = mapped_column(Text)
+    sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    content_type: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    details: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+
+
+class ProjectJobRow(Base):
+    """Persistent async or long-running work record."""
+
+    __tablename__ = "project_jobs"
+
+    job_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    project_id: Mapped[str] = mapped_column(String(64), index=True)
+    revision: Mapped[int] = mapped_column(Integer, index=True)
+    job_type: Mapped[str] = mapped_column(String(64), index=True)
+    status: Mapped[str] = mapped_column(String(32), index=True)
+    provider: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    external_ref: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+    input_data: Mapped[dict] = mapped_column(JSON, default=dict)
+    output_data: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )

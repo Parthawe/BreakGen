@@ -14,8 +14,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from server.config import settings
 from server.db.database import get_db
 from server.db.models import ProjectRevisionRow, ProjectRow
-from server.models.project import KeyboardProject, LayoutSpec, ProductFamily, ProjectStatus
-from server.models.supported_configs import SUPPORTED_SWITCHES
+from server.models.project import (
+    KeyboardProject,
+    LayoutSpec,
+    ProductDomain,
+    ProductFamily,
+    ProjectStatus,
+    domain_for_family,
+)
+from server.models.supported_configs import SUPPORTED_SWITCHES, SUPPORTED_TEMPLATES
+from server.services.project_state import (
+    commit_project_mutation,
+    create_project_record,
+    invalidate_derived_state,
+    load_project_state,
+)
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
@@ -24,6 +37,7 @@ class CreateProjectRequest(BaseModel):
     name: str = "Untitled Project"
     template_id: Optional[str] = None
     product_family: str = "keyboard"
+    product_domain: Optional[str] = None
 
 
 class UpdateProjectRequest(BaseModel):
@@ -51,6 +65,10 @@ def _load_template(template_id: str) -> dict:
         return json.load(f)
 
 
+def _get_supported_template(template_id: str):
+    return next((template for template in SUPPORTED_TEMPLATES if template.template_id == template_id), None)
+
+
 @router.post("/", status_code=201)
 async def create_project(req: CreateProjectRequest, db: AsyncSession = Depends(get_db)):
     """Create a new keyboard project, optionally from a template."""
@@ -63,8 +81,33 @@ async def create_project(req: CreateProjectRequest, db: AsyncSession = Depends(g
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Unknown product family: {req.product_family}")
 
+    default_domain = domain_for_family(family)
+    if req.product_domain is not None:
+        try:
+            domain = ProductDomain(req.product_domain)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Unknown product domain: {req.product_domain}")
+        if domain != default_domain:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Family '{family.value}' belongs to domain '{default_domain.value}', not '{domain.value}'",
+            )
+    else:
+        domain = default_domain
+
+    if req.template_id:
+        template = _get_supported_template(req.template_id)
+        if template is None:
+            raise HTTPException(status_code=400, detail=f"Unknown template: {req.template_id}")
+        if template.product_family != family:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Template '{req.template_id}' belongs to family '{template.product_family.value}', not '{family.value}'",
+            )
+
     project = KeyboardProject(
         project_id=project_id,
+        product_domain=domain,
         product_family=family,
         name=req.name,
         revision=1,
@@ -81,34 +124,11 @@ async def create_project(req: CreateProjectRequest, db: AsyncSession = Depends(g
         project.layout = LayoutSpec(**layout_data)
         project.status = ProjectStatus.CONFIGURED
 
-    project_dict = project.model_dump(mode="json")
-
-    # Persist
-    row = ProjectRow(
-        project_id=project_id,
-        product_family=family.value,
-        name=project.name,
-        revision=1,
-        status=project.status.value,
-        template=req.template_id,
-        data=project_dict,
-        created_at=now,
-        updated_at=now,
-    )
-    db.add(row)
-
-    # Save initial revision
-    rev_row = ProjectRevisionRow(
-        project_id=project_id,
-        revision=1,
-        data=project_dict,
-        created_at=now,
+    return await create_project_record(
+        db,
+        project,
         change_summary="Project created",
     )
-    db.add(rev_row)
-
-    await db.commit()
-    return project_dict
 
 
 @router.get("/")
@@ -121,12 +141,16 @@ async def list_projects(db: AsyncSession = Depends(get_db)):
     return [
         {
             "project_id": r.project_id,
+            "product_domain": r.data.get("product_domain") or domain_for_family(ProductFamily(r.product_family)).value,
             "product_family": r.product_family,
             "name": r.name,
             "revision": r.revision,
             "status": r.status,
             "template": r.template,
-            "key_count": len(r.data.get("layout", {}).get("keys", [])),
+            "key_count": len(
+                r.data.get("layout", {}).get("elements")
+                or r.data.get("layout", {}).get("keys", [])
+            ),
             "created_at": r.created_at.isoformat() if r.created_at else None,
             "updated_at": r.updated_at.isoformat() if r.updated_at else None,
         }
@@ -153,22 +177,11 @@ async def update_project(
     db: AsyncSession = Depends(get_db),
 ):
     """Update project fields. Increments revision."""
-    result = await db.execute(
-        select(ProjectRow).where(ProjectRow.project_id == project_id)
+    row, project = await load_project_state(
+        db,
+        project_id,
+        expected_revision=req.expected_revision,
     )
-    row = result.scalar_one_or_none()
-    if not row:
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    # Optimistic locking: reject if client's revision doesn't match
-    if req.expected_revision is not None and row.revision != req.expected_revision:
-        raise HTTPException(
-            status_code=409,
-            detail=f"Revision conflict: expected {req.expected_revision}, current is {row.revision}",
-        )
-
-    # Reconstruct project from stored data
-    project = KeyboardProject(**row.data)
     changes: list[str] = []
 
     if req.name is not None:
@@ -195,39 +208,15 @@ async def update_project(
     if not changes:
         return project.model_dump(mode="json")
 
-    # Increment revision
-    now = datetime.now(timezone.utc)
-    project.revision += 1
-    project.updated_at = now
-
     # Invalidate validation on material changes
     if any(c in changes for c in ["layout", "switch"]):
-        project.status = ProjectStatus.CONFIGURED
-        project.pcb.drc_passed = None
-        project.exports.bundle_id = None
-        project.exports.validation_report_id = None
-
-    project_dict = project.model_dump(mode="json")
-
-    # Update current row
-    row.name = project.name
-    row.revision = project.revision
-    row.status = project.status.value
-    row.data = project_dict
-    row.updated_at = now
-
-    # Save revision snapshot
-    rev_row = ProjectRevisionRow(
-        project_id=project_id,
-        revision=project.revision,
-        data=project_dict,
-        created_at=now,
+        invalidate_derived_state(project)
+    return await commit_project_mutation(
+        db,
+        row,
+        project,
         change_summary=f"Updated: {', '.join(changes)}",
     )
-    db.add(rev_row)
-
-    await db.commit()
-    return project_dict
 
 
 @router.delete("/{project_id}", status_code=204)

@@ -11,7 +11,14 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from .project import ControllerFamily, DiodeDirection, ProductFamily, SwitchFamily
+from .project import (
+    ControllerFamily,
+    DiodeDirection,
+    ProductDomain,
+    ProductFamily,
+    SwitchFamily,
+    domain_for_family,
+)
 
 
 class SupportedSwitch(BaseModel):
@@ -35,8 +42,13 @@ class LayoutTemplate(BaseModel):
     name: str
     description: str
     key_count: int
+    product_domain: ProductDomain | None = Field(default=None)
     product_family: ProductFamily = Field(default=ProductFamily.KEYBOARD)
     file: str = Field(description="Path to template JSON file")
+
+    @property
+    def resolved_domain(self) -> ProductDomain:
+        return self.product_domain or domain_for_family(self.product_family)
 
 
 # --- V1 Support Matrix ---
@@ -107,6 +119,14 @@ SUPPORTED_TEMPLATES: list[LayoutTemplate] = [
         product_family=ProductFamily.STREAMDECK,
         file="templates/streamdeck_2x3.json",
     ),
+    LayoutTemplate(
+        template_id="streamdeck_display_3x5",
+        name="3x5 Deck + Status Display",
+        description="15 control keys with a status display and encoder for scene navigation and dashboard feedback.",
+        key_count=17,
+        product_family=ProductFamily.STREAMDECK,
+        file="templates/streamdeck_display_3x5.json",
+    ),
     # MIDI Controllers
     LayoutTemplate(
         template_id="midi_25key",
@@ -115,6 +135,24 @@ SUPPORTED_TEMPLATES: list[LayoutTemplate] = [
         key_count=29,
         product_family=ProductFamily.MIDI,
         file="templates/midi_25key.json",
+    ),
+    # Gamepads / controller surfaces
+    LayoutTemplate(
+        template_id="gamepad_compact",
+        name="Compact Gamepad",
+        description="Compact 11-control gamepad with face buttons, D-pad, shoulder inputs, and a thumbstick.",
+        key_count=11,
+        product_family=ProductFamily.GAMEPAD,
+        file="templates/gamepad_compact.json",
+    ),
+    # Planned handheld proof templates
+    LayoutTemplate(
+        template_id="handheld_companion_compact",
+        name="Compact Handheld Companion",
+        description="Private proof template with display, buttons, battery, speaker, and USB-C access.",
+        key_count=12,
+        product_family=ProductFamily.HANDHELD_COMPANION,
+        file="templates/handheld_companion_compact.json",
     ),
 ]
 

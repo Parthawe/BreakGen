@@ -1,0 +1,21 @@
+{
+  "template_id": "handheld_companion_compact",
+  "name": "Handheld Companion Compact",
+  "layout": {
+    "unit_pitch_mm": 19.05,
+    "elements": [
+      { "id": "main_display", "element_type": "display", "label": "Display", "footprint_id": "oled_128x64", "x_mm": 44.0, "y_mm": 10.0, "w_mm": 72.0, "h_mm": 48.0 },
+      { "id": "dpad_up", "element_type": "button", "label": "Up", "footprint_id": "tact_button", "x_mm": 12.0, "y_mm": 72.0, "w_mm": 16.0, "h_mm": 16.0 },
+      { "id": "dpad_left", "element_type": "button", "label": "Left", "footprint_id": "tact_button", "x_mm": 0.0, "y_mm": 88.0, "w_mm": 16.0, "h_mm": 16.0 },
+      { "id": "dpad_right", "element_type": "button", "label": "Right", "footprint_id": "tact_button", "x_mm": 24.0, "y_mm": 88.0, "w_mm": 16.0, "h_mm": 16.0 },
+      { "id": "dpad_down", "element_type": "button", "label": "Down", "footprint_id": "tact_button", "x_mm": 12.0, "y_mm": 104.0, "w_mm": 16.0, "h_mm": 16.0 },
+      { "id": "face_y", "element_type": "button", "label": "Y", "footprint_id": "tact_button", "x_mm": 138.0, "y_mm": 72.0, "w_mm": 16.0, "h_mm": 16.0 },
+      { "id": "face_x", "element_type": "button", "label": "X", "footprint_id": "tact_button", "x_mm": 126.0, "y_mm": 88.0, "w_mm": 16.0, "h_mm": 16.0 },
+      { "id": "face_b", "element_type": "button", "label": "B", "footprint_id": "tact_button", "x_mm": 150.0, "y_mm": 88.0, "w_mm": 16.0, "h_mm": 16.0 },
+      { "id": "face_a", "element_type": "button", "label": "A", "footprint_id": "tact_button", "x_mm": 138.0, "y_mm": 104.0, "w_mm": 16.0, "h_mm": 16.0 },
+      { "id": "speaker_main", "element_type": "speaker", "label": "Speaker", "footprint_id": "speaker_40mm", "x_mm": 10.0, "y_mm": 126.0, "w_mm": 40.0, "h_mm": 40.0 },
+      { "id": "battery_pack", "element_type": "battery", "label": "Battery", "footprint_id": "lipo_1000mah", "x_mm": 116.0, "y_mm": 126.0, "w_mm": 50.0, "h_mm": 34.0 },
+      { "id": "usb_c", "element_type": "usb_port", "label": "USB-C", "footprint_id": "usb_c_port", "x_mm": 72.0, "y_mm": 168.0, "w_mm": 20.0, "h_mm": 8.0 }
+    ]
+  }
+}

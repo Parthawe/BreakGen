@@ -30,7 +30,7 @@ export function SwitchExplorer() {
           return (
             <button key={sw.part_id} onClick={() => setSwitch(sw.part_id)}
               className={`w-full text-left p-4 rounded-2xl transition-all duration-200 ${
-                selected ? "bg-indigo-500/8 border-indigo-500/25" : "bg-white/[0.02] border-white/[0.04] hover:border-white/[0.08]"} border`}>
+                selected ? "glass border-indigo-500/25" : "glass glass-soft hover:border-white/[0.12]"} border`}>
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <span className="text-[14px] font-medium text-white">{sw.name}</span>
@@ -48,7 +48,7 @@ export function SwitchExplorer() {
                   <span className="text-[11px] text-zinc-600">Actuation force</span>
                   <span className="text-[12px] font-mono text-zinc-400">{sw.actuation_force_g}g</span>
                 </div>
-                <div className="h-1.5 rounded-full bg-white/[0.04]">
+                <div className="glass-subcard h-1.5 rounded-full">
                   <div className="h-full rounded-full transition-all duration-500"
                     style={{ width: `${Math.min((sw.actuation_force_g / 80) * 100, 100)}%`, background: selected ? "#818cf8" : tc, opacity: 0.5 }} />
                 </div>
@@ -57,7 +57,7 @@ export function SwitchExplorer() {
               <div className="flex items-center gap-3">
                 <span className="text-[12px] text-zinc-600">{sw.total_travel_mm}mm travel</span>
                 {sw.tags.slice(0, 3).map((tag) => (
-                  <span key={tag} className="text-[10px] text-zinc-600 px-2 py-0.5 rounded-full bg-white/[0.03]">{tag}</span>
+                  <span key={tag} className="glass-chip text-[10px] text-zinc-600 px-2 py-0.5 rounded-full">{tag}</span>
                 ))}
               </div>
             </button>

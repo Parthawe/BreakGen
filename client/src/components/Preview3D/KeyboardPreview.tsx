@@ -1,23 +1,21 @@
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
+import { getEditableElements } from "../../lib/projectCompat";
 import { useProjectStore } from "../../stores/projectStore";
-import type { KeySpec } from "../../types/project";
+import type { ElementType, PlacedElementSpec } from "../../types/project";
 
-const UNIT_MM = 19.05;
-const S = 0.1; // mm to scene units — all geometry uses this consistently
-
-// Cherry-profile keycap dimensions in scene units
+const S = 0.1; // mm to scene units
 const KEYCAP_HEIGHT = 8 * S;
 const KEYCAP_TOP_INSET = 1.5 * S;
-const KEYCAP_GAP = 1 * S; // 1mm gap between keycaps
+const KEYCAP_GAP = 1 * S;
 
-function createKeycapGeometry(widthU: number, heightU: number): THREE.BufferGeometry {
-  const w = widthU * UNIT_MM * S;
-  const h = heightU * UNIT_MM * S;
-  const bw = w - KEYCAP_GAP;
-  const bh = h - KEYCAP_GAP;
-  const tw = bw - KEYCAP_TOP_INSET * 2;
-  const th = bh - KEYCAP_TOP_INSET * 2;
+function createTaperedRectGeometry(widthMm: number, heightMm: number): THREE.BufferGeometry {
+  const w = widthMm * S;
+  const h = heightMm * S;
+  const bw = Math.max(0.2, w - KEYCAP_GAP);
+  const bh = Math.max(0.2, h - KEYCAP_GAP);
+  const tw = Math.max(0.2, bw - KEYCAP_TOP_INSET * 2);
+  const th = Math.max(0.2, bh - KEYCAP_TOP_INSET * 2);
   const kh = KEYCAP_HEIGHT;
 
   const vertices = new Float32Array([
@@ -47,76 +45,133 @@ function createKeycapGeometry(widthU: number, heightU: number): THREE.BufferGeom
   return geo;
 }
 
-function KeycapInstances({
-  keys,
-  selectedKeyIds,
+function materialColor(type: ElementType): string {
+  switch (type) {
+    case "button":
+      return "#1b3d2a";
+    case "encoder":
+      return "#4d3510";
+    case "display":
+      return "#123444";
+    case "joystick":
+      return "#43163a";
+    case "speaker":
+      return "#4c1835";
+    case "battery":
+      return "#4d4210";
+    case "usb_port":
+      return "#16324a";
+    default:
+      return "#29292d";
+  }
+}
+
+function elementKey(type: ElementType, widthMm: number, heightMm: number) {
+  const roundWidth = Math.round(widthMm * 100) / 100;
+  const roundHeight = Math.round(heightMm * 100) / 100;
+  return `${type}:${roundWidth}x${roundHeight}`;
+}
+
+function ElementInstances({
+  elements,
+  selectedElementIds,
 }: {
-  keys: KeySpec[];
-  selectedKeyIds: string[];
+  elements: PlacedElementSpec[];
+  selectedElementIds: string[];
 }) {
   const sizeGroups = useMemo(() => {
-    const groups = new Map<string, KeySpec[]>();
-    for (const key of keys) {
-      const sizeKey = `${key.w_u}x${key.h_u}`;
-      if (!groups.has(sizeKey)) groups.set(sizeKey, []);
-      groups.get(sizeKey)!.push(key);
+    const groups = new Map<string, PlacedElementSpec[]>();
+    for (const element of elements) {
+      const key = elementKey(element.element_type, element.w_mm, element.h_mm);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(element);
     }
     return groups;
-  }, [keys]);
+  }, [elements]);
 
   return (
     <>
-      {Array.from(sizeGroups.entries()).map(([sizeKey, groupKeys]) => (
-        <KeycapSizeGroup
-          key={sizeKey}
-          keys={groupKeys}
-          selectedKeyIds={selectedKeyIds}
-        />
+      {Array.from(sizeGroups.entries()).map(([sizeKey, groupElements]) => (
+        <ElementSizeGroup key={sizeKey} elements={groupElements} selectedElementIds={selectedElementIds} />
       ))}
     </>
   );
 }
 
-function KeycapSizeGroup({
-  keys,
-  selectedKeyIds,
+function ElementSizeGroup({
+  elements,
+  selectedElementIds,
 }: {
-  keys: KeySpec[];
-  selectedKeyIds: string[];
+  elements: PlacedElementSpec[];
+  selectedElementIds: string[];
 }) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
+  const first = elements[0];
+  const geometry = useMemo(() => {
+    if (first.element_type === "encoder") {
+      return new THREE.CylinderGeometry((first.w_mm * 0.32) * S, (first.w_mm * 0.38) * S, 10 * S, 24);
+    }
+    if (first.element_type === "display") {
+      return new THREE.BoxGeometry(first.w_mm * S, 3 * S, first.h_mm * S);
+    }
+    if (first.element_type === "speaker") {
+      return new THREE.CylinderGeometry((Math.min(first.w_mm, first.h_mm) * 0.46) * S, (Math.min(first.w_mm, first.h_mm) * 0.46) * S, 5 * S, 32);
+    }
+    if (first.element_type === "battery") {
+      return new THREE.BoxGeometry(first.w_mm * S, 8 * S, first.h_mm * S);
+    }
+    if (first.element_type === "usb_port") {
+      return new THREE.BoxGeometry(first.w_mm * S, 4 * S, first.h_mm * S);
+    }
+    return createTaperedRectGeometry(first.w_mm, first.h_mm);
+  }, [first.element_type, first.h_mm, first.w_mm]);
 
-  const geometry = useMemo(
-    () => createKeycapGeometry(keys[0].w_u, keys[0].h_u),
-    [keys[0]?.w_u, keys[0]?.h_u]
-  );
+  const matrix = useMemo(() => new THREE.Matrix4(), []);
+  const position = useMemo(() => new THREE.Vector3(), []);
+  const quaternion = useMemo(() => new THREE.Quaternion(), []);
+  const scale = useMemo(() => new THREE.Vector3(1, 1, 1), []);
+  const color = useMemo(() => new THREE.Color(), []);
 
   useEffect(() => {
     const mesh = meshRef.current;
     if (!mesh) return;
+    const colors = new Float32Array(elements.length * 3);
 
-    const matrix = new THREE.Matrix4();
-    const color = new THREE.Color();
-    const colors = new Float32Array(keys.length * 3);
-
-    keys.forEach((key, i) => {
-      // Position: center of key in scene units (mm * S)
-      const x = (key.x_u + key.w_u / 2) * UNIT_MM * S;
-      const z = (key.y_u + (key.h_u ?? 1) / 2) * UNIT_MM * S;
-
-      matrix.identity();
-      if (key.rotation_deg) {
-        const rad = (key.rotation_deg * Math.PI) / 180;
-        matrix.makeRotationY(-rad);
+    elements.forEach((element, i) => {
+      const x = (element.x_mm + element.w_mm / 2) * S;
+      const z = (element.y_mm + element.h_mm / 2) * S;
+      quaternion.setFromAxisAngle(
+        new THREE.Vector3(0, 1, 0),
+        (-element.rotation_deg * Math.PI) / 180,
+      );
+      position.set(x, 0, z);
+      matrix.compose(position, quaternion, scale);
+      if (element.element_type === "encoder") {
+        position.set(x, 5 * S, z);
+        matrix.compose(position, quaternion, scale);
       }
-      matrix.setPosition(x, 0, z);
+      if (element.element_type === "display") {
+        position.set(x, 1.5 * S, z);
+        matrix.compose(position, quaternion, scale);
+      }
+      if (element.element_type === "speaker") {
+        position.set(x, 2.5 * S, z);
+        matrix.compose(position, quaternion, scale);
+      }
+      if (element.element_type === "battery") {
+        position.set(x, 4 * S, z);
+        matrix.compose(position, quaternion, scale);
+      }
+      if (element.element_type === "usb_port") {
+        position.set(x, 2 * S, z);
+        matrix.compose(position, quaternion, scale);
+      }
       mesh.setMatrixAt(i, matrix);
 
-      const isSelected = selectedKeyIds.includes(key.id);
-      if (isSelected) {
+      if (selectedElementIds.includes(element.id)) {
         color.setRGB(0.35, 0.38, 0.92);
       } else {
-        color.setRGB(0.16, 0.16, 0.18);
+        color.set(materialColor(element.element_type));
       }
       colors[i * 3] = color.r;
       colors[i * 3 + 1] = color.g;
@@ -125,37 +180,31 @@ function KeycapSizeGroup({
 
     mesh.instanceMatrix.needsUpdate = true;
     mesh.instanceColor = new THREE.InstancedBufferAttribute(colors, 3);
-  }, [keys, selectedKeyIds]);
+  }, [color, elements, matrix, position, quaternion, scale, selectedElementIds]);
 
   return (
-    <instancedMesh
-      ref={meshRef}
-      args={[geometry, undefined, keys.length]}
-      castShadow
-      receiveShadow
-    >
-      <meshStandardMaterial vertexColors metalness={0.05} roughness={0.85} />
+    <instancedMesh ref={meshRef} args={[geometry, undefined, elements.length]} castShadow receiveShadow>
+      <meshStandardMaterial vertexColors metalness={0.08} roughness={0.82} />
     </instancedMesh>
   );
 }
 
-function Plate({ keys }: { keys: KeySpec[] }) {
+function Plate({ elements }: { elements: PlacedElementSpec[] }) {
   const bounds = useMemo(() => {
-    if (keys.length === 0) return { w: 10, h: 4, cx: 5, cz: 2 };
-    // Use min AND max to handle negative coordinates
-    const minX = Math.min(...keys.map((k) => k.x_u));
-    const minY = Math.min(...keys.map((k) => k.y_u));
-    const maxX = Math.max(...keys.map((k) => k.x_u + k.w_u));
-    const maxY = Math.max(...keys.map((k) => k.y_u + (k.h_u ?? 1)));
-    const margin = 0.5; // 0.5u margin
-    const w = (maxX - minX + margin * 2) * UNIT_MM * S;
-    const h = (maxY - minY + margin * 2) * UNIT_MM * S;
-    const cx = ((minX + maxX) / 2) * UNIT_MM * S;
-    const cz = ((minY + maxY) / 2) * UNIT_MM * S;
+    if (elements.length === 0) return { w: 10, h: 4, cx: 5, cz: 2 };
+    const minX = Math.min(...elements.map((element) => element.x_mm));
+    const minY = Math.min(...elements.map((element) => element.y_mm));
+    const maxX = Math.max(...elements.map((element) => element.x_mm + element.w_mm));
+    const maxY = Math.max(...elements.map((element) => element.y_mm + element.h_mm));
+    const margin = 9.525; // 0.5u
+    const w = (maxX - minX + margin * 2) * S;
+    const h = (maxY - minY + margin * 2) * S;
+    const cx = ((minX + maxX) / 2) * S;
+    const cz = ((minY + maxY) / 2) * S;
     return { w, h, cx, cz };
-  }, [keys]);
+  }, [elements]);
 
-  const plateThickness = 1.5 * S; // 1.5mm plate
+  const plateThickness = 1.5 * S;
 
   return (
     <mesh position={[bounds.cx, -plateThickness / 2, bounds.cz]} receiveShadow>
@@ -166,14 +215,14 @@ function Plate({ keys }: { keys: KeySpec[] }) {
 }
 
 export function KeyboardPreview() {
-  const keys = useProjectStore((s) => s.project?.layout.keys ?? []);
-  const selectedKeyIds = useProjectStore((s) => s.selectedKeyIds);
+  const project = useProjectStore((s) => s.project);
+  const selectedElementIds = useProjectStore((s) => s.selectedElementIds);
+  const elements = useMemo(() => (project ? getEditableElements(project.layout) : []), [project]);
 
-  // No wrapper group scaling — all geometry is already in scene units
   return (
     <>
-      <KeycapInstances keys={keys} selectedKeyIds={selectedKeyIds} />
-      <Plate keys={keys} />
+      <ElementInstances elements={elements} selectedElementIds={selectedElementIds} />
+      <Plate elements={elements} />
     </>
   );
 }

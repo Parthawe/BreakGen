@@ -47,3 +47,5 @@ class ExportManifest(BaseModel):
     toolchain: ToolchainVersions = Field(default_factory=ToolchainVersions)
     artifacts: list[ArtifactEntry] = Field(default_factory=list)
     validation_report_id: str = Field(default="")
+    validation_status: str = Field(default="")
+    export_readiness: str = Field(default="")

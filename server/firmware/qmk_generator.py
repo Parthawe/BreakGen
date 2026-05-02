@@ -13,8 +13,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from server.eda.control_surface_electronics import compile_control_surface_electronics
 from server.eda.matrix_compiler import MatrixAssignment
-from server.models.project import KeyboardProject
+from server.models.project import ElementType, KeyboardProject, ProductFamily
 
 
 # Default pin assignments for RP2040-based controllers
@@ -57,6 +58,168 @@ def _label_to_keycode(label: str) -> str:
     return QWERTY_MAP.get(label, "KC_NO")
 
 
+GAMEPAD_BUTTON_MAP = {
+    "A": "south",
+    "B": "east",
+    "X": "west",
+    "Y": "north",
+    "L1": "left_shoulder",
+    "R1": "right_shoulder",
+    "L2": "left_trigger",
+    "R2": "right_trigger",
+    "Start": "start",
+    "Select": "select",
+}
+
+
+def _control_map_entry(project: KeyboardProject, element, index_by_type: dict[ElementType, int]) -> dict:
+    index = index_by_type.get(element.element_type, 0)
+    payload: dict = {
+        "id": element.id,
+        "element_type": element.element_type.value,
+        "label": element.label,
+        "position_mm": {
+            "x": element.x_mm,
+            "y": element.y_mm,
+            "w": element.w_mm,
+            "h": element.h_mm,
+        },
+        "matrix": [element.row, element.col] if element.row is not None and element.col is not None else None,
+    }
+
+    if project.product_family == ProductFamily.MIDI:
+        if element.element_type == ElementType.KEY_SWITCH:
+            payload["mapping"] = {
+                "kind": "midi_note",
+                "channel": 1,
+                "note": 60 + index,
+                "velocity_curve": "linear",
+            }
+        elif element.element_type == ElementType.ENCODER:
+            payload["mapping"] = {
+                "kind": "midi_cc",
+                "channel": 1,
+                "cc": 16 + index,
+                "mode": "relative",
+            }
+        elif element.element_type == ElementType.DISPLAY:
+            payload["mapping"] = {
+                "kind": "status_display",
+                "page": index,
+            }
+        else:
+            payload["mapping"] = {
+                "kind": "generic_control",
+                "slot": index,
+            }
+        return payload
+
+    if project.product_family == ProductFamily.GAMEPAD:
+        if element.label in {"Up", "Down", "Left", "Right"}:
+            payload["mapping"] = {
+                "kind": "dpad",
+                "direction": element.label.lower(),
+            }
+        elif element.element_type == ElementType.JOYSTICK:
+            payload["mapping"] = {
+                "kind": "analog_stick",
+                "axes": ["x", "y"],
+                "slot": index,
+            }
+        else:
+            payload["mapping"] = {
+                "kind": "gamepad_button",
+                "button": GAMEPAD_BUTTON_MAP.get(element.label, f"aux_{index + 1}"),
+            }
+        return payload
+
+    if project.product_family == ProductFamily.HANDHELD_COMPANION:
+        if element.element_type == ElementType.BUTTON:
+            payload["mapping"] = {
+                "kind": "navigation_button",
+                "action": element.label.lower().replace(" ", "_"),
+            }
+        elif element.element_type == ElementType.DISPLAY:
+            payload["mapping"] = {
+                "kind": "display_surface",
+                "page": index,
+            }
+        elif element.element_type == ElementType.SPEAKER:
+            payload["mapping"] = {
+                "kind": "audio_output",
+                "channel": "mono",
+            }
+        elif element.element_type == ElementType.BATTERY:
+            payload["mapping"] = {
+                "kind": "power_module",
+                "chemistry": "lipo",
+            }
+        elif element.element_type == ElementType.USB_PORT:
+            payload["mapping"] = {
+                "kind": "service_port",
+                "port": "usb_c",
+            }
+        else:
+            payload["mapping"] = {
+                "kind": "generic_control",
+                "slot": index,
+            }
+        return payload
+
+    if element.element_type in {ElementType.KEY_SWITCH, ElementType.BUTTON}:
+        payload["mapping"] = {
+            "kind": "hid_keycode",
+            "value": _label_to_keycode(element.label),
+        }
+    elif element.element_type == ElementType.ENCODER:
+        payload["mapping"] = {
+            "kind": "encoder_delta",
+            "slot": index,
+            "clockwise": "volume_up" if project.product_family == ProductFamily.STREAMDECK else "next",
+            "counterclockwise": "volume_down" if project.product_family == ProductFamily.STREAMDECK else "previous",
+        }
+    elif element.element_type == ElementType.DISPLAY:
+        payload["mapping"] = {
+            "kind": "display_region",
+            "slot": index,
+        }
+    else:
+        payload["mapping"] = {
+            "kind": "generic_control",
+            "slot": index,
+        }
+    return payload
+
+
+def generate_control_map(
+    project: KeyboardProject,
+    matrix: MatrixAssignment,
+) -> dict:
+    """Generate a family-native control mapping artifact."""
+    electronics = compile_control_surface_electronics(project)
+    index_by_type: dict[ElementType, int] = {}
+    mappings: list[dict] = []
+    for element in project.layout.elements:
+        index_by_type[element.element_type] = index_by_type.get(element.element_type, 0)
+        mappings.append(_control_map_entry(project, element, index_by_type))
+        index_by_type[element.element_type] += 1
+
+    return {
+        "version": 1,
+        "project": project.project_id,
+        "name": project.name,
+        "product_family": project.product_family.value,
+        "firmware_target": electronics.firmware_target,
+        "control_protocol": electronics.control_protocol,
+        "matrix": {
+            "rows": matrix.matrix_rows,
+            "cols": matrix.matrix_cols,
+            "strategy": electronics.matrix_strategy,
+        },
+        "mappings": mappings,
+    }
+
+
 def generate_qmk_info(
     project: KeyboardProject,
     matrix: MatrixAssignment,
@@ -72,6 +235,7 @@ def generate_qmk_info(
     # Pin assignments (limited by matrix size)
     row_pins = RP2040_ROW_PINS[: matrix.matrix_rows]
     col_pins = RP2040_COL_PINS[: matrix.matrix_cols]
+    electronics = compile_control_surface_electronics(project)
 
     # Layout definition — key positions for QMK's layout macro
     layout_keys = []
@@ -108,6 +272,16 @@ def generate_qmk_info(
                 "layout": layout_keys,
             }
         },
+        "breakgen": {
+            "product_domain": project.product_domain.value,
+            "product_family": project.product_family.value,
+            "firmware_target": electronics.firmware_target,
+            "control_protocol": electronics.control_protocol,
+            "matrix_strategy": electronics.matrix_strategy,
+            "matrix_controls": electronics.matrix_control_count,
+            "direct_controls": electronics.direct_control_count,
+            "direct_pin_usage": electronics.model_dump()["direct_pin_usage"],
+        },
     }
 
 
@@ -118,6 +292,7 @@ def generate_keymap(
     """
     Generate a default QWERTY keymap.json.
     """
+    electronics = compile_control_surface_electronics(project)
     # Build a matrix-indexed keymap
     keymap = [["KC_NO"] * matrix.matrix_cols for _ in range(matrix.matrix_rows)]
 
@@ -129,6 +304,8 @@ def generate_keymap(
         "version": 1,
         "keyboard": project.name.lower().replace(" ", "_"),
         "keymap": "default",
+        "target_profile": electronics.firmware_target,
+        "control_protocol": electronics.control_protocol,
         "layers": [
             # Layer 0: QWERTY
             [kc for row in keymap for kc in row],
@@ -150,6 +327,7 @@ def generate_via_definition(
     Matrix coordinates are embedded as "row,col" in the key label.
     Ref: https://www.caniusevia.com/docs/layouts/
     """
+    electronics = compile_control_surface_electronics(project)
     # Sort keys by row (y) then column (x) for KLE row grouping
     sorted_keys = sorted(
         [k for k in project.layout.keys if k.row is not None and k.col is not None],
@@ -197,6 +375,12 @@ def generate_via_definition(
         "layouts": {
             "keymap": kle_rows,
         },
+        "breakgen": {
+            "product_family": project.product_family.value,
+            "firmware_target": electronics.firmware_target,
+            "control_protocol": electronics.control_protocol,
+            "matrix_strategy": electronics.matrix_strategy,
+        },
     }
 
 
@@ -211,12 +395,19 @@ def write_firmware_files(
     info = generate_qmk_info(project, matrix)
     keymap = generate_keymap(project, matrix)
     via = generate_via_definition(project, matrix)
+    control_map = generate_control_map(project, matrix)
 
     info_path = output_dir / "info.json"
     keymap_path = output_dir / "keymap.json"
     via_path = output_dir / "via.json"
+    control_map_path = output_dir / "control-map.json"
 
-    for path, data in [(info_path, info), (keymap_path, keymap), (via_path, via)]:
+    for path, data in [
+        (info_path, info),
+        (keymap_path, keymap),
+        (via_path, via),
+        (control_map_path, control_map),
+    ]:
         with open(path, "w") as f:
             json.dump(data, f, indent=2)
 
@@ -224,4 +415,5 @@ def write_firmware_files(
         "info_json": str(info_path),
         "keymap_json": str(keymap_path),
         "via_json": str(via_path),
+        "control_map_json": str(control_map_path),
     }

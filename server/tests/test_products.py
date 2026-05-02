@@ -3,7 +3,11 @@
 import json
 from pathlib import Path
 
-from server.models.product_adapter import generate_grid_layout, generate_midi_layout
+from server.models.product_adapter import (
+    generate_gamepad_layout,
+    generate_grid_layout,
+    generate_midi_layout,
+)
 from server.models.project import LayoutSpec, ProductFamily
 from server.models.supported_configs import SUPPORTED_TEMPLATES
 from server.eda.matrix_compiler import compile_matrix
@@ -28,6 +32,16 @@ def test_streamdeck_3x5_has_15_keys():
     assert len(layout.keys) == 15
 
 
+def test_streamdeck_display_template_adds_status_modules():
+    with open(TEMPLATES_DIR / "streamdeck_display_3x5.json") as f:
+        data = json.load(f)
+    layout = LayoutSpec(**data["layout"])
+    assert len(layout.elements) == 17
+    assert len(layout.keys) == 15
+    assert sum(1 for element in layout.elements if element.element_type.value == "display") == 1
+    assert sum(1 for element in layout.elements if element.element_type.value == "encoder") == 1
+
+
 def test_streamdeck_wider_spacing():
     """Stream deck keys should be spaced wider than standard keyboard keys."""
     kb = generate_grid_layout(2, 2, ProductFamily.MACROPAD)
@@ -40,11 +54,22 @@ def test_streamdeck_wider_spacing():
 
 def test_midi_layout_has_keys_and_encoders():
     layout = generate_midi_layout(25, 4)
-    assert len(layout.keys) == 29  # 25 keys + 4 encoders
-    encoders = [k for k in layout.keys if k.id.startswith("k_enc_")]
-    keys = [k for k in layout.keys if k.id.startswith("k_key_")]
+    assert len(layout.elements) == 29  # 25 keys + 4 encoders
+    assert len(layout.keys) == 25  # encoders no longer masquerade as keys
+    encoders = [element for element in layout.elements if element.id.startswith("k_enc_")]
+    keys = [element for element in layout.elements if element.id.startswith("k_key_")]
     assert len(encoders) == 4
     assert len(keys) == 25
+
+
+def test_gamepad_layout_generates_button_elements():
+    layout = generate_gamepad_layout()
+    assert len(layout.elements) == 11
+    assert len(layout.keys) == 10
+    buttons = [element for element in layout.elements if element.element_type.value == "button"]
+    joysticks = [element for element in layout.elements if element.element_type.value == "joystick"]
+    assert len(buttons) == 10
+    assert len(joysticks) == 1
 
 
 def test_macropad_matrix_compiles():
@@ -71,8 +96,9 @@ def test_all_new_templates_exist():
         with open(path) as f:
             data = json.load(f)
         layout = LayoutSpec(**data["layout"])
-        assert len(layout.keys) == tmpl.key_count, (
-            f"{tmpl.template_id}: declared {tmpl.key_count}, actual {len(layout.keys)}"
+        actual_count = len(layout.elements) if layout.elements else len(layout.keys)
+        assert actual_count == tmpl.key_count, (
+            f"{tmpl.template_id}: declared {tmpl.key_count}, actual {actual_count}"
         )
 
 
@@ -81,10 +107,14 @@ def test_template_family_filter():
     macropads = [t for t in SUPPORTED_TEMPLATES if t.product_family == ProductFamily.MACROPAD]
     streamdecks = [t for t in SUPPORTED_TEMPLATES if t.product_family == ProductFamily.STREAMDECK]
     midi = [t for t in SUPPORTED_TEMPLATES if t.product_family == ProductFamily.MIDI]
+    gamepads = [t for t in SUPPORTED_TEMPLATES if t.product_family == ProductFamily.GAMEPAD]
+    handhelds = [t for t in SUPPORTED_TEMPLATES if t.product_family == ProductFamily.HANDHELD_COMPANION]
     assert len(keyboards) == 3
     assert len(macropads) == 2
-    assert len(streamdecks) == 2
+    assert len(streamdecks) == 3
     assert len(midi) == 1
+    assert len(gamepads) == 1
+    assert len(handhelds) == 1
 
 
 def test_grid_no_duplicate_ids():
