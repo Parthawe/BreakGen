@@ -48,21 +48,42 @@ function createTaperedRectGeometry(widthMm: number, heightMm: number): THREE.Buf
 function materialColor(type: ElementType): string {
   switch (type) {
     case "button":
-      return "#1b3d2a";
+      return "#2e8c62";
     case "encoder":
-      return "#4d3510";
+      return "#d0a63d";
     case "display":
-      return "#123444";
+      return "#4db7ff";
     case "joystick":
-      return "#43163a";
+      return "#a255d8";
     case "speaker":
-      return "#4c1835";
+      return "#d364a1";
     case "battery":
-      return "#4d4210";
+      return "#b79a2f";
     case "usb_port":
-      return "#16324a";
+      return "#4f94cf";
     default:
-      return "#29292d";
+      return "#5b5d65";
+  }
+}
+
+function materialProps(type: ElementType) {
+  switch (type) {
+    case "display":
+      return { metalness: 0.12, roughness: 0.2, emissive: "#11344f", emissiveIntensity: 0.65 };
+    case "encoder":
+      return { metalness: 0.7, roughness: 0.28, emissive: "#3b2807", emissiveIntensity: 0.18 };
+    case "button":
+      return { metalness: 0.14, roughness: 0.36, emissive: "#0d2419", emissiveIntensity: 0.16 };
+    case "joystick":
+      return { metalness: 0.18, roughness: 0.34, emissive: "#2a1038", emissiveIntensity: 0.16 };
+    case "speaker":
+      return { metalness: 0.22, roughness: 0.38, emissive: "#2f1222", emissiveIntensity: 0.12 };
+    case "battery":
+      return { metalness: 0.3, roughness: 0.42, emissive: "#33270a", emissiveIntensity: 0.1 };
+    case "usb_port":
+      return { metalness: 0.42, roughness: 0.32, emissive: "#14314a", emissiveIntensity: 0.1 };
+    default:
+      return { metalness: 0.18, roughness: 0.48, emissive: "#111216", emissiveIntensity: 0.08 };
   }
 }
 
@@ -107,6 +128,7 @@ function ElementSizeGroup({
 }) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const first = elements[0];
+  const material = useMemo(() => materialProps(first.element_type), [first.element_type]);
   const geometry = useMemo(() => {
     if (first.element_type === "encoder") {
       return new THREE.CylinderGeometry((first.w_mm * 0.32) * S, (first.w_mm * 0.38) * S, 10 * S, 24);
@@ -184,7 +206,13 @@ function ElementSizeGroup({
 
   return (
     <instancedMesh ref={meshRef} args={[geometry, undefined, elements.length]} castShadow receiveShadow>
-      <meshStandardMaterial vertexColors metalness={0.08} roughness={0.82} />
+      <meshStandardMaterial
+        vertexColors
+        metalness={material.metalness}
+        roughness={material.roughness}
+        emissive={material.emissive}
+        emissiveIntensity={material.emissiveIntensity}
+      />
     </instancedMesh>
   );
 }
@@ -209,7 +237,7 @@ function Plate({ elements }: { elements: PlacedElementSpec[] }) {
   return (
     <mesh position={[bounds.cx, -plateThickness / 2, bounds.cz]} receiveShadow>
       <boxGeometry args={[bounds.w, plateThickness, bounds.h]} />
-      <meshStandardMaterial color="#141416" metalness={0.6} roughness={0.45} />
+      <meshStandardMaterial color="#24262d" metalness={0.42} roughness={0.34} />
     </mesh>
   );
 }

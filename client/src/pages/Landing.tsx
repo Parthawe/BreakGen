@@ -110,6 +110,30 @@ const DIFFERENTIATORS = [
   "Not just firmware tools. Geometry, electronics, assets, and exports stay connected.",
 ];
 
+const LAUNCH_DOSSIER = [
+  {
+    label: "Public build",
+    title: "Interactive launch surface",
+    body: "A GitHub Pages release with a real demo route, not a static mockup.",
+  },
+  {
+    label: "Control-surface alpha",
+    title: "Five live families",
+    body: "Keyboard, macro pad, stream deck, MIDI, and gamepad all sit on one revisioned product spine.",
+  },
+  {
+    label: "Trust layer",
+    title: "Artifacts, validation, exports",
+    body: "The system shows its engineering state instead of hiding it behind marketing language.",
+  },
+];
+
+const LAUNCH_SIGNAL = [
+  "Public demo",
+  "Interactive layout + 3D",
+  "Revisioned product record",
+];
+
 function Glyph({
   rows,
   color,
@@ -153,15 +177,6 @@ function SectionEyebrow({ children }: { children: React.ReactNode }) {
   );
 }
 
-function StatPill({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2">
-      <span className="text-[11px] uppercase tracking-[0.12em] text-zinc-500">{label}</span>
-      <span className="ml-2 text-[12px] font-medium text-zinc-200">{value}</span>
-    </div>
-  );
-}
-
 function FeatureRail() {
   return (
     <div className="relative mx-auto max-w-[1200px] px-8">
@@ -170,7 +185,7 @@ function FeatureRail() {
           <div className="mb-5 flex items-center justify-between">
             <div>
               <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">Intent</div>
-              <div className="mt-1 text-[15px] font-medium text-white">Build a cinematic 65% board in brushed graphite</div>
+              <div className="mt-1 text-[15px] font-medium text-white">Build a cinematic broadcast deck in brushed graphite</div>
             </div>
             <div className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[10px] uppercase tracking-[0.12em] text-emerald-300">
               live project
@@ -228,9 +243,9 @@ function FeatureRail() {
             <div className="mb-4 text-[11px] uppercase tracking-[0.18em] text-zinc-500">Outputs</div>
             <div className="grid grid-cols-2 gap-3">
               {[
-                ["Plate DXF", "Geometry"],
+                ["Mechanical DXF", "Panel geometry"],
                 ["Matrix + pins", "Electronics"],
-                ["Firmware JSON", "QMK / VIA"],
+                ["Control map", "Family-native firmware"],
                 ["Export bundle", "Traceable"],
               ].map(([title, meta]) => (
                 <div key={title} className="rounded-2xl border border-white/8 bg-black/20 px-4 py-4">
@@ -320,51 +335,82 @@ export function Landing() {
                 GitHub Pages + interactive demo
               </div>
             )}
-            <div className="mb-12 max-w-[880px]">
-              <SectionEyebrow>Creative environment for programmable hardware</SectionEyebrow>
-              <h1
-                className="max-w-[980px] text-[56px] font-semibold leading-[0.94] tracking-[-0.055em] text-white sm:text-[72px] lg:text-[104px]"
-                style={{ textWrap: "balance" } as CSSProperties}
-              >
-                What should we build in
-                <span className="ml-3 inline-block bg-[linear-gradient(90deg,#d9d2ff,#86e3ff,#ffc8eb)] bg-clip-text text-transparent">
-                  3D?
-                </span>
-              </h1>
-              <p
-                className="mt-7 max-w-[720px] text-[17px] leading-[1.8] text-zinc-400 sm:text-[19px]"
-                style={{ textWrap: "pretty" } as CSSProperties}
-              >
-                BreakGen is a creative operating surface for custom input hardware. Start from a mood, a layout, or a prompt, then move through 3D assets, electronics, validation, and export without falling out of the same environment.
-              </p>
-              {PUBLIC_SITE && (
-                <p className="mt-4 max-w-[720px] text-[14px] leading-[1.8] text-zinc-500">
-                  The public site ships a client-only demo for product feel and interaction. The full authenticated alpha with live backend compilers, jobs, and exports runs locally from the repository.
+            <div className="mb-12 grid gap-10 lg:grid-cols-[minmax(0,0.95fr)_minmax(320px,0.6fr)] lg:items-end">
+              <div className="max-w-[880px]">
+                <SectionEyebrow>Creative environment for programmable hardware</SectionEyebrow>
+                <h1
+                  className="max-w-[980px] text-[56px] font-semibold leading-[0.94] tracking-[-0.055em] text-white sm:text-[72px] lg:text-[98px]"
+                  style={{ textWrap: "balance" } as CSSProperties}
+                >
+                  Design electronic products in 3D, then carry them through to
+                  <span className="ml-3 inline-block text-[#c7c0ff]">export.</span>
+                </h1>
+                <p
+                  className="mt-7 max-w-[760px] text-[17px] leading-[1.8] text-zinc-400 sm:text-[19px]"
+                  style={{ textWrap: "pretty" } as CSSProperties}
+                >
+                  BreakGen is a creative operating surface for control hardware. Start from a mood, a layout, or a product family, then move through 3D assets, electronics, validation, and export without leaving the same system.
                 </p>
-              )}
+                {PUBLIC_SITE && (
+                  <p className="mt-4 max-w-[760px] text-[14px] leading-[1.8] text-zinc-500">
+                    This public launch build ships a client-side interactive demo for product feel. The deeper authenticated alpha with live compilers, jobs, and durable exports runs from the repository.
+                  </p>
+                )}
 
-              <div className="mt-9 flex flex-wrap items-center gap-3">
-                <Link
-                  to={cta}
-                  className="rounded-full bg-[#f5f3ff] px-7 py-4 text-[14px] font-semibold text-[#09090d] transition-colors hover:bg-white"
-                >
-                  {PUBLIC_SITE ? "Open public demo" : "Open the workspace"}
-                </Link>
-                <a
-                  href={REPO_URL}
-                  target="_blank"
-                  rel="noopener"
-                  className="glass rounded-full border border-white/10 px-7 py-4 text-[14px] font-medium text-zinc-300 transition-colors hover:border-white/20 hover:text-white"
-                >
-                  View the codebase
-                </a>
+                <div className="mt-9 flex flex-wrap items-center gap-3">
+                  <Link
+                    to={cta}
+                    className="rounded-full bg-[#f5f3ff] px-7 py-4 text-[14px] font-semibold text-[#09090d] transition-colors hover:bg-white"
+                  >
+                    {PUBLIC_SITE ? "Open public demo" : "Open the workspace"}
+                  </Link>
+                  <a
+                    href={REPO_URL}
+                    target="_blank"
+                    rel="noopener"
+                    className="glass rounded-full border border-white/10 px-7 py-4 text-[14px] font-medium text-zinc-300 transition-colors hover:border-white/20 hover:text-white"
+                  >
+                    View the codebase
+                  </a>
+                </div>
+
+                <div className="mt-8 flex flex-wrap gap-2">
+                  {LAUNCH_SIGNAL.map((item) => (
+                    <span
+                      key={item}
+                      className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-[11px] uppercase tracking-[0.14em] text-zinc-400"
+                    >
+                      {item}
+                    </span>
+                  ))}
+                </div>
               </div>
 
-              <div className="mt-8 flex flex-wrap gap-3">
-                <StatPill label="Families" value="4 live categories" />
-                <StatPill label="Loop" value="2D + 3D + export" />
-                <StatPill label={PUBLIC_SITE ? "Launch" : "Providers"} value={PUBLIC_SITE ? "Demo now, full alpha in repo" : "Meshy now, provider-ready next"} />
-              </div>
+              <aside className="rounded-[34px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(123,111,255,0.22),transparent_40%),linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.015))] p-6 shadow-[0_30px_100px_rgba(0,0,0,0.38)]">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">Launch dossier</div>
+                    <div className="mt-2 text-[22px] font-semibold leading-[1.1] text-white">
+                      BreakGen is shipping as a real product surface, not a concept deck.
+                    </div>
+                  </div>
+                  <div className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[10px] uppercase tracking-[0.12em] text-emerald-300">
+                    live
+                  </div>
+                </div>
+                <div className="mt-6 space-y-3">
+                  {LAUNCH_DOSSIER.map((item) => (
+                    <div
+                      key={item.label}
+                      className="rounded-[22px] border border-white/8 bg-black/22 px-4 py-4"
+                    >
+                      <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">{item.label}</div>
+                      <div className="mt-2 text-[15px] font-semibold text-white">{item.title}</div>
+                      <p className="mt-2 text-[13px] leading-[1.7] text-zinc-400">{item.body}</p>
+                    </div>
+                  ))}
+                </div>
+              </aside>
             </div>
           </div>
         </section>

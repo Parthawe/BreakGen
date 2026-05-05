@@ -73,7 +73,7 @@ export function PublicDemo() {
 
   return (
     <div className="app-shell flex h-screen w-screen">
-      <aside className="glass glass-strong w-[320px] shrink-0 rounded-r-[28px] flex flex-col">
+      <aside className="glass glass-strong w-[344px] shrink-0 rounded-r-[30px] flex flex-col">
         <div className="glass-toolbar glass-divider h-16 px-5 border-b flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3">
             <div className="glass-chip w-10 h-10 rounded-xl flex items-center justify-center">
@@ -96,16 +96,30 @@ export function PublicDemo() {
         </div>
 
         <div className="p-4 space-y-4 overflow-y-auto">
-          <div className="glass glass-soft rounded-2xl p-4">
+          <div className="rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(123,111,255,0.2),transparent_42%),linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))] p-5 shadow-[0_24px_60px_rgba(0,0,0,0.28)]">
             <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#a39bff] mb-3">
               YC-level launch slice
             </div>
-            <h1 className="text-[24px] font-semibold leading-[1.02] tracking-[-0.04em] text-white">
-              Interactive control-surface demo, public on GitHub Pages.
+            <h1 className="text-[28px] font-semibold leading-[0.98] tracking-[-0.05em] text-white">
+              Interactive control-surface demo, public and explorable.
             </h1>
             <p className="mt-3 text-[13px] leading-[1.7] text-zinc-400">
               This is the public launch surface: editable layout, live 3D preview, mechanical provenance, validation state, and export history in one artifact-backed product record.
             </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {[
+                "17 controls",
+                "3 tracked assets",
+                "mechanical compile attached",
+              ].map((item) => (
+                <span
+                  key={item}
+                  className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] uppercase tracking-[0.12em] text-zinc-400"
+                >
+                  {item}
+                </span>
+              ))}
+            </div>
             <div className="mt-4 flex flex-wrap gap-2">
               <a
                 href={REPO_URL}
@@ -150,6 +164,9 @@ export function PublicDemo() {
             </span>
           </div>
           <div className="flex items-center gap-2">
+            <span className="rounded-full border border-white/8 bg-white/[0.03] px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-zinc-500">
+              artifact-backed demo
+            </span>
             <span className="text-[11px] uppercase tracking-[0.08em] text-zinc-600">
               streamdeck
             </span>
@@ -164,18 +181,37 @@ export function PublicDemo() {
             {renderEditor()}
           </div>
           <div className="w-[44%] shrink-0 glass-divider border-l flex flex-col">
-            <div className="flex-1 min-h-0">
+            <div className="relative flex-1 min-h-0 overflow-hidden bg-[radial-gradient(circle_at_top,rgba(82,126,255,0.12),transparent_34%),radial-gradient(circle_at_bottom,rgba(255,145,205,0.08),transparent_28%),#050609]">
+              <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-24 bg-[linear-gradient(180deg,rgba(5,6,9,0.88),rgba(5,6,9,0.12))]" />
+              <div className="absolute left-4 top-4 z-20 rounded-2xl border border-white/10 bg-black/28 px-4 py-3 backdrop-blur-md">
+                <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">Preview chamber</div>
+                <div className="mt-1 text-[14px] font-semibold text-white">Panel, controls, and accepted assets</div>
+              </div>
+              <div className="absolute right-4 top-4 z-20 rounded-full border border-emerald-500/18 bg-emerald-500/10 px-3 py-1.5 text-[10px] uppercase tracking-[0.12em] text-emerald-300 backdrop-blur-md">
+                interactive
+              </div>
               {renderScene()}
             </div>
             <div className="glass-divider border-t p-4">
-              <div className="glass glass-soft rounded-2xl p-4">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-zinc-600 mb-2">
-                  Launch framing
+              <div className="grid gap-3 lg:grid-cols-2">
+                <div className="glass glass-soft rounded-2xl p-4">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-zinc-600 mb-2">
+                    Launch framing
+                  </div>
+                  <div className="text-[13px] leading-[1.75] text-zinc-400">
+                    Public site: launch narrative plus client-only interactive demo.
+                    Private alpha: authenticated workspace, live API, generation jobs,
+                    compiler endpoints, and full export flow from the repo.
+                  </div>
                 </div>
-                <div className="text-[13px] leading-[1.75] text-zinc-400">
-                  Public site: launch narrative plus client-only interactive demo.
-                  Private alpha: authenticated workspace, live API, generation jobs,
-                  compiler endpoints, and full export flow from the repo.
+                <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-zinc-600 mb-2">
+                    What this proves
+                  </div>
+                  <div className="space-y-2 text-[13px] leading-[1.7] text-zinc-400">
+                    <div>One product record spans layout, preview, electronics, validation, and export.</div>
+                    <div>The public site shows the software as a system, not a static marketing page.</div>
+                  </div>
                 </div>
               </div>
             </div>
