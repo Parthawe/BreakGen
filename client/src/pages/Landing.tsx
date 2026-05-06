@@ -110,6 +110,24 @@ const DIFFERENTIATORS = [
   "Not just firmware tools. Geometry, electronics, assets, and exports stay connected.",
 ];
 
+const ALPHA_CONTRACT = [
+  {
+    label: "Live now",
+    title: "Public launch + interactive demo",
+    body: "A browsable launch surface with a client-side workspace that proves layout, preview, provenance, and product feel.",
+  },
+  {
+    label: "Runs from the repo",
+    title: "Authenticated alpha with compilers",
+    body: "The deeper build includes live revisioned state, generation jobs, mechanical compile, validation, and export records.",
+  },
+  {
+    label: "Platform direction",
+    title: "Five control-surface families, one spine",
+    body: "Keyboard, macropad, stream deck, MIDI, and gamepad share the same product record, asset lifecycle, and export truth model.",
+  },
+];
+
 const LAUNCH_DOSSIER = [
   {
     label: "Public build",
@@ -132,6 +150,59 @@ const LAUNCH_SIGNAL = [
   "Public demo",
   "Interactive layout + 3D",
   "Revisioned product record",
+];
+
+const HERO_EVIDENCE = [
+  {
+    label: "Families live",
+    value: "5",
+    note: "keyboard to gamepad",
+  },
+  {
+    label: "Product planes",
+    value: "3",
+    note: "studio, compiler, records",
+  },
+  {
+    label: "Proof style",
+    value: "1",
+    note: "interactive public demo",
+  },
+];
+
+const AUDIENCE_STRIP = [
+  "Makers",
+  "Hardware founders",
+  "Industrial designers",
+  "Creative technologists",
+  "Product engineers",
+];
+
+const PLATFORM_PILLARS = [
+  {
+    id: "studio",
+    eyebrow: "BreakGen Studio",
+    meta: "Create",
+    title: "Shape the product directly, family, layout, appearance, and preview in one workspace.",
+    body: "Choose a control-surface family, arrange elements, assign accepted assets, and keep the object readable in both 2D and 3D from the same product record.",
+    points: ["Family-aware workspace", "Live layout + preview loop", "Accepted appearance assets"],
+  },
+  {
+    id: "compiler",
+    eyebrow: "BreakGen Compiler",
+    meta: "Build",
+    title: "Turn authored product state into mechanical, electronics, validation, and export outputs.",
+    body: "The same revision drives panel geometry, matrix strategy, firmware metadata, validation checks, and export bundles, so the build path stays explicit.",
+    points: ["Mechanical compile", "Electronics strategy", "Validation and export"],
+  },
+  {
+    id: "records",
+    eyebrow: "BreakGen Records",
+    meta: "Trace",
+    title: "Keep jobs, artifacts, revisions, and acceptance state visible instead of hidden behind the UI.",
+    body: "BreakGen works when the trust layer stays visible. Generated assets, accepted assets, exports, and validation all remain attached to the revision that produced them.",
+    points: ["Revision history", "Artifact lineage", "Acceptance-aware assets"],
+  },
 ];
 
 function Glyph({
@@ -177,6 +248,25 @@ function SectionEyebrow({ children }: { children: React.ReactNode }) {
   );
 }
 
+function HeroEvidenceRail() {
+  return (
+    <div className="mt-10 grid gap-3 rounded-[24px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015))] p-4 sm:grid-cols-3">
+      {HERO_EVIDENCE.map((item) => (
+        <div
+          key={item.label}
+          className="rounded-[18px] border border-white/7 bg-black/18 px-4 py-4"
+        >
+          <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">{item.label}</div>
+          <div className="mt-3 text-[30px] font-semibold leading-none tracking-[-0.05em] text-white">
+            {item.value}
+          </div>
+          <div className="mt-2 text-[12px] uppercase tracking-[0.1em] text-zinc-500">{item.note}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function FeatureRail() {
   return (
     <div className="relative mx-auto max-w-[1200px] px-8">
@@ -184,7 +274,7 @@ function FeatureRail() {
         <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.02))] p-6">
           <div className="mb-5 flex items-center justify-between">
             <div>
-              <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">Intent</div>
+              <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">Object atlas</div>
               <div className="mt-1 text-[15px] font-medium text-white">Build a cinematic broadcast deck in brushed graphite</div>
             </div>
             <div className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[10px] uppercase tracking-[0.12em] text-emerald-300">
@@ -256,6 +346,169 @@ function FeatureRail() {
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function AlphaContractRail() {
+  return (
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,0.94fr)_minmax(300px,0.72fr)]">
+      <div className="rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-7 lg:p-8">
+        <SectionEyebrow>Alpha contract</SectionEyebrow>
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(260px,0.7fr)]">
+          <div>
+            <h2 className="max-w-[580px] text-[34px] font-semibold leading-[1.03] tracking-[-0.04em] text-white sm:text-[46px]">
+              The launch says exactly what ships, what runs locally, and what the platform is becoming.
+            </h2>
+            <p className="mt-5 max-w-[560px] text-[15px] leading-[1.85] text-zinc-400">
+              BreakGen works best when the product story stays honest. The public site proves interaction and product character. The repository proves the deeper alpha: revisions, jobs, compilers, validation, and durable artifacts.
+            </p>
+          </div>
+          <div className="rounded-[24px] border border-white/8 bg-black/20 p-5">
+            <div className="text-[11px] uppercase tracking-[0.16em] text-zinc-500">
+              Public alpha success contract
+            </div>
+            <div className="mt-4 space-y-2">
+              {[
+                "Create a control-surface project",
+                "Edit family-aware layout and preview it in 3D",
+                "Compile electronics and mechanical outputs",
+                "Inspect validation, assets, jobs, and export history",
+              ].map((item, index) => (
+                <div
+                  key={item}
+                  className="flex items-start gap-3 border-b border-white/6 px-1 py-3 last:border-b-0"
+                >
+                  <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-[10px] font-mono text-zinc-500">
+                    0{index + 1}
+                  </div>
+                  <div className="text-[13px] leading-[1.65] text-zinc-300">{item}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-[30px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(98,104,241,0.18),transparent_36%),linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <div className="text-[11px] uppercase tracking-[0.16em] text-zinc-500">Scope clarity</div>
+          <div className="rounded-full border border-emerald-500/18 bg-emerald-500/10 px-3 py-1 text-[10px] uppercase tracking-[0.12em] text-emerald-300">
+            depth first
+          </div>
+        </div>
+        <div className="space-y-3">
+          {ALPHA_CONTRACT.map((item) => (
+            <div key={item.label} className="rounded-[22px] border border-white/8 bg-black/22 px-4 py-4">
+              <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">{item.label}</div>
+              <div className="mt-2 text-[15px] font-semibold text-white">{item.title}</div>
+              <p className="mt-2 text-[13px] leading-[1.75] text-zinc-400">{item.body}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AudienceRail() {
+  return (
+    <div className="border-y border-white/8 py-4">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">
+          Built for
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {AUDIENCE_STRIP.map((item) => (
+            <span
+              key={item}
+              className="rounded-full border border-white/8 bg-white/[0.02] px-3 py-1.5 text-[11px] uppercase tracking-[0.12em] text-zinc-400"
+            >
+              {item}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PlatformRail() {
+  const [studio, compiler, records] = PLATFORM_PILLARS;
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(300px,0.72fr)]">
+      <div className="rounded-[32px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(123,111,255,0.14),transparent_36%),linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-7 lg:p-8">
+        <div className="flex items-start justify-between gap-6">
+          <div className="max-w-[680px]">
+            <SectionEyebrow>Platform</SectionEyebrow>
+            <h2 className="text-[36px] font-semibold leading-[1.03] tracking-[-0.04em] text-white sm:text-[48px]">
+              Three product planes, one engineering foundation.
+            </h2>
+            <p className="mt-5 max-w-[620px] text-[15px] leading-[1.85] text-zinc-400">
+              BreakGen becomes easier to trust when its major surfaces are legible. Studio, compiler, and records should each read clearly while still feeling like one revisioned system for physical product creation.
+            </p>
+          </div>
+          <div className="hidden rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-[10px] uppercase tracking-[0.16em] text-zinc-500 lg:block">
+            one platform
+          </div>
+        </div>
+
+        <div className="mt-8 rounded-[26px] border border-white/8 bg-black/20 p-6">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <div className="text-[11px] uppercase tracking-[0.16em] text-[#a39bff]">{studio.eyebrow}</div>
+              <div className="mt-2 text-[26px] font-semibold leading-[1.1] tracking-[-0.03em] text-white">
+                {studio.title}
+              </div>
+            </div>
+            <div className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-[10px] uppercase tracking-[0.12em] text-zinc-400">
+              {studio.meta}
+            </div>
+          </div>
+          <p className="mt-4 max-w-[620px] text-[14px] leading-[1.8] text-zinc-400">{studio.body}</p>
+          <div className="mt-5 flex flex-wrap gap-2">
+            {studio.points.map((point) => (
+              <span
+                key={point}
+                className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5 text-[10px] uppercase tracking-[0.12em] text-zinc-500"
+              >
+                {point}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-4">
+        {[compiler, records].map((item) => (
+          <div
+            key={item.id}
+            className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-[11px] uppercase tracking-[0.16em] text-zinc-500">{item.eyebrow}</div>
+              <div className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-[10px] uppercase tracking-[0.12em] text-zinc-500">
+                {item.meta}
+              </div>
+            </div>
+            <div className="mt-4 text-[20px] font-semibold leading-[1.18] tracking-[-0.03em] text-white">
+              {item.title}
+            </div>
+            <p className="mt-4 text-[14px] leading-[1.8] text-zinc-400">{item.body}</p>
+            <div className="mt-5 space-y-0">
+              {item.points.map((point) => (
+                <div
+                  key={point}
+                  className="border-t border-white/6 px-1 py-3 text-[12px] uppercase tracking-[0.1em] text-zinc-500 first:border-t-0 first:pt-0"
+                >
+                  {point}
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -384,6 +637,8 @@ export function Landing() {
                     </span>
                   ))}
                 </div>
+
+                <HeroEvidenceRail />
               </div>
 
               <aside className="rounded-[34px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(123,111,255,0.22),transparent_40%),linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.015))] p-6 shadow-[0_30px_100px_rgba(0,0,0,0.38)]">
@@ -419,24 +674,16 @@ export function Landing() {
           <FeatureRail />
         </section>
 
+        <section className="mx-auto max-w-[1200px] px-6 pb-20 lg:px-8">
+          <AudienceRail />
+        </section>
+
         <section className="mx-auto max-w-[1200px] px-6 pb-28 lg:px-8">
-          <div className="rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01))] p-7 lg:p-9">
-            <div className="grid gap-8 lg:grid-cols-[0.86fr_1.14fr]">
-              <div>
-                <SectionEyebrow>Why this shape works</SectionEyebrow>
-                <h2 className="text-[34px] font-semibold leading-[1.03] tracking-[-0.04em] text-white sm:text-[44px]">
-                  A new class of physical product needs a native creative canvas.
-                </h2>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-3">
-                {DIFFERENTIATORS.map((item) => (
-                  <div key={item} className="rounded-[22px] border border-white/8 bg-black/20 p-5 text-[14px] leading-[1.75] text-zinc-400">
-                    {item}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          <PlatformRail />
+        </section>
+
+        <section className="mx-auto max-w-[1200px] px-6 pb-28 lg:px-8">
+          <AlphaContractRail />
         </section>
 
         <section id="workflow" className="mx-auto max-w-[1200px] px-6 pb-28 lg:px-8">
@@ -471,7 +718,7 @@ export function Landing() {
             <div className="max-w-[760px]">
               <SectionEyebrow>Families</SectionEyebrow>
               <h2 className="text-[38px] font-semibold leading-[1.03] tracking-[-0.04em] text-white sm:text-[54px]">
-                One environment, four hardware directions.
+                One environment, five live control-surface directions.
               </h2>
             </div>
             <p className="max-w-[360px] text-[14px] leading-[1.8] text-zinc-500">
@@ -519,45 +766,83 @@ export function Landing() {
               </h2>
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-3">
-              {STACK.map((item) => (
-                <div key={item.title} className="rounded-[26px] border border-white/10 bg-black/18 p-6">
-                  <div className="text-[12px] uppercase tracking-[0.14em] text-zinc-500">{item.title}</div>
-                  <p className="mt-4 text-[15px] leading-[1.85] text-zinc-300">{item.body}</p>
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(300px,0.62fr)]">
+              <div className="rounded-[26px] border border-white/10 bg-black/18 p-6">
+                <div className="grid gap-0 md:grid-cols-3">
+                  {STACK.map((item, index) => (
+                    <div
+                      key={item.title}
+                      className={`px-0 py-5 md:px-5 ${index > 0 ? "border-t border-white/6 md:border-l md:border-t-0" : ""}`}
+                    >
+                      <div className="text-[12px] uppercase tracking-[0.14em] text-zinc-500">{item.title}</div>
+                      <p className="mt-4 text-[15px] leading-[1.85] text-zinc-300">{item.body}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-
-            <div className="mt-8 rounded-[24px] border border-white/10 bg-black/18 px-5 py-4 text-[13px] leading-[1.8] text-zinc-400">
-              Reference direction: FLORA positions itself as a unified creative environment where many AI tools feed one workflow. That framing is right for BreakGen too, but here the system is specialized for 3D hardware creation rather than general media generation.
+              </div>
+              <div className="rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.025))] p-6">
+                <div className="text-[12px] uppercase tracking-[0.14em] text-zinc-500">Why this shape works</div>
+                <div className="mt-4 space-y-0">
+                  {DIFFERENTIATORS.map((item) => (
+                    <div
+                      key={item}
+                      className="border-t border-white/6 py-4 text-[13px] leading-[1.75] text-zinc-300 first:border-t-0 first:pt-0"
+                    >
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
         <section className="px-6 pb-28 lg:px-8">
-          <div className="mx-auto max-w-[920px] text-center">
-            <SectionEyebrow>Start building</SectionEyebrow>
-            <h2 className="text-[38px] font-semibold leading-[1.03] tracking-[-0.04em] text-white sm:text-[58px]">
-              Design the object, not the toolchain.
-            </h2>
-            <p className="mx-auto mt-6 max-w-[640px] text-[16px] leading-[1.85] text-zinc-400">
-              BreakGen should feel like a creative studio for hardware: layout, 3D assets, electronics, validation, and export all moving in one coherent loop.
-            </p>
-            <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-              <Link
-                to={cta}
-                className="rounded-full bg-[#f5f3ff] px-7 py-4 text-[14px] font-semibold text-[#09090d] transition-colors hover:bg-white"
-              >
-                {PUBLIC_SITE ? "Open the public demo" : "Open BreakGen"}
-              </Link>
-              <a
-                href={REPO_URL}
-                target="_blank"
-                rel="noopener"
-                className="glass rounded-full border border-white/10 px-7 py-4 text-[14px] font-medium text-zinc-300 transition-colors hover:border-white/20 hover:text-white"
-              >
-                Read the repo
-              </a>
+          <div className="mx-auto max-w-[1200px] rounded-[34px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(54,189,248,0.12),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.015))] p-8 lg:p-10">
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(300px,0.62fr)] lg:items-end">
+              <div>
+                <SectionEyebrow>Start building</SectionEyebrow>
+                <h2 className="max-w-[760px] text-[38px] font-semibold leading-[1.03] tracking-[-0.04em] text-white sm:text-[58px]">
+                  Design the object, not the stitched-together toolchain.
+                </h2>
+                <p className="mt-6 max-w-[680px] text-[16px] leading-[1.85] text-zinc-400">
+                  BreakGen should read like a serious studio for hardware: layout, 3D assets, electronics, validation, and export moving in one coherent product record.
+                </p>
+                <div className="mt-10 flex flex-wrap items-center gap-3">
+                  <Link
+                    to={cta}
+                    className="rounded-full bg-[#f5f3ff] px-7 py-4 text-[14px] font-semibold text-[#09090d] transition-colors hover:bg-white"
+                  >
+                    {PUBLIC_SITE ? "Open the public demo" : "Open BreakGen"}
+                  </Link>
+                  <a
+                    href={REPO_URL}
+                    target="_blank"
+                    rel="noopener"
+                    className="glass rounded-full border border-white/10 px-7 py-4 text-[14px] font-medium text-zinc-300 transition-colors hover:border-white/20 hover:text-white"
+                  >
+                    Read the repo
+                  </a>
+                </div>
+              </div>
+
+              <div className="rounded-[24px] border border-white/8 bg-black/20 p-5">
+                <div className="text-[11px] uppercase tracking-[0.16em] text-zinc-500">Product promise</div>
+                <div className="mt-4 space-y-3">
+                  {[
+                    "Creative direction becomes structured product state",
+                    "Every revision carries validation, artifacts, and export lineage",
+                    "The same platform spine scales across control-surface families",
+                  ].map((item) => (
+                    <div
+                      key={item}
+                      className="rounded-[18px] border border-white/7 bg-white/[0.02] px-4 py-3 text-[13px] leading-[1.7] text-zinc-300"
+                    >
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </section>

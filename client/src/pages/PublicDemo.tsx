@@ -47,6 +47,12 @@ export function PublicDemo() {
     return "This public demo is client-only. The full alpha with auth, jobs, and live backend compilation runs locally from the repo.";
   }, [demoProject, dirty]);
 
+  const demoSignals = [
+    { label: "layout", value: "live edit" },
+    { label: "preview", value: "3d chamber" },
+    { label: "provenance", value: "artifact-backed" },
+  ];
+
   const renderEditor = () => (
     <Suspense
       fallback={
@@ -73,7 +79,7 @@ export function PublicDemo() {
 
   return (
     <div className="app-shell flex h-screen w-screen">
-      <aside className="glass glass-strong w-[344px] shrink-0 rounded-r-[30px] flex flex-col">
+      <aside className="glass glass-strong w-[332px] shrink-0 rounded-r-[30px] flex flex-col">
         <div className="glass-toolbar glass-divider h-16 px-5 border-b flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3">
             <div className="glass-chip w-10 h-10 rounded-xl flex items-center justify-center">
@@ -163,6 +169,18 @@ export function PublicDemo() {
               Edit the sample layout locally and watch the product state update live.
             </span>
           </div>
+          <div className="hidden items-center gap-2 xl:flex">
+            {demoSignals.map((item) => (
+              <span
+                key={item.label}
+                className="rounded-full border border-white/8 bg-white/[0.03] px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-zinc-500"
+              >
+                {item.label}
+                <span className="mx-1 text-zinc-700">/</span>
+                <span className="text-zinc-300">{item.value}</span>
+              </span>
+            ))}
+          </div>
           <div className="flex items-center gap-2">
             <span className="rounded-full border border-white/8 bg-white/[0.03] px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-zinc-500">
               artifact-backed demo
@@ -180,8 +198,10 @@ export function PublicDemo() {
           <div className="flex-1 p-4 overflow-hidden">
             {renderEditor()}
           </div>
-          <div className="w-[44%] shrink-0 glass-divider border-l flex flex-col">
+          <div className="w-[45%] shrink-0 glass-divider border-l flex flex-col">
             <div className="relative flex-1 min-h-0 overflow-hidden bg-[radial-gradient(circle_at_top,rgba(82,126,255,0.12),transparent_34%),radial-gradient(circle_at_bottom,rgba(255,145,205,0.08),transparent_28%),#050609]">
+              <div className="pointer-events-none absolute inset-[22px] rounded-[32px] border border-white/8 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.03),transparent_42%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]" />
+              <div className="pointer-events-none absolute inset-x-10 bottom-6 z-10 h-24 rounded-full bg-[radial-gradient(circle,rgba(91,119,255,0.16),transparent_62%)] blur-2xl" />
               <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-24 bg-[linear-gradient(180deg,rgba(5,6,9,0.88),rgba(5,6,9,0.12))]" />
               <div className="absolute left-4 top-4 z-20 rounded-2xl border border-white/10 bg-black/28 px-4 py-3 backdrop-blur-md">
                 <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">Preview chamber</div>
@@ -190,10 +210,31 @@ export function PublicDemo() {
               <div className="absolute right-4 top-4 z-20 rounded-full border border-emerald-500/18 bg-emerald-500/10 px-3 py-1.5 text-[10px] uppercase tracking-[0.12em] text-emerald-300 backdrop-blur-md">
                 interactive
               </div>
+              <div className="absolute bottom-4 left-4 z-20 rounded-[20px] border border-white/10 bg-black/28 px-4 py-3 backdrop-blur-md">
+                <div className="grid grid-cols-3 gap-4">
+                  {[
+                    ["controls", "17"],
+                    ["accepted", "2"],
+                    ["mechanical", "panel"],
+                  ].map(([label, value]) => (
+                    <div key={label}>
+                      <div className="text-[10px] uppercase tracking-[0.14em] text-zinc-600">{label}</div>
+                      <div className="mt-1 text-[16px] font-semibold text-white">{value}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="absolute bottom-4 right-4 z-20 rounded-[20px] border border-white/10 bg-black/28 px-4 py-3 text-right backdrop-blur-md">
+                <div className="text-[10px] uppercase tracking-[0.14em] text-zinc-600">Viewport</div>
+                <div className="mt-1 text-[12px] leading-[1.6] text-zinc-300">
+                  Orbit, inspect, and compare the board as a product object,
+                  not just as flat layout data.
+                </div>
+              </div>
               {renderScene()}
             </div>
             <div className="glass-divider border-t p-4">
-              <div className="grid gap-3 lg:grid-cols-2">
+              <div className="space-y-3">
                 <div className="glass glass-soft rounded-2xl p-4">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-zinc-600 mb-2">
                     Launch framing
@@ -201,7 +242,7 @@ export function PublicDemo() {
                   <div className="text-[13px] leading-[1.75] text-zinc-400">
                     Public site: launch narrative plus client-only interactive demo.
                     Private alpha: authenticated workspace, live API, generation jobs,
-                    compiler endpoints, and full export flow from the repo.
+                    mechanical compile, validation, and export provenance from the repository.
                   </div>
                 </div>
                 <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
@@ -211,6 +252,14 @@ export function PublicDemo() {
                   <div className="space-y-2 text-[13px] leading-[1.7] text-zinc-400">
                     <div>One product record spans layout, preview, electronics, validation, and export.</div>
                     <div>The public site shows the software as a system, not a static marketing page.</div>
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-white/8 bg-black/22 p-4">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-zinc-600 mb-2">
+                    Demo boundaries
+                  </div>
+                  <div className="text-[13px] leading-[1.7] text-zinc-400">
+                    This route is intentionally client-only. It proves interface character and workflow shape, while the repository-backed alpha handles live state, jobs, and durable outputs.
                   </div>
                 </div>
               </div>
