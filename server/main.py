@@ -4,7 +4,7 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -42,6 +42,29 @@ app.add_middleware(
     allow_headers=["Content-Type", "Authorization"],
 )
 
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "no-referrer")
+    response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+    if request.url.path not in {"/docs", "/redoc", "/openapi.json"}:
+        response.headers.setdefault(
+            "Content-Security-Policy",
+            (
+                "default-src 'self'; "
+                "base-uri 'self'; "
+                "frame-ancestors 'none'; "
+                "img-src 'self' data: https:; "
+                "style-src 'self' 'unsafe-inline'; "
+                "script-src 'self'; "
+                "connect-src 'self' http://localhost:5173 ws://localhost:5173"
+            ),
+        )
+    return response
+
+
 # Core routers — always available
 app.include_router(auth.router)
 app.include_router(projects.router)
@@ -69,13 +92,28 @@ async def health():
 
 # Serve built frontend in production (client/dist)
 FRONTEND_DIR = SERVER_DIR.parent / "client" / "dist"
+
+
+def _resolve_frontend_file(path: str) -> Path | None:
+    """Resolve a requested SPA file while enforcing the frontend root."""
+    root = FRONTEND_DIR.resolve()
+    candidate = (root / path).resolve()
+    if candidate != root and root not in candidate.parents:
+        return None
+    if candidate.exists() and candidate.is_file():
+        return candidate
+    return None
+
+
 if FRONTEND_DIR.exists():
     app.mount("/assets", StaticFiles(directory=str(FRONTEND_DIR / "assets")), name="static")
 
     @app.get("/{path:path}")
     async def serve_spa(request: Request, path: str):
         """SPA fallback: serve index.html for all non-API routes."""
-        file_path = FRONTEND_DIR / path
-        if file_path.exists() and file_path.is_file():
+        file_path = _resolve_frontend_file(path)
+        if file_path is not None:
             return FileResponse(str(file_path))
+        if ".." in Path(path).parts:
+            raise HTTPException(status_code=404, detail="Not found")
         return FileResponse(str(FRONTEND_DIR / "index.html"))

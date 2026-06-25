@@ -281,6 +281,7 @@ async def update_project(
         row,
         project,
         change_summary=f"Updated: {', '.join(changes)}",
+        expected_revision=req.expected_revision,
     )
     return _public_project_payload(payload)
 

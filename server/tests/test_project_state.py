@@ -137,6 +137,59 @@ async def test_load_project_state_rejects_missing_and_stale_revision(tmp_path: P
 
 
 @pytest.mark.anyio
+async def test_commit_project_mutation_rechecks_expected_revision_before_commit(tmp_path: Path):
+    engine, session_factory = await _make_session(tmp_path)
+    try:
+        async with session_factory() as setup_db:
+            project = KeyboardProject(project_id="bg_test_toctou", name="Original")
+            await create_project_record(setup_db, project, change_summary="Project created")
+
+        async with session_factory() as stale_db:
+            stale_row, stale_project = await load_project_state(
+                stale_db,
+                "bg_test_toctou",
+                expected_revision=1,
+            )
+
+            async with session_factory() as fresh_db:
+                fresh_row, fresh_project = await load_project_state(
+                    fresh_db,
+                    "bg_test_toctou",
+                    expected_revision=1,
+                )
+                fresh_project.name = "Fresh"
+                await commit_project_mutation(
+                    fresh_db,
+                    fresh_row,
+                    fresh_project,
+                    change_summary="Fresh update",
+                    expected_revision=1,
+                )
+
+            stale_project.name = "Stale"
+            with pytest.raises(HTTPException) as stale_exc:
+                await commit_project_mutation(
+                    stale_db,
+                    stale_row,
+                    stale_project,
+                    change_summary="Stale update",
+                    expected_revision=1,
+                )
+            assert stale_exc.value.status_code == 409
+
+        async with session_factory() as check_db:
+            row = (
+                await check_db.execute(
+                    select(ProjectRow).where(ProjectRow.project_id == "bg_test_toctou")
+                )
+            ).scalar_one()
+            assert row.name == "Fresh"
+            assert row.revision == 2
+    finally:
+        await engine.dispose()
+
+
+@pytest.mark.anyio
 async def test_project_state_enforces_owner_scope(tmp_path: Path):
     engine, session_factory = await _make_session(tmp_path)
     try:

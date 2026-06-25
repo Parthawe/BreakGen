@@ -6,7 +6,7 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.db.models import ProjectUsageEventRow
@@ -113,14 +113,16 @@ async def usage_total(
     project_id: str | None = None,
 ) -> int:
     """Return total recorded quantity for one usage event type."""
-    rows = await list_usage_events(
-        db,
-        user_id=user_id,
-        project_id=project_id,
-        limit=500,
-    )
     normalized = event_type.strip().lower()
-    return sum(row.quantity for row in rows if row.event_type == normalized)
+    stmt = select(func.coalesce(func.sum(ProjectUsageEventRow.quantity), 0)).where(
+        ProjectUsageEventRow.event_type == normalized
+    )
+    if user_id is not None:
+        stmt = stmt.where(ProjectUsageEventRow.user_id == user_id)
+    if project_id is not None:
+        stmt = stmt.where(ProjectUsageEventRow.project_id == project_id)
+    result = await db.execute(stmt)
+    return int(result.scalar_one())
 
 
 def serialize_usage_event(row: ProjectUsageEventRow) -> dict[str, Any]:

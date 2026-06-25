@@ -4,14 +4,17 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+from datetime import datetime, timedelta, timezone
 
 import httpx
+import jwt
 import pytest
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from server.db.database import get_db
 from server.db.models import Base
 from server.main import app
+from server.api.auth import MAX_BCRYPT_PASSWORD_BYTES, settings as auth_settings
 
 
 @pytest.fixture
@@ -306,6 +309,77 @@ async def test_signup_can_be_disabled_or_invite_gated(tmp_path: Path, monkeypatc
             )
             assert invited.status_code == 200
             assert invited.json()["user"]["email"] == "reviewer@example.com"
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        await engine.dispose()
+
+
+@pytest.mark.anyio
+async def test_signed_token_missing_required_claims_returns_unauthorized(tmp_path: Path):
+    engine, session_factory = await _make_session(tmp_path)
+
+    async def override_get_db():
+        async with session_factory() as session:
+            yield session
+
+    app.dependency_overrides[get_db] = override_get_db
+    transport = httpx.ASGITransport(app=app)
+    token = jwt.encode(
+        {
+            "email": "reviewer@example.com",
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
+        },
+        auth_settings.jwt_secret,
+        algorithm=auth_settings.jwt_algorithm,
+    )
+
+    try:
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+            response = await client.get("/api/auth/me", headers=_auth(token))
+            assert response.status_code == 401
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        await engine.dispose()
+
+
+@pytest.mark.anyio
+async def test_auth_rejects_oversized_bcrypt_password_inputs(tmp_path: Path, monkeypatch):
+    engine, session_factory = await _make_session(tmp_path)
+    monkeypatch.setattr("server.api.auth.settings.public_signup_enabled", True)
+    monkeypatch.setattr("server.api.auth.settings.signup_invite_code", "")
+
+    async def override_get_db():
+        async with session_factory() as session:
+            yield session
+
+    app.dependency_overrides[get_db] = override_get_db
+    transport = httpx.ASGITransport(app=app)
+    long_password = "a" * (MAX_BCRYPT_PASSWORD_BYTES + 1)
+
+    try:
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+            signup = await client.post(
+                "/api/auth/signup",
+                json={
+                    "email": "long@example.com",
+                    "name": "Long Password",
+                    "password": long_password,
+                },
+            )
+            assert signup.status_code == 400
+            assert "bytes or fewer" in signup.json()["detail"]
+
+            token = await _signup(client, "normal@example.com")
+            assert token
+
+            login = await client.post(
+                "/api/auth/login",
+                json={
+                    "email": "normal@example.com",
+                    "password": long_password,
+                },
+            )
+            assert login.status_code == 401
     finally:
         app.dependency_overrides.pop(get_db, None)
         await engine.dispose()

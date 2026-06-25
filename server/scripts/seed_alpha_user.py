@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 import bcrypt as _bcrypt
 from sqlalchemy import select
 
+from server.api.auth import MAX_BCRYPT_PASSWORD_BYTES
 from server.config import settings
 from server.db.database import async_session
 from server.db.models import UserRow
@@ -42,6 +43,8 @@ async def seed_user(email: str, name: str, password: str) -> None:
         raise ValueError(
             f"Password must be at least {settings.min_password_length} characters"
         )
+    if len(password.encode("utf-8")) > MAX_BCRYPT_PASSWORD_BYTES:
+        raise ValueError(f"Password must be {MAX_BCRYPT_PASSWORD_BYTES} bytes or fewer")
 
     async with async_session() as db:
         result = await db.execute(select(UserRow).where(UserRow.email == email))

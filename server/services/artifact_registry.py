@@ -57,7 +57,16 @@ def sha256_for_path(path: str | Path) -> str:
 def project_state_fingerprint(project: KeyboardProject) -> str:
     """Compute a stable fingerprint for the current canonical project state."""
     payload = json.dumps(
-        project.model_dump(mode="json"),
+        project.model_dump(
+            mode="json",
+            exclude={
+                "created_at",
+                "updated_at",
+                "status",
+                "exports",
+                "derived",
+            },
+        ),
         sort_keys=True,
         separators=(",", ":"),
     ).encode("utf-8")

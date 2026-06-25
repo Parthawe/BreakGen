@@ -1,8 +1,8 @@
 {
-  "bundle_id": "bundle_4af704039efa",
+  "bundle_id": "bundle_b01fef28bedc",
   "project_id": "yc_proof_streamdeck",
   "revision": 2,
-  "created_at": "2026-06-25T21:39:01.212953Z",
+  "created_at": "2026-06-25T22:23:10Z",
   "toolchain": {
     "breakgen": "0.1.0",
     "meshy_api": "not_used",
@@ -47,16 +47,16 @@
     },
     {
       "path": "plate/plate.dxf",
-      "sha256": "1bab23d33c6bb7903435d44d34301e8e32a7b2a3d45d2aa4334b144e532ced2e",
+      "sha256": "be3e3534649a43cd8314df09077893440c0f273c625ddcb8e6ac73ef2c60aade",
       "category": "plate"
     },
     {
       "path": "validation_report.json",
-      "sha256": "b0313753ca766744df42674e613088c7110154c856055fb53a41e0e57e174b1a",
+      "sha256": "0d03069b1dab2b11067814729488097b676c5036b7e7e45c524cfd6f937f1acd",
       "category": "doc"
     }
   ],
-  "validation_report_id": "vr_9e859fbb7cdd",
+  "validation_report_id": "vr_e7d5abe33237",
   "validation_status": "pass",
   "export_readiness": "review_ready"
 }

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+import hmac
 import bcrypt as _bcrypt
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -15,6 +16,8 @@ from server.db.database import get_db
 from server.db.models import UserRow
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+MAX_BCRYPT_PASSWORD_BYTES = 72
 
 
 class SignupRequest(BaseModel):
@@ -60,7 +63,12 @@ def _create_token(user_id: int, email: str) -> str:
 
 def _verify_token(token: str) -> dict | None:
     try:
-        return jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+        return jwt.decode(
+            token,
+            settings.jwt_secret,
+            algorithms=[settings.jwt_algorithm],
+            options={"require": ["exp", "sub"]},
+        )
     except jwt.PyJWTError:
         return None
 
@@ -79,8 +87,12 @@ async def get_current_user(request: Request, db: AsyncSession = Depends(get_db))
     payload = _verify_token(auth[7:])
     if not payload:
         return None
+    try:
+        user_id = int(payload["sub"])
+    except (KeyError, TypeError, ValueError):
+        return None
     result = await db.execute(
-        select(UserRow).where(UserRow.id == int(payload["sub"]))
+        select(UserRow).where(UserRow.id == user_id)
     )
     return result.scalar_one_or_none()
 
@@ -186,7 +198,10 @@ async def signup(req: SignupRequest, db: AsyncSession = Depends(get_db)):
     if not settings.public_signup_enabled:
         raise HTTPException(status_code=403, detail="Signup is disabled")
 
-    if settings.signup_invite_code and req.invite_code != settings.signup_invite_code:
+    if settings.signup_invite_code and not hmac.compare_digest(
+        req.invite_code or "",
+        settings.signup_invite_code,
+    ):
         raise HTTPException(status_code=403, detail="Invalid invite code")
 
     email = req.email.strip().lower()
@@ -199,6 +214,11 @@ async def signup(req: SignupRequest, db: AsyncSession = Depends(get_db)):
         raise HTTPException(
             status_code=400,
             detail=f"Password must be at least {settings.min_password_length} characters",
+        )
+    if len(req.password.encode("utf-8")) > MAX_BCRYPT_PASSWORD_BYTES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Password must be {MAX_BCRYPT_PASSWORD_BYTES} bytes or fewer",
         )
 
     user = UserRow(
@@ -224,7 +244,15 @@ async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(UserRow).where(UserRow.email == email))
     user = result.scalar_one_or_none()
 
-    if not user or not _bcrypt.checkpw(req.password.encode(), user.password_hash.encode()):
+    password_bytes = req.password.encode("utf-8")
+    password_valid = False
+    if user and len(password_bytes) <= MAX_BCRYPT_PASSWORD_BYTES:
+        try:
+            password_valid = _bcrypt.checkpw(password_bytes, user.password_hash.encode())
+        except ValueError:
+            password_valid = False
+
+    if not user or not password_valid:
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
     token = _create_token(user.id, user.email)

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from pydantic import ValidationError
 
@@ -77,3 +79,11 @@ def test_apple_oauth_settings_must_be_complete():
             apple_oauth_client_id="apple-service-id",
             apple_oauth_team_id="team-id",
         )
+
+
+def test_dockerfile_default_settings_do_not_conflict_with_sqlite_dev_database():
+    dockerfile = Path(__file__).resolve().parents[2] / "docker" / "Dockerfile"
+    contents = dockerfile.read_text()
+
+    assert "ENV BREAKGEN_DATABASE_URL=sqlite+aiosqlite:///./data/breakgen.db" in contents
+    assert "ENV BREAKGEN_DEBUG=true" in contents

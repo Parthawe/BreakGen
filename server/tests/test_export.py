@@ -1,5 +1,6 @@
 """Tests for export bundling and export endpoint semantics."""
 
+import hashlib
 import json
 import zipfile
 from pathlib import Path
@@ -225,5 +226,43 @@ async def test_review_ready_export_stays_validated_until_fabrication_outputs_exi
             assert response.headers["X-Export-Readiness"] == "review_ready"
             assert row.status == "validated"
             assert artifact.details["acceptance_state"] == "review_ready"
+    finally:
+        await engine.dispose()
+
+
+@pytest.mark.anyio
+async def test_export_bundle_is_stable_for_same_project_revision(tmp_path: Path, monkeypatch):
+    engine, session_factory = await _make_session(tmp_path)
+    monkeypatch.setattr("server.services.artifact_registry.settings.artifacts_dir", str(tmp_path))
+    monkeypatch.setattr("server.export.bundler.settings.artifacts_dir", str(tmp_path))
+
+    try:
+        async with session_factory() as db:
+            project = _project_65()
+            await create_project_record(db, project, change_summary="Project created")
+
+            first = await export_bundle(project.project_id, db)
+            first_path = Path(first.path)
+            first_hash = hashlib.sha256(first_path.read_bytes()).hexdigest()
+            first_bundle_id = first.headers["X-Bundle-Id"]
+
+            second = await export_bundle(project.project_id, db)
+            second_path = Path(second.path)
+            second_hash = hashlib.sha256(second_path.read_bytes()).hexdigest()
+
+            artifacts = (
+                await db.execute(
+                    select(ProjectArtifactRow).where(
+                        ProjectArtifactRow.project_id == project.project_id,
+                        ProjectArtifactRow.kind == "export_bundle",
+                    )
+                )
+            ).scalars().all()
+
+            assert second.headers["X-Bundle-Id"] == first_bundle_id
+            assert second_hash == first_hash
+            assert first_path == second_path
+            assert len(artifacts) == 1
+            assert artifacts[0].artifact_id == first_bundle_id
     finally:
         await engine.dispose()

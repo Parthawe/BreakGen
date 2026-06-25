@@ -23,8 +23,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import tempfile
-import uuid
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -44,6 +44,11 @@ from server.models.project import KeyboardProject, ProductFamily
 from server.models.validation_schema import ValidationReport
 from server.validation.engine import validate_project
 
+_DXF_UUID_RE = re.compile(
+    r"\{[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}\}"
+)
+_DXF_TIMESTAMP_RE = re.compile(r"(\d+\.\d+\.\d+) @ .+")
+
 
 def _sha256(path: Path) -> str:
     h = hashlib.sha256()
@@ -51,6 +56,45 @@ def _sha256(path: Path) -> str:
         for chunk in iter(lambda: f.read(8192), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def _zip_datetime(value: datetime) -> tuple[int, int, int, int, int, int]:
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    value = value.astimezone(timezone.utc)
+    year = max(value.year, 1980)
+    return (year, value.month, value.day, value.hour, value.minute, value.second)
+
+
+def _write_zip_member(
+    zf: zipfile.ZipFile,
+    source_path: Path,
+    arcname: str,
+    *,
+    created_at: datetime,
+) -> None:
+    info = zipfile.ZipInfo(arcname, date_time=_zip_datetime(created_at))
+    info.compress_type = zipfile.ZIP_DEFLATED
+    info.external_attr = 0o644 << 16
+    zf.writestr(info, source_path.read_bytes())
+
+
+def _normalize_dxf_metadata(path: Path, *, created_at: datetime) -> None:
+    """Remove volatile ezdxf metadata from review bundles without changing geometry."""
+    text = path.read_text(errors="ignore")
+    uuid_counter = 0
+
+    def replace_uuid(_: re.Match[str]) -> str:
+        nonlocal uuid_counter
+        uuid_counter += 1
+        return f"{{00000000-0000-0000-0000-{uuid_counter:012d}}}"
+
+    text = _DXF_UUID_RE.sub(replace_uuid, text)
+    text = _DXF_TIMESTAMP_RE.sub(
+        lambda match: f"{match.group(1)} @ {created_at.isoformat()}",
+        text,
+    )
+    path.write_text(text)
 
 
 def _format_element_type(value: str) -> str:
@@ -354,54 +398,71 @@ def create_export_bundle(
     validation_report: ValidationReport | None = None,
     export_readiness: str = "review_ready",
     output_path: str | Path | None = None,
+    bundle_id: str | None = None,
+    created_at: datetime | None = None,
 ) -> tuple[str, Path]:
     """
     Create a review-ready export bundle ZIP.
 
     Returns (bundle_id, zip_path).
     """
-    bundle_id = f"bundle_{uuid.uuid4().hex[:12]}"
+    export_project = project.model_copy(deep=True)
+    created_at = created_at or datetime.now(timezone.utc)
+    if bundle_id is None:
+        bundle_seed = {
+            "project_id": export_project.project_id,
+            "revision": export_project.revision,
+            "updated_at": export_project.updated_at.isoformat(),
+            "readiness": export_readiness,
+        }
+        digest = hashlib.sha256(
+            json.dumps(bundle_seed, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
+        bundle_id = f"bundle_{digest[:12]}"
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = Path(tmpdir)
 
         # --- Compile matrix ---
-        matrix, _ = compile_project_matrix(project)
-        apply_project_matrix(project, matrix)
+        matrix, _ = compile_project_matrix(export_project)
+        apply_project_matrix(export_project, matrix)
 
         # --- Generate family-specific mechanical artifacts ---
-        if project.product_family in {ProductFamily.HANDHELD_COMPANION, ProductFamily.RETRO_HANDHELD}:
+        if export_project.product_family in {ProductFamily.HANDHELD_COMPANION, ProductFamily.RETRO_HANDHELD}:
             shell_dir = tmp / "shell"
-            generate_handheld_shell_artifacts(project.layout, shell_dir)
+            generate_handheld_shell_artifacts(export_project.layout, shell_dir)
         else:
             plate_dir = tmp / "plate"
             plate_dir.mkdir()
             plate_path = plate_dir / "plate.dxf"
-            generate_plate_dxf(project.layout, PlateConfig(), output_path=plate_path)
+            generate_plate_dxf(export_project.layout, PlateConfig(), output_path=plate_path)
+
+        for dxf_path in sorted(tmp.rglob("*.dxf")):
+            _normalize_dxf_metadata(dxf_path, created_at=created_at)
 
         # --- Generate firmware metadata ---
         firmware_dir = tmp / "firmware"
-        write_firmware_files(project, matrix, firmware_dir)
+        write_firmware_files(export_project, matrix, firmware_dir)
 
         # --- Run validation ---
-        report = validation_report or validate_project(project)
+        report = validation_report or validate_project(export_project)
         report_path = tmp / "validation_report.json"
         with open(report_path, "w") as f:
             json.dump(report.model_dump(mode="json"), f, indent=2)
 
         # --- Build guide ---
-        bom = _review_bom(project)
+        bom = _review_bom(export_project)
         guide_path = tmp / "BUILD_GUIDE.md"
         guide_path.write_text(
             _generate_build_guide(
-                project,
+                export_project,
                 matrix.matrix_rows,
                 matrix.matrix_cols,
                 validation_status=report.status.value,
                 export_readiness=export_readiness,
             )
         )
-        (tmp / "BOM.md").write_text(_bom_markdown(project, bom))
+        (tmp / "BOM.md").write_text(_bom_markdown(export_project, bom))
         with open(tmp / "bom.json", "w") as f:
             json.dump(bom, f, indent=2)
 
@@ -419,9 +480,9 @@ def create_export_bundle(
 
         manifest = ExportManifest(
             bundle_id=bundle_id,
-            project_id=project.project_id,
-            revision=project.revision,
-            created_at=datetime.now(timezone.utc),
+            project_id=export_project.project_id,
+            revision=export_project.revision,
+            created_at=created_at,
             toolchain=ToolchainVersions(breakgen="0.1.0"),
             artifacts=artifacts,
             validation_report_id=report.report_id,
@@ -434,7 +495,7 @@ def create_export_bundle(
 
         # --- ZIP everything ---
         if output_path is None:
-            export_dir = Path(settings.artifacts_dir) / "projects" / project.project_id / "exports"
+            export_dir = Path(settings.artifacts_dir) / "projects" / export_project.project_id / "exports"
             export_dir.mkdir(parents=True, exist_ok=True)
             output_path = export_dir / f"{bundle_id}.zip"
         else:
@@ -444,6 +505,6 @@ def create_export_bundle(
             for file_path in sorted(tmp.rglob("*")):
                 if file_path.is_file():
                     arcname = f"BreakGen_Export/{file_path.relative_to(tmp)}"
-                    zf.write(file_path, arcname)
+                    _write_zip_member(zf, file_path, arcname, created_at=created_at)
 
     return bundle_id, output_path

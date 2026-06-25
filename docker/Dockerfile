@@ -20,7 +20,7 @@ RUN mkdir -p /app/data/artifacts
 ENV PYTHONPATH=/app
 ENV BREAKGEN_DATABASE_URL=sqlite+aiosqlite:///./data/breakgen.db
 ENV BREAKGEN_ARTIFACTS_DIR=./data/artifacts
-ENV BREAKGEN_DEBUG=false
+ENV BREAKGEN_DEBUG=true
 
 EXPOSE 8000
 

@@ -2,16 +2,19 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.api.auth import require_user, user_scope_id
 from server.config import settings
 from server.db.database import get_db
-from server.db.models import UserRow
+from server.db.models import ProjectArtifactRow, UserRow
 from server.export.bundler import build_export_preview, create_export_bundle
 from server.models.project import ProjectStatus
 from server.models.validation_schema import CheckStatus
@@ -32,6 +35,45 @@ router = APIRouter(prefix="/api/projects", tags=["export"])
 
 def _export_readiness(report_status: CheckStatus) -> str:
     return "review_ready" if report_status == CheckStatus.PASS else "candidate"
+
+
+def _stable_export_created_at(project_created_at: datetime, revision: int) -> datetime:
+    if project_created_at.tzinfo is None:
+        project_created_at = project_created_at.replace(tzinfo=timezone.utc)
+    return project_created_at.astimezone(timezone.utc).replace(microsecond=0)
+
+
+def _stable_export_digest(
+    *,
+    project_id: str,
+    revision: int,
+    spec_hash: str,
+    readiness: str,
+    validation_status: str,
+    purpose: str,
+) -> str:
+    payload = {
+        "project_id": project_id,
+        "revision": revision,
+        "source_spec_hash": spec_hash,
+        "readiness": readiness,
+        "validation_status": validation_status,
+        "purpose": purpose,
+    }
+    return hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+
+
+async def _replace_artifact_ids(db: AsyncSession, artifact_ids: list[str]) -> None:
+    if not artifact_ids:
+        return
+    result = await db.execute(
+        select(ProjectArtifactRow).where(ProjectArtifactRow.artifact_id.in_(artifact_ids))
+    )
+    for row in result.scalars().all():
+        await db.delete(row)
+    await db.flush()
 
 
 @router.post("/{project_id}/validate")
@@ -141,6 +183,15 @@ async def export_project_bundle(
     readiness = _export_readiness(report.status)
 
     spec_hash = project_state_fingerprint(project)
+    export_created_at = _stable_export_created_at(project.created_at, project.revision)
+    report = report.model_copy(
+        update={
+            "report_id": f"vr_{_stable_export_digest(project_id=project.project_id, revision=project.revision, spec_hash=spec_hash, readiness=readiness, validation_status=report.status.value, purpose='validation')[:12]}",
+            "created_at": export_created_at,
+        }
+    )
+    bundle_id = f"bundle_{_stable_export_digest(project_id=project.project_id, revision=project.revision, spec_hash=spec_hash, readiness=readiness, validation_status=report.status.value, purpose='bundle')[:12]}"
+    await _replace_artifact_ids(db, [report.report_id, bundle_id])
     record_validation_report(
         db,
         report=report,
@@ -152,6 +203,8 @@ async def export_project_bundle(
         project,
         validation_report=report,
         export_readiness=readiness,
+        bundle_id=bundle_id,
+        created_at=export_created_at,
     )
     record_export_bundle(
         db,

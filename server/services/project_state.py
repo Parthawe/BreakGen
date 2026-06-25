@@ -130,9 +130,20 @@ async def commit_project_mutation(
     *,
     change_summary: str,
     now: datetime | None = None,
+    expected_revision: int | None = None,
 ) -> dict:
     """Bump revision, persist the current row, and write a snapshot."""
     now = now or datetime.now(timezone.utc)
+    if expected_revision is not None:
+        await db.refresh(row)
+        if row.revision != expected_revision:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Revision conflict: expected {expected_revision}, "
+                    f"current is {row.revision}"
+                ),
+            )
     project.revision += 1
     project.updated_at = now
     project_dict = project.model_dump(mode="json")

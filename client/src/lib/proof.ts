@@ -13,5 +13,5 @@ export const PUBLIC_PROOF_FACTS = {
   status: "validated",
   readiness: "review_ready",
   validation: "10 checks / 0 warnings",
-  bundleSha: "90d147820c756ece310c21af4373d69afd68f1b9287936b393f813d6673e1fa7",
+  bundleSha: "6f93d0675833c266cf8523a7bedb6479530c2bef01b98f937bda1ad5593e9951",
 };

@@ -549,6 +549,7 @@ async def apply_keycap(
         row,
         project,
         change_summary=f"Applied keycap asset {req.asset_id} to {applied_count} controls",
+        expected_revision=req.expected_revision,
     )
 
     return {
@@ -625,6 +626,7 @@ async def update_keycap_asset_acceptance(
             change_summary=(
                 f"Marked keycap asset {asset_id} as {next_state.value}"
             ),
+            expected_revision=req.expected_revision,
         )
     else:
         await persist_project_metadata(db, row, project)
