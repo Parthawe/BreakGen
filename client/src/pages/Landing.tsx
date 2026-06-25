@@ -34,6 +34,29 @@ const PROOF_CHAIN = [
   },
 ];
 
+const CANVAS_LOOP = [
+  {
+    label: "design",
+    title: "Shape the surface",
+    body: "Start from a product family and place controls, labels, display zones, and enclosure intent on one authored canvas.",
+  },
+  {
+    label: "compile",
+    title: "Generate the hard parts",
+    body: "Turn that state into panel geometry, control maps, electronics metadata, validation reports, and export bundles.",
+  },
+  {
+    label: "review",
+    title: "Inspect what changed",
+    body: "Every artifact stays tied to a revision, so the next design pass can compare proof instead of guessing from screenshots.",
+  },
+  {
+    label: "ship",
+    title: "Pilot before marketplace",
+    body: "Use the first kit to prove fit, cost, assembly, and builder demand before expanding the catalog.",
+  },
+];
+
 const FAMILY_RAIL = [
   {
     name: "Split macro pad",
@@ -70,6 +93,27 @@ const SYSTEM_RULES = [
   "No export without validation",
   "No product family without module truth",
   "No campaign promise without pilot evidence",
+];
+
+const LAUNCH_BOARD = [
+  {
+    label: "roadmap",
+    title: "Pilot kit first",
+    body: "Split macro pad and creator console stay the lead candidates because the build path is understandable.",
+    action: "Help choose the kit",
+  },
+  {
+    label: "community",
+    title: "Builder room",
+    body: "Collect makers, founders, designers, and hardware people before making a broad marketplace promise.",
+    action: "Join the build list",
+  },
+  {
+    label: "build log",
+    title: "Proof bundle",
+    body: "Show the exported files, checksums, validation report, and assumptions behind every public demo.",
+    action: "Inspect the repo",
+  },
 ];
 
 function openLaunchCapture(mode: "waitlist" | "research" = "waitlist") {
@@ -125,6 +169,18 @@ function HeroInstrument() {
       <div className="front-device-stage" aria-hidden="true">
         <div className="front-device-stage__orbit front-device-stage__orbit--outer" />
         <div className="front-device-stage__orbit front-device-stage__orbit--inner" />
+        <div className="front-canvas-panel front-canvas-panel--layout">
+          <span>layout</span>
+          <b>12 controls</b>
+        </div>
+        <div className="front-canvas-panel front-canvas-panel--bom">
+          <span>bom</span>
+          <b>rp2040 + mx</b>
+        </div>
+        <div className="front-canvas-panel front-canvas-panel--proof">
+          <span>checks</span>
+          <b>0 blockers</b>
+        </div>
         <div className="front-device">
           {Array.from({ length: 12 }).map((_, index) => (
             <span key={index} style={{ "--key-index": index } as CSSProperties} />
@@ -143,6 +199,33 @@ function HeroInstrument() {
         ))}
       </div>
     </div>
+  );
+}
+
+function CanvasLoop() {
+  return (
+    <section className="front-loop section-rule">
+      <div className="front-loop__intro">
+        <span>Design, compile, review, ship</span>
+        <h2>A continuous loop for physical products, not a pile of disconnected tools.</h2>
+      </div>
+
+      <div className="front-loop__track">
+        {CANVAS_LOOP.map((item, index) => (
+          <article
+            key={item.label}
+            className="front-loop-step"
+            style={{ "--loop-index": index } as CSSProperties}
+          >
+            <div>
+              <span>{item.label}</span>
+              <h3>{item.title}</h3>
+            </div>
+            <p>{item.body}</p>
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -254,6 +337,32 @@ function EvidencePanel() {
   );
 }
 
+function LaunchBoard() {
+  return (
+    <section className="front-launch-board section-rule">
+      <div className="front-section-kicker">
+        <span>Launch system</span>
+        <h2>Make the public launch feel active before the full catalog exists.</h2>
+      </div>
+
+      <div className="front-launch-board__grid">
+        {LAUNCH_BOARD.map((item, index) => (
+          <article
+            key={item.label}
+            className="front-launch-card"
+            style={{ "--launch-index": index } as CSSProperties}
+          >
+            <span>{item.label}</span>
+            <h3>{item.title}</h3>
+            <p>{item.body}</p>
+            <b>{item.action}</b>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function Landing() {
   useEffect(() => {
     document.title = PUBLIC_SITE
@@ -300,9 +409,11 @@ export function Landing() {
             <HeroInstrument />
           </section>
 
+          <CanvasLoop />
           <ProofChain />
           <FamilyRail />
           <EvidencePanel />
+          <LaunchBoard />
 
           <section className="front-community">
             <div>
