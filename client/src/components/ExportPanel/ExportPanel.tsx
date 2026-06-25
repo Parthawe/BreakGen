@@ -148,6 +148,13 @@ export function ExportPanel({
   const canExport = validation && validation.status !== "fail";
   const showExport = mode === "export";
   const copy = familyCopy(project?.product_family);
+  const latestExport = records?.latest_export ?? null;
+  const currentRevisionExport =
+    latestExport?.source_revision === project?.revision
+      ? latestExport
+      : null;
+  const persistedBundleReadiness =
+    currentRevisionExport?.acceptance_state ?? (project?.exports.bundle_id ? "candidate" : null);
   const guidePreviewLines =
     preview?.build_guide_markdown
       .split("\n")
@@ -330,7 +337,9 @@ export function ExportPanel({
       {project?.exports.bundle_id && (
         <div className="mt-3 text-[11px] text-[var(--text-tertiary)]">
           Last export: {project.exports.bundle_id}
-          {project.status === "exported" ? " · review-ready" : " · candidate bundle"}
+          {persistedBundleReadiness
+            ? ` · ${persistedBundleReadiness.replace(/_/g, " ")} evidence`
+            : " · candidate evidence"}
         </div>
       )}
 

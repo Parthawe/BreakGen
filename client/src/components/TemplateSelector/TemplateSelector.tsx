@@ -38,6 +38,42 @@ const FAMILY_META: Record<ProductFamily, { color: string; icon: number[][]; fall
   sensor_pod: { color: "#60a5fa", fallbackDesc: "Sensing devices with custom shells", defaultName: "My Sensor Pod", icon: [[1,1],[0,1,0],[1,1]] },
 };
 
+type FamilyConfidence = "proven" | "alpha" | "proof";
+
+const FAMILY_CONFIDENCE: Partial<Record<ProductFamily, { tier: FamilyConfidence; label: string; detail: string }>> = {
+  keyboard: {
+    tier: "proven",
+    label: "Safest path",
+    detail: "Deepest layout, validation, electronics, and export evidence today.",
+  },
+  macropad: {
+    tier: "alpha",
+    label: "Alpha path",
+    detail: "Shares the keyboard proof stack, with smaller-grid constraints still maturing.",
+  },
+  streamdeck: {
+    tier: "alpha",
+    label: "Alpha path",
+    detail: "Good panel and control proof; display and labeling evidence is still early.",
+  },
+  midi: {
+    tier: "proof",
+    label: "Proof path",
+    detail: "Mapping and control workflow proof before a full fabrication package.",
+  },
+  gamepad: {
+    tier: "proof",
+    label: "Proof path",
+    detail: "HID layout proof with manufacturing coverage still under active buildout.",
+  },
+};
+
+const FAMILY_CONFIDENCE_ORDER: Record<FamilyConfidence, number> = {
+  proven: 0,
+  alpha: 1,
+  proof: 2,
+};
+
 function Sil({ rows, color, s = 5 }: { rows: number[][]; color: string; s?: number }) {
   return (
     <div className="flex flex-col items-center" style={{ gap: `${s * 0.3}px` }}>
@@ -107,7 +143,13 @@ export function TemplateSelector({ onSelect, domains, families }: TemplateSelect
 
   const activeDomain = selectedDomain ?? enabledDomains[0]?.domain ?? null;
   const visibleFamilies = useMemo(
-    () => familySource.filter((entry) => entry.domain === activeDomain && entry.status === "enabled"),
+    () => familySource
+      .filter((entry) => entry.domain === activeDomain && entry.status === "enabled")
+      .sort((a, b) => {
+        const aTier = FAMILY_CONFIDENCE[a.family]?.tier ?? "proof";
+        const bTier = FAMILY_CONFIDENCE[b.family]?.tier ?? "proof";
+        return FAMILY_CONFIDENCE_ORDER[aTier] - FAMILY_CONFIDENCE_ORDER[bTier];
+      }),
     [familySource, activeDomain],
   );
 
@@ -202,8 +244,8 @@ export function TemplateSelector({ onSelect, domains, families }: TemplateSelect
       <div className="template-flow template-flow--matrix w-full max-w-[1180px]">
         <StepHeader
           eyebrow="New project"
-          title="Pick the device, baseline, and compiler path together."
-          copy="The first decision should feel like a product cockpit: domain, family, hardware modules, and starter templates stay visible before the project record is created."
+          title="Start with the safest compiler path, then explore alpha families."
+          copy="Keyboard has the deepest proof stack today. Macro pad, stream deck, MIDI, and gamepad remain available as alpha/proof paths while their artifact coverage matures."
         />
 
         <div className="template-decision-grid">
@@ -225,7 +267,7 @@ export function TemplateSelector({ onSelect, domains, families }: TemplateSelect
                   >
                     <span>{meta.icon}</span>
                     <b>{domain.display_name}</b>
-                    <small>{domain.enabled_families.length} live families</small>
+                    <small>1 proven, 2 alpha, 2 proof paths</small>
                   </button>
                 );
               })}
@@ -253,20 +295,30 @@ export function TemplateSelector({ onSelect, domains, families }: TemplateSelect
               {visibleFamilies.map((entry) => {
                 const meta = FAMILY_META[entry.family];
                 const selected = entry.family === selectedFamily;
+                const confidence = FAMILY_CONFIDENCE[entry.family] ?? {
+                  tier: "proof" as const,
+                  label: "Proof path",
+                  detail: "Available for exploration while its artifact coverage matures.",
+                };
                 return (
                   <button
                     key={entry.family}
                     onClick={() => setSelectedFamily(entry.family)}
                     aria-label={`Choose ${entry.display_name}`}
                     className={`template-family-button ${selected ? "is-selected" : ""}`}
+                    data-confidence={confidence.tier}
                     style={{ "--template-accent": meta.color } as CSSProperties}
                   >
                     <div className="template-family-button__icon">
                       <Sil rows={meta.icon} color={meta.color} s={entry.family === "keyboard" ? 3.9 : 6.6} />
                     </div>
-                    <div>
-                      <b>{entry.display_name}</b>
+                    <div className="template-family-button__copy">
+                      <div className="template-family-button__heading">
+                        <b>{entry.display_name}</b>
+                        <em>{confidence.label}</em>
+                      </div>
                       <span>{entry.description}</span>
+                      <small>{confidence.detail}</small>
                     </div>
                   </button>
                 );

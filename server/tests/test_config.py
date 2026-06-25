@@ -34,6 +34,20 @@ def test_production_requires_non_default_jwt_secret():
         Settings(debug=False, jwt_secret=DEV_JWT_SECRET)
 
 
+def test_production_rejects_sqlite_database_url():
+    for database_url in (
+        "sqlite+aiosqlite:///tmp/breakgen-prod.db",
+        "sqlite+pysqlite:///tmp/breakgen-prod.db",
+    ):
+        with pytest.raises(ValidationError, match="BREAKGEN_DATABASE_URL"):
+            Settings(
+                debug=False,
+                jwt_secret="prod-secret",
+                cors_origins="https://breakgen.example",
+                database_url=database_url,
+            )
+
+
 def test_google_oauth_settings_must_be_complete():
     with pytest.raises(ValidationError, match="GOOGLE_OAUTH"):
         Settings(google_oauth_client_id="google-client")

@@ -20,7 +20,7 @@ function statusTone(status: string): string {
     case "succeeded":
       return "text-emerald-500 dark:text-emerald-400";
     case "exported":
-      return "text-indigo-600 dark:text-indigo-400";
+      return "text-amber-600 dark:text-amber-400";
     case "review_ready":
     case "warn":
     case "generating":
@@ -33,6 +33,10 @@ function statusTone(status: string): string {
     default:
       return "text-[var(--text-tertiary)]";
   }
+}
+
+function projectStatusLabel(status: string): string {
+  return status === "exported" ? "review bundle" : status;
 }
 
 function formatTime(value: string | null | undefined): string {
@@ -286,7 +290,7 @@ export function ProjectSurfaces({
             </div>
             <div className="glass-subcard rounded-lg px-3 py-2">
               <div className="text-[var(--text-tertiary)]">Status</div>
-              <div className={`mt-1 capitalize ${statusTone(project.status)}`}>{project.status}</div>
+              <div className={`mt-1 capitalize ${statusTone(project.status)}`}>{projectStatusLabel(project.status)}</div>
             </div>
           </div>
         </div>

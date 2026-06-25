@@ -4,13 +4,11 @@
 
 This runbook is for the current private-alpha product only.
 
-Live alpha families:
+Reviewer-facing control-surface paths:
 
-- `keyboard`
-- `macropad`
-- `streamdeck`
-- `midi`
-- `gamepad`
+- `keyboard`: safest path with the deepest current compiler, validation, electronics, and export evidence
+- `macropad` and `streamdeck`: alpha paths that reuse much of the control-surface proof stack while artifact coverage matures
+- `midi` and `gamepad`: proof paths for validating layout and mapping workflows before making fabrication-complete claims
 
 Planned families such as `handheld_companion`, `retro_handheld`, `desktop_speaker`, `smart_lamp`, and `sensor_pod` should not be presented to reviewers as part of the supported authoring scope.
 
@@ -74,7 +72,7 @@ PYTHONPATH=$(pwd)/.. python3 -m uv run python -m server.scripts.seed_alpha_user 
 Reviewers should test the authenticated product in this order:
 
 1. Sign in
-2. Create a project in one of the five live families
+2. Create a project in one of the reviewer-facing control-surface paths, starting with `keyboard` when validating the safest path
 3. Confirm the define baseline is correct
 4. Edit layout and save
 5. Generate or review appearance assets

@@ -170,4 +170,4 @@ Those instead produce durable artifacts and job records tied to the current revi
 ## Notes
 
 - Generation routes are lazy-loaded. If Meshy dependencies are unavailable, the API boots with generation disabled instead of crashing.
-- Planned families may exist in manifests or proof infrastructure, but the authenticated alpha should stay focused on the five live control-surface families.
+- Planned families may exist in manifests or proof infrastructure, but the authenticated alpha should stay focused on the tiered control-surface paths: keyboard as the safest path, macro pad and stream deck as alpha paths, and MIDI/gamepad as proof paths.

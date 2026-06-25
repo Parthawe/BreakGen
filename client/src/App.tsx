@@ -210,12 +210,16 @@ function statusTone(status: string): string {
     case "validated":
       return "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
     case "exported":
-      return "text-indigo-400 bg-indigo-500/10 border-indigo-500/20";
+      return "text-amber-400 bg-amber-500/10 border-amber-500/20";
     case "generating":
       return "text-amber-400 bg-amber-500/10 border-amber-500/20";
     default:
       return "text-[var(--text-secondary)] bg-[var(--surface-chip)] border-[var(--border-default)]";
   }
+}
+
+function projectStatusLabel(status: string): string {
+  return status === "exported" ? "review bundle" : status;
 }
 
 function App() {
@@ -569,7 +573,7 @@ function App() {
                 <span className="text-[11px] uppercase tracking-[0.08em] text-[var(--text-tertiary)]">{project.product_family}</span>
                 <span className="text-[11px] font-mono text-[var(--text-tertiary)]">r{project.revision}</span>
                 <span className={`glass-badge px-2.5 py-1 rounded-full border text-[10px] uppercase tracking-[0.08em] ${statusTone(project.status)}`}>
-                  {project.status}
+                  {projectStatusLabel(project.status)}
                 </span>
               </div>
             )}

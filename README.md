@@ -10,13 +10,11 @@ The important product idea is not "AI generates hardware." BreakGen keeps AI at 
 
 BreakGen is now an authenticated private-alpha product studio with a FastAPI backend and React workspace.
 
-Reviewer-facing alpha scope:
+Reviewer-facing alpha scope is deliberately tiered:
 
-- `keyboard`
-- `macropad`
-- `streamdeck`
-- `midi`
-- `gamepad`
+- `keyboard`: safest path with the deepest current compiler, validation, electronics, and export evidence
+- `macropad` and `streamdeck`: alpha paths that reuse much of the control-surface proof stack while artifact coverage matures
+- `midi` and `gamepad`: proof paths for validating layout and mapping workflows before making fabrication-complete claims
 
 Implemented proof templates also exist for `pedal_controller`, `breath_controller`, and `handheld_companion`, but those are intentionally marked as proof-stage paths rather than default reviewer-facing product scope.
 
@@ -58,12 +56,17 @@ Example output:
 ```text
 BreakGen YC proof complete
 project: yc_proof_streamdeck (streamdeck)
-revision: r2 status=exported
+revision: r2 status=validated
 electronics: physical_rows 14/26 GPIO target=hid_control_surface
 mechanical: panel artifacts=mech_panel_dxf_r2, mech_panel_summary_r2
 validation: pass checks=9 warnings=0
 export: bundle_... readiness=review_ready sha256=...
 ```
+
+The export line means BreakGen produced a revision-linked, review-ready evidence
+bundle. It is not a fabrication-complete package yet; project status remains
+`validated` until future Gerber, supplier BOM, enclosure STL, and assembly
+outputs are complete enough to support fabrication claims.
 
 ## Local Development
 
@@ -90,6 +93,14 @@ Expected local URLs:
 - frontend: [http://localhost:5173](http://localhost:5173)
 - backend: [http://localhost:8000](http://localhost:8000)
 - API docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+## Production Guardrails
+
+Local defaults are private-alpha development defaults, not deployment defaults. When
+`BREAKGEN_DEBUG=false`, BreakGen rejects the default JWT secret, wildcard
+credentialed CORS, and SQLite database URLs. Production deploys should provide a
+real database, explicit origins, durable artifact storage with backups, and an
+operator-owned secrets path before accepting public traffic.
 
 ## Verification
 

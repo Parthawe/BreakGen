@@ -8,14 +8,12 @@ Date of assessment: May 6, 2026
 
 BreakGen is no longer a keyboard-only concept prototype.
 
-Current product scope is:
+Current product scope is tiered:
 
-- a private-alpha product studio for **five live control-surface families**
-- `keyboard`
-- `macropad`
-- `streamdeck`
-- `midi`
-- `gamepad`
+- a private-alpha product studio for control-surface paths with explicit readiness tiers
+- `keyboard`: proven/safest path
+- `macropad` and `streamdeck`: alpha paths
+- `midi` and `gamepad`: proof paths
 
 Planned families and domains such as `handheld`, `ambient_device`, and `wearable` exist in platform manifests and proof infrastructure, but they are **not part of the live authenticated alpha flow**.
 
@@ -54,7 +52,7 @@ The client is no longer only a dark demo shell. It now has:
 
 - light, dark, and system theme support
 - authenticated and public routes
-- a shared product shell across the five live families
+- a shared product shell across the tiered control-surface paths
 - lazy-loaded heavy modules
 - family-aware define, layout, appearance, electronics, validate, and export stages
 

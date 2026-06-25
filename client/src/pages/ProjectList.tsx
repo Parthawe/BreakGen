@@ -117,8 +117,8 @@ function projectStatusTone(status: string) {
   switch (status) {
     case "exported":
       return {
-        color: "var(--accent)",
-        background: "var(--accent-muted)",
+        color: "var(--warn)",
+        background: "rgba(246, 174, 45, 0.12)",
       };
     case "validated":
       return {
@@ -131,6 +131,10 @@ function projectStatusTone(status: string) {
         background: "var(--surface-chip)",
       };
   }
+}
+
+function projectStatusLabel(status: string) {
+  return status === "exported" ? "review bundle" : status;
 }
 
 function ProjectListSkeleton() {
@@ -269,7 +273,7 @@ export function ProjectList() {
             </p>
             <div className="section-rule mt-8 grid gap-4 pt-6 md:grid-cols-3">
               {[
-                ["families", "5 live alpha families"],
+                ["families", "1 proven, 2 alpha, 2 proof paths"],
                 ["history", "revisioned project state"],
                 ["outputs", "validation, mechanical, export"],
               ].map(([label, copy]) => (
@@ -291,7 +295,7 @@ export function ProjectList() {
               source artifacts, validation, and export history from one shell.
             </p>
             <div className="section-rule mt-6 grid gap-3 pt-5 text-[12px] text-[var(--text-secondary)]">
-              <span>Live families are gated by compiler readiness.</span>
+              <span>Keyboard is the safest compiler path; macro pad and stream deck are alpha, MIDI and gamepad are proof paths.</span>
               <span>Review-ready exports stay separate from fabrication-complete status.</span>
             </div>
           </aside>
@@ -411,7 +415,7 @@ export function ProjectList() {
                             className="mt-1 inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em]"
                             style={status}
                           >
-                            {project.status}
+                            {projectStatusLabel(project.status)}
                           </div>
                         </div>
                       </div>
