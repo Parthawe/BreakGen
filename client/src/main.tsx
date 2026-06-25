@@ -5,6 +5,7 @@ import App from "./App";
 import { Landing } from "./pages/Landing";
 import { Login, Signup } from "./pages/Auth";
 import { ProjectList } from "./pages/ProjectList";
+import { CreatorsPage, HowItWorksPage, ManufacturingPage, MarketplacePage } from "./pages/SitePages";
 import { PUBLIC_DEMO_PATH, PUBLIC_SITE, ROUTER_BASENAME } from "./lib/runtime";
 import { initAnalytics, trackPageView } from "./lib/analytics";
 import { ThemeProvider, bootstrapTheme } from "./lib/theme";
@@ -61,6 +62,10 @@ function Root() {
       <Suspense fallback={<div className="min-h-screen bg-[var(--bg-root)]" />}>
         <Routes>
           <Route path="/" element={<Landing />} />
+          <Route path="/marketplace" element={<MarketplacePage />} />
+          <Route path="/how-it-works" element={<HowItWorksPage />} />
+          <Route path="/creators" element={<CreatorsPage />} />
+          <Route path="/manufacturing" element={<ManufacturingPage />} />
           <Route path={PUBLIC_DEMO_PATH} element={<LazyPublicDemo />} />
           {PUBLIC_SITE ? (
             <>

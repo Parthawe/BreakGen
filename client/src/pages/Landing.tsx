@@ -1,7 +1,7 @@
 import { useEffect, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { LaunchCapture } from "../components/LaunchCapture";
-import { ThemeSwitcher } from "../components/ThemeSwitcher";
+import { SiteNav } from "../components/SiteNav";
 import { trackEvent } from "../lib/analytics";
 import { PUBLIC_DEMO_PATH, PUBLIC_SITE, REPO_URL } from "../lib/runtime";
 import { useAuthStore } from "../stores/authStore";
@@ -657,37 +657,7 @@ export function Landing() {
       <div className="landing-beam landing-beam--two absolute right-[4%] top-[18rem]" />
 
       <div className="relative z-10 mx-auto max-w-[1380px]">
-        <nav className="surface-toolbar mb-7 flex items-center justify-between rounded-[24px] px-5 py-4">
-          <div className="flex items-center gap-3">
-            <div className="surface-chip flex h-11 w-11 items-center justify-center rounded-2xl">
-              <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
-                <rect x="1" y="3" width="6" height="4" rx="1" fill="var(--accent)" />
-                <rect x="9" y="3" width="6" height="4" rx="1" fill="var(--accent)" opacity="0.48" />
-                <rect x="1" y="9" width="14" height="4" rx="1" fill="var(--accent)" opacity="0.24" />
-              </svg>
-            </div>
-            <div>
-              <div className="text-[15px] font-semibold text-[var(--text-primary)]">BreakGen</div>
-              <div className="hidden text-[12px] text-[var(--text-tertiary)] sm:block">
-                Private alpha for custom programmable hardware
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <ThemeSwitcher />
-            <a
-              href={REPO_URL}
-              target="_blank"
-              rel="noopener"
-              onClick={() => trackEvent("landing_cta_click", { surface: "landing", target: "github", placement: "nav" })}
-              className="surface-button hidden h-11 items-center rounded-full px-4 text-[13px] font-semibold lg:inline-flex"
-            >
-              GitHub
-            </a>
-            <NavCta />
-          </div>
-        </nav>
+        <SiteNav />
 
         <section className="hero-revamp grid gap-6 lg:grid-cols-[minmax(0,0.98fr)_minmax(380px,0.72fr)]">
           <div className="hero-revamp__copy rounded-[34px] p-7 md:p-10 lg:p-12">
