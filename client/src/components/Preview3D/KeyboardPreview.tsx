@@ -51,12 +51,18 @@ function materialColor(type: ElementType): string {
       return "#2e8c62";
     case "encoder":
       return "#d0a63d";
+    case "pad":
+      return "#d85a58";
     case "display":
       return "#4db7ff";
     case "joystick":
       return "#a255d8";
     case "speaker":
       return "#d364a1";
+    case "microphone":
+      return "#14b8a6";
+    case "sensor":
+      return "#2dd4bf";
     case "battery":
       return "#b79a2f";
     case "usb_port":
@@ -72,12 +78,18 @@ function materialProps(type: ElementType) {
       return { metalness: 0.12, roughness: 0.2, emissive: "#11344f", emissiveIntensity: 0.65 };
     case "encoder":
       return { metalness: 0.7, roughness: 0.28, emissive: "#3b2807", emissiveIntensity: 0.18 };
+    case "pad":
+      return { metalness: 0.1, roughness: 0.58, emissive: "#3f1111", emissiveIntensity: 0.18 };
     case "button":
       return { metalness: 0.14, roughness: 0.36, emissive: "#0d2419", emissiveIntensity: 0.16 };
     case "joystick":
       return { metalness: 0.18, roughness: 0.34, emissive: "#2a1038", emissiveIntensity: 0.16 };
     case "speaker":
       return { metalness: 0.22, roughness: 0.38, emissive: "#2f1222", emissiveIntensity: 0.12 };
+    case "microphone":
+      return { metalness: 0.34, roughness: 0.3, emissive: "#06332f", emissiveIntensity: 0.12 };
+    case "sensor":
+      return { metalness: 0.2, roughness: 0.34, emissive: "#073331", emissiveIntensity: 0.14 };
     case "battery":
       return { metalness: 0.3, roughness: 0.42, emissive: "#33270a", emissiveIntensity: 0.1 };
     case "usb_port":
@@ -136,8 +148,17 @@ function ElementSizeGroup({
     if (first.element_type === "display") {
       return new THREE.BoxGeometry(first.w_mm * S, 3 * S, first.h_mm * S);
     }
+    if (first.element_type === "pad") {
+      return new THREE.BoxGeometry(first.w_mm * S, 5 * S, first.h_mm * S);
+    }
     if (first.element_type === "speaker") {
       return new THREE.CylinderGeometry((Math.min(first.w_mm, first.h_mm) * 0.46) * S, (Math.min(first.w_mm, first.h_mm) * 0.46) * S, 5 * S, 32);
+    }
+    if (first.element_type === "microphone") {
+      return new THREE.CylinderGeometry((Math.min(first.w_mm, first.h_mm) * 0.42) * S, (Math.min(first.w_mm, first.h_mm) * 0.42) * S, 3 * S, 20);
+    }
+    if (first.element_type === "sensor") {
+      return new THREE.BoxGeometry(first.w_mm * S, 4 * S, first.h_mm * S);
     }
     if (first.element_type === "battery") {
       return new THREE.BoxGeometry(first.w_mm * S, 8 * S, first.h_mm * S);
@@ -176,8 +197,20 @@ function ElementSizeGroup({
         position.set(x, 1.5 * S, z);
         matrix.compose(position, quaternion, scale);
       }
+      if (element.element_type === "pad") {
+        position.set(x, 2.5 * S, z);
+        matrix.compose(position, quaternion, scale);
+      }
       if (element.element_type === "speaker") {
         position.set(x, 2.5 * S, z);
+        matrix.compose(position, quaternion, scale);
+      }
+      if (element.element_type === "microphone") {
+        position.set(x, 1.5 * S, z);
+        matrix.compose(position, quaternion, scale);
+      }
+      if (element.element_type === "sensor") {
+        position.set(x, 2 * S, z);
         matrix.compose(position, quaternion, scale);
       }
       if (element.element_type === "battery") {

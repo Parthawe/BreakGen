@@ -1,167 +1,105 @@
 # BreakGen Current State
 
-> Snapshot of what exists in the repository right now and what that means architecturally.
+> Snapshot of the actual product and architecture currently present in the repository.
 
-## Intent
+Date of assessment: May 6, 2026
 
-This document is not a wishlist. It describes the implementation surface that currently exists so the team can see clearly:
+## Product Boundary
 
-- what is already real
-- what is still scaffolding
-- where the build is converging correctly
-- where the build has not started yet
+BreakGen is no longer a keyboard-only concept prototype.
 
-Date of assessment: April 7, 2026
+Current product scope is:
 
-## Repo Shape
+- a private-alpha product studio for **five live control-surface families**
+- `keyboard`
+- `macropad`
+- `streamdeck`
+- `midi`
+- `gamepad`
 
-The repo now has three layers:
+Planned families and domains such as `handheld`, `ambient_device`, and `wearable` exist in platform manifests and proof infrastructure, but they are **not part of the live authenticated alpha flow**.
 
-| Layer | Status | Notes |
-| --- | --- | --- |
-| Root documentation | Present | The product spec and README now define the product and system clearly |
-| `client/` | Early scaffold | React + Vite + Three.js shell exists |
-| `server/` | Early scaffold | Python backend package exists, but runtime API is not yet implemented |
+## What Is Real
 
-This is the right direction. The project has moved from concept-only into a split frontend/backend architecture, but it is still in foundation mode.
+### Authenticated product loop
 
-## What Is Actually Implemented
+The signed-in product already supports the main alpha path:
 
-### 1. Frontend shell exists
+1. Create a project from a family/template baseline
+2. Edit the layout through authoritative `layout.elements`
+3. Generate and review appearance assets
+4. Compile electronics metadata
+5. Compile mechanical outputs
+6. Run validation
+7. Export a traceable bundle
+8. Inspect jobs, artifacts, validation, and export history
 
-Current signals:
+### Platform spine
 
-- React 19, Vite, Tailwind, Three.js, `@react-three/fiber`, and `zustand` are installed
-- the app renders a sidebar with the intended six-step flow
-- the main viewport renders a placeholder 3D scene
-- the UI language already matches the product thesis: "Keyboard Intent Compiler"
+The repo has a real platform backbone:
 
-What that means:
+- revisioned canonical project state
+- immutable revision snapshots
+- durable artifact records
+- persistent job records
+- validation artifacts
+- export artifacts
+- family manifests
+- provider manifests
+- mechanical and electronics compile endpoints
 
-- the client has a credible app shell
-- the 3D stack choice is aligned with the product
-- the interaction model is visible even though the functionality is not yet there
+### Client product shell
 
-### 2. Canonical backend domain model exists
+The client is no longer only a dark demo shell. It now has:
 
-Current signals:
+- light, dark, and system theme support
+- authenticated and public routes
+- a shared product shell across the five live families
+- lazy-loaded heavy modules
+- family-aware define, layout, appearance, electronics, validate, and export stages
 
-- `server/models/project.py` defines `KeyboardProject` and supporting models
-- project status, switch families, controllers, stabilizers, layout, style request, keycap assets, PCB spec, and export state are already modeled
-- the comments explicitly treat the project model as the single source of truth
+### Test health
 
-What that means:
+The server suite is healthy. Current baseline in this repo is:
 
-- the most important architectural decision is already represented in code
-- the backend is starting in the right place: schema first, artifact second
-- this model can anchor API design, persistence, validation, and compilation work
+- `93` passing server tests before the current private-alpha hardening pass
 
-### 3. Packaging direction is set
+## What Is Still Thin
 
-Current signals:
+### Private-alpha operations
 
-- the server depends on FastAPI, SQLAlchemy, Pydantic, and optional geometry libraries
-- the client stack is coherent for a real interactive product
+The product has needed operator assumptions, but they still require explicit runbook discipline:
 
-What that means:
+- seeded reviewer accounts
+- local/dev stack startup
+- provider-key expectations
+- test-flow expectations for reviewers
 
-- the repo is not randomly exploring tools
-- the likely path is web client + API + async workers or worker-like services
+### Collaboration and commercial surfaces
 
-## What Is Not Implemented Yet
+These are still out of scope:
 
-### 1. No runtime API
+- multi-user collaboration
+- billing
+- quotes and purchasing
+- production manufacturing integrations
 
-`server/main.py` is still a stub. There are no routes, no app factory, no request models, and no persistence wiring.
+### Broader product-family release
 
-Impact:
+The architecture can represent additional domains, but those domains should not be treated as shipped:
 
-- the domain model cannot be exercised
-- the client cannot load or save projects
-- there is no contract between the build surfaces yet
+- handheld is proof-only
+- ambient devices are planned
+- wearables are planned
 
-### 2. No persistence layer
+## Current Architectural Read
 
-SQLAlchemy is declared, but there are no database models, migrations, repositories, or storage boundaries.
+BreakGen is now in the correct phase to become a **real private alpha**, but only if the team keeps the product boundary disciplined:
 
-Impact:
+- deepen the signed-in loop
+- keep provenance visible
+- keep revision semantics strict
+- keep exports honest
+- do not expand scope faster than validation and export truth can support
 
-- project revisions are not durable
-- artifacts cannot be referenced safely
-- validation and export provenance cannot exist yet
-
-### 3. No background job system
-
-There is no queue, no job table, no worker process, and no async task contract for generation, geometry, PCB compilation, or export.
-
-Impact:
-
-- the architecture currently has no place for long-running work
-- if generation is wired directly into request/response flows, the system will become brittle immediately
-
-### 4. No compiler implementation
-
-The product promise depends on compilation pipelines, but none are implemented yet:
-
-- no layout compiler
-- no plate generator
-- no keycap normalization pipeline
-- no PCB compiler
-- no export bundler
-- no validation engine
-
-Impact:
-
-- the current build is still a shell around a schema
-
-### 5. No frontend state architecture
-
-`zustand` is installed, but there is no store, no typed client domain state, no step machine, and no API integration.
-
-Impact:
-
-- the current sidebar is presentational only
-- there is no project loading, editing, or recomputation loop
-
-## What Is Going Right
-
-These are the strongest signals in the current implementation:
-
-- the project is splitting concerns correctly into client and server
-- the product language and engineering model are coherent with the spec
-- the canonical project model appeared early, which is exactly what this product needs
-- the frontend did not start as a marketing page; it started as an application shell
-
-## Where The Build Is Currently Thin
-
-The thinnest points are not aesthetic. They are systems points:
-
-- no API boundary
-- no persistent project lifecycle
-- no revision semantics
-- no validation layer
-- no artifact store contract
-- no job execution model
-
-If those are not established early, later work on generation and 3D rendering will pile onto unstable foundations.
-
-## Maturity Assessment By Subsystem
-
-| Subsystem | Maturity | Notes |
-| --- | --- | --- |
-| Product framing | Strong | Clear spec and repo direction |
-| Client shell | Early but promising | Visual scaffold exists |
-| Domain schema | Strong for this stage | Best implemented part of the system |
-| API layer | Not started | Critical missing bridge |
-| Persistence | Not started | Needed before meaningful stateful work |
-| Validation | Not started | Should start early, not late |
-| Geometry pipeline | Not started | Still conceptual |
-| PCB pipeline | Not started | Still conceptual |
-| Export system | Not started | Still conceptual |
-| Tests | Not started | No system confidence yet |
-
-## Immediate Interpretation
-
-BreakGen is no longer "just an idea," but it is also not yet "a working compiler." It is in the most important early phase: the moment where the system can still be built cleanly if the boundaries are established before feature pressure takes over.
-
-That is the main read on the current state.
+The main risk is no longer “missing frontend.” The main risk is product drift: showing planned capability in places where the authenticated alpha cannot yet support it end to end.

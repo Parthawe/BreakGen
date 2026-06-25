@@ -10,8 +10,9 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from server.api.auth import require_user, user_scope_id
 from server.db.database import get_db
-from server.db.models import ProjectRow
+from server.db.models import ProjectRow, UserRow
 from server.geometry.plate_generator import (
     PlateConfig,
     generate_plate_dxf,
@@ -116,10 +117,15 @@ def _mechanical_download_filename(
     }[artifact_name]
 
 
-async def _load_project_row(project_id: str, db: AsyncSession) -> ProjectRow:
-    result = await db.execute(
-        select(ProjectRow).where(ProjectRow.project_id == project_id)
-    )
+async def _load_project_row(
+    project_id: str,
+    db: AsyncSession,
+    owner_user_id: int | None = None,
+) -> ProjectRow:
+    stmt = select(ProjectRow).where(ProjectRow.project_id == project_id)
+    if owner_user_id is not None:
+        stmt = stmt.where(ProjectRow.user_id == owner_user_id)
+    result = await db.execute(stmt)
     row = result.scalar_one_or_none()
     if not row:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -398,9 +404,10 @@ async def compile_plate(
     project_id: str,
     config: PlateConfigRequest | None = None,
     db: AsyncSession = Depends(get_db),
+    user: UserRow = Depends(require_user),
 ):
     """Compile mechanical panel geometry from the project's layout."""
-    row = await _load_project_row(project_id, db)
+    row = await _load_project_row(project_id, db, user_scope_id(user))
     project = KeyboardProject(**row.data)
     _require_layout(project)
 
@@ -418,9 +425,10 @@ async def compile_shell(
     project_id: str,
     config: ShellConfigRequest | None = None,
     db: AsyncSession = Depends(get_db),
+    user: UserRow = Depends(require_user),
 ):
     """Compile handheld shell metadata for planned portable proof families."""
-    row = await _load_project_row(project_id, db)
+    row = await _load_project_row(project_id, db, user_scope_id(user))
     project = KeyboardProject(**row.data)
     if project.product_family not in HANDHELD_PROOF_FAMILIES:
         raise HTTPException(
@@ -444,9 +452,25 @@ async def compile_mechanical(
     project_id: str,
     config: MechanicalCompileRequest | None = None,
     db: AsyncSession = Depends(get_db),
+    user: UserRow = Depends(require_user),
+):
+    return await compile_mechanical_for_project(
+        project_id,
+        config,
+        db,
+        owner_user_id=user_scope_id(user),
+    )
+
+
+async def compile_mechanical_for_project(
+    project_id: str,
+    config: MechanicalCompileRequest | None,
+    db: AsyncSession,
+    *,
+    owner_user_id: int | None,
 ):
     """Compile family-aware mechanical artifacts from the project's layout."""
-    row = await _load_project_row(project_id, db)
+    row = await _load_project_row(project_id, db, owner_user_id)
     project = KeyboardProject(**row.data)
     _require_layout(project)
 
@@ -475,9 +499,10 @@ async def export_plate_dxf(
     project_id: str,
     kerf_mm: float = 0.0,
     db: AsyncSession = Depends(get_db),
+    user: UserRow = Depends(require_user),
 ):
     """Download the mechanical panel as a DXF file."""
-    row = await _load_project_row(project_id, db)
+    row = await _load_project_row(project_id, db, user_scope_id(user))
     project = KeyboardProject(**row.data)
     _require_layout(project)
 
@@ -513,9 +538,10 @@ async def export_mechanical_artifact(
     project_id: str,
     artifact_name: str,
     db: AsyncSession = Depends(get_db),
+    user: UserRow = Depends(require_user),
 ):
     """Download family-aware mechanical artifacts on demand."""
-    row = await _load_project_row(project_id, db)
+    row = await _load_project_row(project_id, db, user_scope_id(user))
     project = KeyboardProject(**row.data)
     _require_layout(project)
 

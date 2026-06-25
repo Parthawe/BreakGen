@@ -1,4 +1,4 @@
-.PHONY: dev dev-client dev-server install test build clean
+.PHONY: dev dev-client dev-server install test build seed-alpha-user demo-proof clean
 
 # Install all dependencies
 install:
@@ -22,6 +22,14 @@ dev-server:
 # Run server tests
 test:
 	cd server && PYTHONPATH=$(shell pwd) python3 -m uv run pytest tests/ -v
+
+# Seed or refresh the default private-alpha reviewer account
+seed-alpha-user:
+	cd server && PYTHONPATH=$(shell pwd) python3 -m uv run python -m server.scripts.seed_alpha_user
+
+# Build a deterministic local proof project and export bundle for reviewers
+demo-proof:
+	@cd server && PYTHONPATH=$(shell pwd) python3 -m uv run python -m server.scripts.run_yc_proof
 
 # Build frontend for production
 build:

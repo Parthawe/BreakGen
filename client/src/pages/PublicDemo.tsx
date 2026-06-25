@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ProjectSurfaces } from "../components/PlatformSurfaces";
+import { ThemeSwitcher } from "../components/ThemeSwitcher";
 import {
   createPublicDemoProject,
   createPublicDemoRecords,
@@ -17,6 +18,12 @@ const LazyLayoutEditor = lazy(async () => ({
 const LazyScene = lazy(async () => ({
   default: (await import("../components/Preview3D")).Scene,
 }));
+
+const DEMO_SIGNALS = [
+  { label: "layout", value: "live edit" },
+  { label: "preview", value: "3D chamber" },
+  { label: "records", value: "static sample" },
+];
 
 export function PublicDemo() {
   const project = useProjectStore((state) => state.project);
@@ -40,23 +47,17 @@ export function PublicDemo() {
 
   const demoProject = useProjectStore((state) => state.project);
   const statusMessage = useMemo(() => {
-    if (!demoProject) return "Loading public demo...";
+    if (!demoProject) return "Loading public demo…";
     if (dirty) {
-      return "You are editing the demo locally in your browser. Refresh to reset the launch sample.";
+      return "You are editing the public sample locally in your browser. Refresh to reset it.";
     }
-    return "This public demo is client-only. The full alpha with auth, jobs, and live backend compilation runs locally from the repo.";
+    return "This public demo is client-only. The authenticated alpha adds backend compilation, records, jobs, and export lifecycle data.";
   }, [demoProject, dirty]);
-
-  const demoSignals = [
-    { label: "layout", value: "live edit" },
-    { label: "preview", value: "3d chamber" },
-    { label: "provenance", value: "artifact-backed" },
-  ];
 
   const renderEditor = () => (
     <Suspense
       fallback={
-        <div className="glass glass-strong h-full w-full rounded-[28px] flex items-center justify-center text-[12px] text-zinc-500">
+        <div className="surface-strong flex h-full w-full items-center justify-center rounded-[30px] text-[12px] text-[var(--text-tertiary)]">
           Loading layout editor…
         </div>
       }
@@ -68,7 +69,7 @@ export function PublicDemo() {
   const renderScene = () => (
     <Suspense
       fallback={
-        <div className="glass glass-strong h-full w-full flex items-center justify-center text-[12px] text-zinc-500">
+        <div className="surface-strong flex h-full w-full items-center justify-center text-[12px] text-[var(--text-tertiary)]">
           Loading 3D preview…
         </div>
       }
@@ -78,195 +79,154 @@ export function PublicDemo() {
   );
 
   return (
-    <div className="app-shell flex h-screen w-screen">
-      <aside className="glass glass-strong w-[332px] shrink-0 rounded-r-[30px] flex flex-col">
-        <div className="glass-toolbar glass-divider h-16 px-5 border-b flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3">
-            <div className="glass-chip w-10 h-10 rounded-xl flex items-center justify-center">
-              <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
-                <rect x="1" y="3" width="6" height="4" rx="1" fill="#818cf8" />
-                <rect x="9" y="3" width="6" height="4" rx="1" fill="#818cf8" opacity="0.5" />
-                <rect x="1" y="9" width="14" height="4" rx="1" fill="#818cf8" opacity="0.25" />
-              </svg>
-            </div>
-            <div>
-              <div className="text-[15px] font-semibold text-white">BreakGen</div>
-              <div className="text-[10px] uppercase tracking-[0.18em] text-zinc-500">
-                Public demo
-              </div>
-            </div>
-          </Link>
-          <span className="glass-badge px-2.5 py-1 rounded-full border text-[10px] uppercase tracking-[0.08em] text-emerald-300 bg-emerald-500/10 border-emerald-500/20">
-            launch
-          </span>
-        </div>
-
-        <div className="p-4 space-y-4 overflow-y-auto">
-          <div className="rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(123,111,255,0.2),transparent_42%),linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))] p-5 shadow-[0_24px_60px_rgba(0,0,0,0.28)]">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#a39bff] mb-3">
-              YC-level launch slice
-            </div>
-            <h1 className="text-[28px] font-semibold leading-[0.98] tracking-[-0.05em] text-white">
-              Interactive control-surface demo, public and explorable.
-            </h1>
-            <p className="mt-3 text-[13px] leading-[1.7] text-zinc-400">
-              This is the public launch surface: editable layout, live 3D preview, mechanical provenance, validation state, and export history in one artifact-backed product record.
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {[
-                "17 controls",
-                "3 tracked assets",
-                "mechanical compile attached",
-              ].map((item) => (
-                <span
-                  key={item}
-                  className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] uppercase tracking-[0.12em] text-zinc-400"
-                >
-                  {item}
-                </span>
-              ))}
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <a
-                href={REPO_URL}
-                target="_blank"
-                rel="noopener"
-                className="glass-chip px-3 py-2 rounded-full text-[12px] text-zinc-300 hover:text-white transition-colors"
-              >
-                View GitHub
-              </a>
-              <Link
-                to="/"
-                className="glass-chip px-3 py-2 rounded-full text-[12px] text-zinc-300 hover:text-white transition-colors"
-              >
-                Launch page
-              </Link>
-            </div>
-          </div>
-
-          <div className="glass glass-soft rounded-2xl p-4 text-[12px] leading-[1.7] text-zinc-400">
-            {statusMessage}
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto">
-          <ProjectSurfaces
-            project={demoProject}
-            familyManifest={publicDemoFamilyManifest}
-            providers={publicDemoProviders}
-            records={records}
-            loading={false}
-          />
-        </div>
-      </aside>
-
-      <main className="flex-1 flex flex-col overflow-hidden">
-        <div className="glass-toolbar glass-divider h-12 border-b flex items-center justify-between px-5">
+    <div className="app-shell min-h-screen px-5 py-5 md:px-8 md:py-8">
+      <div className="mx-auto flex max-w-[1480px] flex-col gap-6">
+        <header className="surface-toolbar flex flex-wrap items-center justify-between gap-4 rounded-[24px] px-5 py-4">
           <div className="flex items-center gap-3">
-            <span className="text-[13px] font-medium text-zinc-300">Demo workspace</span>
-            <span className="text-zinc-700">/</span>
-            <span className="text-[12px] text-zinc-500">
-              Edit the sample layout locally and watch the product state update live.
-            </span>
+            <Link to="/" className="surface-chip flex h-11 w-11 items-center justify-center rounded-2xl">
+              <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
+                <rect x="1" y="3" width="6" height="4" rx="1" fill="var(--accent)" />
+                <rect x="9" y="3" width="6" height="4" rx="1" fill="var(--accent)" opacity="0.48" />
+                <rect x="1" y="9" width="14" height="4" rx="1" fill="var(--accent)" opacity="0.24" />
+              </svg>
+            </Link>
+            <div>
+              <div className="text-[15px] font-semibold text-[var(--text-primary)]">BreakGen</div>
+              <div className="text-[12px] text-[var(--text-tertiary)]">
+                Public demo workspace
+              </div>
+            </div>
           </div>
-          <div className="hidden items-center gap-2 xl:flex">
-            {demoSignals.map((item) => (
-              <span
-                key={item.label}
-                className="rounded-full border border-white/8 bg-white/[0.03] px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-zinc-500"
-              >
-                {item.label}
-                <span className="mx-1 text-zinc-700">/</span>
-                <span className="text-zinc-300">{item.value}</span>
-              </span>
-            ))}
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="rounded-full border border-white/8 bg-white/[0.03] px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-zinc-500">
-              artifact-backed demo
-            </span>
-            <span className="text-[11px] uppercase tracking-[0.08em] text-zinc-600">
-              streamdeck
-            </span>
-            <span className="text-[11px] font-mono text-zinc-600">
-              r{demoProject?.revision ?? "?"}
-            </span>
-          </div>
-        </div>
 
-        <div className="flex-1 flex">
-          <div className="flex-1 p-4 overflow-hidden">
-            {renderEditor()}
+          <div className="flex flex-wrap items-center gap-3">
+            <ThemeSwitcher />
+            <a
+              href={REPO_URL}
+              target="_blank"
+              rel="noopener"
+              className="surface-button inline-flex h-11 items-center rounded-full px-4 text-[13px] font-semibold"
+            >
+              GitHub
+            </a>
+            <Link
+              to="/"
+              className="surface-button-primary inline-flex h-11 items-center rounded-full px-5 text-[13px] font-semibold"
+            >
+              Launch page
+            </Link>
           </div>
-          <div className="w-[45%] shrink-0 glass-divider border-l flex flex-col">
-            <div className="relative flex-1 min-h-0 overflow-hidden bg-[radial-gradient(circle_at_top,rgba(82,126,255,0.12),transparent_34%),radial-gradient(circle_at_bottom,rgba(255,145,205,0.08),transparent_28%),#050609]">
-              <div className="pointer-events-none absolute inset-[22px] rounded-[32px] border border-white/8 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.03),transparent_42%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]" />
-              <div className="pointer-events-none absolute inset-x-10 bottom-6 z-10 h-24 rounded-full bg-[radial-gradient(circle,rgba(91,119,255,0.16),transparent_62%)] blur-2xl" />
-              <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-24 bg-[linear-gradient(180deg,rgba(5,6,9,0.88),rgba(5,6,9,0.12))]" />
-              <div className="absolute left-4 top-4 z-20 rounded-2xl border border-white/10 bg-black/28 px-4 py-3 backdrop-blur-md">
-                <div className="text-[10px] uppercase tracking-[0.16em] text-zinc-500">Preview chamber</div>
-                <div className="mt-1 text-[14px] font-semibold text-white">Panel, controls, and accepted assets</div>
-              </div>
-              <div className="absolute right-4 top-4 z-20 rounded-full border border-emerald-500/18 bg-emerald-500/10 px-3 py-1.5 text-[10px] uppercase tracking-[0.12em] text-emerald-300 backdrop-blur-md">
-                interactive
-              </div>
-              <div className="absolute bottom-4 left-4 z-20 rounded-[20px] border border-white/10 bg-black/28 px-4 py-3 backdrop-blur-md">
-                <div className="grid grid-cols-3 gap-4">
-                  {[
-                    ["controls", "17"],
-                    ["accepted", "2"],
-                    ["mechanical", "panel"],
-                  ].map(([label, value]) => (
-                    <div key={label}>
-                      <div className="text-[10px] uppercase tracking-[0.14em] text-zinc-600">{label}</div>
-                      <div className="mt-1 text-[16px] font-semibold text-white">{value}</div>
+        </header>
+
+        <section className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)] xl:items-start">
+          <aside className="surface-panel order-2 flex flex-col overflow-hidden rounded-[32px] xl:order-1 xl:sticky xl:top-8 xl:max-h-[calc(100vh-4rem)]">
+            <div className="surface-strong p-6">
+              <div className="eyebrow">Launch slice</div>
+              <h1 className="mt-4 text-[34px] font-semibold leading-[0.94] tracking-[-0.05em] text-[var(--text-primary)]">
+                Interactive control-surface demo, public and explorable.
+              </h1>
+              <p className="mt-4 text-[14px] leading-[1.8] text-[var(--text-secondary)]">
+                This route proves the product character of BreakGen: editable layout,
+                live preview, static sample records, and a visible trust layer in a shareable public build.
+              </p>
+
+              <div className="section-rule mt-6 grid gap-3 pt-5">
+                {[
+                  ["17", "controls in the sample"],
+                  ["3", "appearance assets tracked"],
+                  ["1", "mechanical sample attached"],
+                ].map(([value, label]) => (
+                  <div key={label} className="flex items-end justify-between gap-3">
+                    <div className="text-[28px] font-semibold leading-none tracking-[-0.05em] text-[var(--text-primary)]">
+                      {value}
                     </div>
-                  ))}
-                </div>
+                    <div className="max-w-[190px] text-right text-[11px] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
+                      {label}
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div className="absolute bottom-4 right-4 z-20 rounded-[20px] border border-white/10 bg-black/28 px-4 py-3 text-right backdrop-blur-md">
-                <div className="text-[10px] uppercase tracking-[0.14em] text-zinc-600">Viewport</div>
-                <div className="mt-1 text-[12px] leading-[1.6] text-zinc-300">
-                  Orbit, inspect, and compare the board as a product object,
-                  not just as flat layout data.
-                </div>
-              </div>
-              {renderScene()}
             </div>
-            <div className="glass-divider border-t p-4">
-              <div className="space-y-3">
-                <div className="glass glass-soft rounded-2xl p-4">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-zinc-600 mb-2">
-                    Launch framing
-                  </div>
-                  <div className="text-[13px] leading-[1.75] text-zinc-400">
-                    Public site: launch narrative plus client-only interactive demo.
-                    Private alpha: authenticated workspace, live API, generation jobs,
-                    mechanical compile, validation, and export provenance from the repository.
-                  </div>
-                </div>
-                <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-zinc-600 mb-2">
-                    What this proves
-                  </div>
-                  <div className="space-y-2 text-[13px] leading-[1.7] text-zinc-400">
-                    <div>One product record spans layout, preview, electronics, validation, and export.</div>
-                    <div>The public site shows the software as a system, not a static marketing page.</div>
-                  </div>
-                </div>
-                <div className="rounded-2xl border border-white/8 bg-black/22 p-4">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-zinc-600 mb-2">
-                    Demo boundaries
-                  </div>
-                  <div className="text-[13px] leading-[1.7] text-zinc-400">
-                    This route is intentionally client-only. It proves interface character and workflow shape, while the repository-backed alpha handles live state, jobs, and durable outputs.
-                  </div>
-                </div>
+
+            <div className="section-rule p-6">
+              <div className="eyebrow">Status</div>
+              <p className="mt-3 text-[13px] leading-[1.75] text-[var(--text-secondary)]">
+                {statusMessage}
+              </p>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-4 pb-4">
+              <ProjectSurfaces
+                project={demoProject}
+                familyManifest={publicDemoFamilyManifest}
+                providers={publicDemoProviders}
+                records={records}
+                loading={false}
+              />
+            </div>
+          </aside>
+
+          <div className="order-1 grid min-h-[620px] gap-6 lg:grid-cols-[minmax(0,1fr)_400px] xl:order-2 xl:min-h-[780px]">
+            <section className="surface-panel flex min-h-[540px] flex-col rounded-[32px] p-4 xl:min-h-0">
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                {DEMO_SIGNALS.map((item) => (
+                  <span
+                    key={item.label}
+                    className="surface-chip rounded-full px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] text-[var(--text-secondary)]"
+                  >
+                    {item.label}
+                    <span className="mx-1 text-[var(--text-muted)]">/</span>
+                    <span className="text-[var(--text-primary)]">{item.value}</span>
+                  </span>
+                ))}
               </div>
+              <div className="min-h-0 flex-1">{renderEditor()}</div>
+            </section>
+
+            <div className="flex min-h-0 flex-col gap-6">
+              <section className="preview-chamber relative h-[420px] flex-none rounded-[32px] sm:h-[520px]">
+                <div className="surface-toolbar absolute left-5 top-5 z-20 rounded-[20px] px-4 py-3">
+                  <div className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">
+                    Preview chamber
+                  </div>
+                  <div className="mt-1 text-[14px] font-semibold text-[var(--text-primary)]">
+                    Panel, controls, and accepted parts
+                  </div>
+                </div>
+                <div className="surface-toolbar absolute bottom-5 left-5 z-20 rounded-[20px] px-4 py-3">
+                  <div className="grid grid-cols-3 gap-4">
+                    {[
+                      ["controls", "17"],
+                      ["accepted", "2"],
+                      ["mechanical", "panel"],
+                    ].map(([label, value]) => (
+                      <div key={label}>
+                        <div className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">{label}</div>
+                        <div className="mt-1 text-[16px] font-semibold text-[var(--text-primary)]">{value}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                {renderScene()}
+              </section>
+
+              <section className="surface-panel rounded-[32px] p-6">
+                <div className="eyebrow">What this proves</div>
+                <div className="section-rule mt-4 grid gap-4 pt-5">
+                  <div className="text-[14px] leading-[1.8] text-[var(--text-secondary)]">
+                    One product record spans layout, 3D preview, electronics, validation, and export history.
+                  </div>
+                  <div className="text-[14px] leading-[1.8] text-[var(--text-secondary)]">
+                    The public launch site behaves like software, not just marketing.
+                  </div>
+                  <div className="text-[14px] leading-[1.8] text-[var(--text-secondary)]">
+                    The authenticated alpha deepens the same model instead of diverging into a separate product story.
+                  </div>
+                </div>
+              </section>
             </div>
           </div>
-        </div>
-      </main>
+        </section>
+      </div>
     </div>
   );
 }

@@ -14,6 +14,7 @@ from server.api.generation import get_generation_status
 from server.db.models import Base, ProjectArtifactRow, ProjectJobRow, ProjectRow
 from server.models.platform import GenerationProviderManifest
 from server.models.project import KeyboardProject, ProjectStatus
+from server.services.keycap_ingestion import KeycapIngestionError, _suffix_for_url
 from server.services.job_registry import create_project_job
 from server.services.project_state import create_project_record
 
@@ -85,6 +86,13 @@ def _fake_normalize_mesh(input_path, output_dir, asset_id, unit_width=1.0):
     preview_path.write_bytes(b"preview")
     export_path.write_bytes(b"export")
     return _FakeNormalizationResult(preview_path, export_path)
+
+
+def test_generated_model_suffix_rejects_non_model_extensions():
+    assert _suffix_for_url("https://example.com/generated/model.glb?signature=abc") == ".glb"
+    assert _suffix_for_url("https://example.com/generated/model") == ".glb"
+    with pytest.raises(KeycapIngestionError, match="Unsupported"):
+        _suffix_for_url("https://example.com/generated/model.zip")
 
 
 @pytest.mark.anyio

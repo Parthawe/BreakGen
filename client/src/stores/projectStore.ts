@@ -12,7 +12,8 @@ import {
   keyToPlacedElement,
   syncLayoutWithElements,
 } from "../lib/projectCompat";
-import { api } from "../lib/api";
+import { api, extractRevisionConflict, isApiError } from "../lib/api";
+import { useAuthStore } from "./authStore";
 import type {
   KeyboardProject,
   KeySpec,
@@ -27,6 +28,13 @@ type DirtyField = "name" | "layout" | "switch" | "style";
 
 const MAX_UNDO = 50;
 
+interface RevisionConflict {
+  projectId: string;
+  expectedRevision: number | null;
+  currentRevision: number | null;
+  message: string;
+}
+
 interface ProjectStore {
   project: KeyboardProject | null;
   loading: boolean;
@@ -34,6 +42,7 @@ interface ProjectStore {
   dirtyFields: Set<DirtyField>;
   selectedElementIds: string[];
   error: string | null;
+  revisionConflict: RevisionConflict | null;
   undoStack: PlacedElementSpec[][];
   redoStack: PlacedElementSpec[][];
 
@@ -46,6 +55,8 @@ interface ProjectStore {
   ) => Promise<void>;
   save: () => Promise<void>;
   clearError: () => void;
+  dismissRevisionConflict: () => void;
+  reloadLatest: () => Promise<void>;
   undo: () => void;
   redo: () => void;
 
@@ -91,11 +102,12 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   dirtyFields: new Set(),
   selectedElementIds: [],
   error: null,
+  revisionConflict: null,
   undoStack: [],
   redoStack: [],
 
   loadProject: async (id) => {
-    set({ loading: true, error: null });
+    set({ loading: true, error: null, revisionConflict: null });
     try {
       const project = await api.projects.get(id);
       set({
@@ -104,16 +116,22 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
         dirty: false,
         dirtyFields: new Set(),
         selectedElementIds: [],
+        revisionConflict: null,
         undoStack: [],
         redoStack: [],
       });
     } catch (e) {
+      if (isApiError(e) && e.status === 401) {
+        useAuthStore
+          .getState()
+          .handleUnauthorized("Your session expired while loading this project. Sign in again to continue.");
+      }
       set({ loading: false, error: e instanceof Error ? e.message : "Failed to load project" });
     }
   },
 
   createProject: async (name, templateId, productFamily, productDomain) => {
-    set({ loading: true, error: null });
+    set({ loading: true, error: null, revisionConflict: null });
     try {
       const project = await api.projects.create({
         name,
@@ -127,10 +145,16 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
         dirty: false,
         dirtyFields: new Set(),
         selectedElementIds: [],
+        revisionConflict: null,
         undoStack: [],
         redoStack: [],
       });
     } catch (e) {
+      if (isApiError(e) && e.status === 401) {
+        useAuthStore
+          .getState()
+          .handleUnauthorized("Your session expired while creating a project. Sign in again to continue.");
+      }
       set({ loading: false, error: e instanceof Error ? e.message : "Failed to create project" });
     }
   },
@@ -139,7 +163,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     const { project, dirtyFields } = get();
     if (!project || dirtyFields.size === 0) return;
 
-    set({ error: null });
+    set({ error: null, revisionConflict: null, loading: true });
     try {
       const req: UpdateProjectRequest = {
         expected_revision: project.revision,
@@ -150,13 +174,46 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       if (dirtyFields.has("style")) req.style_prompt = project.style_request.prompt ?? undefined;
 
       const updated = await api.projects.update(project.project_id, req);
-      set({ project: updated, dirty: false, dirtyFields: new Set() });
+      set({
+        project: updated,
+        dirty: false,
+        dirtyFields: new Set(),
+        loading: false,
+        revisionConflict: null,
+      });
     } catch (e) {
-      set({ error: e instanceof Error ? e.message : "Failed to save" });
+      if (isApiError(e)) {
+        if (e.status === 401) {
+          useAuthStore
+            .getState()
+            .handleUnauthorized("Your session expired before this revision could be saved. Sign in again to continue.");
+        }
+        if (e.code === "revision_conflict") {
+          const revisions = extractRevisionConflict(e.detail);
+          set({
+            loading: false,
+            revisionConflict: {
+              projectId: project.project_id,
+              expectedRevision: revisions.expectedRevision,
+              currentRevision: revisions.currentRevision,
+              message:
+                "Another saved revision exists on the server. Reload the latest project state before continuing.",
+            },
+          });
+          return;
+        }
+      }
+      set({ loading: false, error: e instanceof Error ? e.message : "Failed to save" });
     }
   },
 
   clearError: () => set({ error: null }),
+  dismissRevisionConflict: () => set({ revisionConflict: null }),
+  reloadLatest: async () => {
+    const projectId = get().project?.project_id;
+    if (!projectId) return;
+    await get().loadProject(projectId);
+  },
 
   undo: () => {
     set((state) => {

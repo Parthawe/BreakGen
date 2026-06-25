@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { api, isApiError } from "../lib/api";
 
 interface User {
   id: number;
@@ -6,9 +7,20 @@ interface User {
   name: string;
 }
 
+type SessionState =
+  | "unknown"
+  | "loading"
+  | "authenticated"
+  | "unauthenticated"
+  | "expired"
+  | "offline";
+
 interface AuthStore {
   user: User | null;
   token: string | null;
+  initialized: boolean;
+  sessionState: SessionState;
+  sessionNotice: string | null;
   loading: boolean;
   error: string | null;
 
@@ -17,85 +29,133 @@ interface AuthStore {
   logout: () => void;
   loadSession: () => Promise<void>;
   clearError: () => void;
+  clearSessionNotice: () => void;
+  handleUnauthorized: (message?: string) => void;
 }
-
-const BASE = "/api/auth";
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
   user: null,
   token: localStorage.getItem("breakgen_token"),
+  initialized: false,
+  sessionState: localStorage.getItem("breakgen_token") ? "unknown" : "unauthenticated",
+  sessionNotice: null,
   loading: false,
   error: null,
 
   signup: async (email, name, password) => {
-    set({ loading: true, error: null });
+    set({ loading: true, error: null, sessionNotice: null });
     try {
-      const res = await fetch(`${BASE}/signup`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, name, password }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        set({ loading: false, error: data.detail || "Signup failed" });
-        return false;
-      }
-      const data = await res.json();
+      const data = await api.auth.signup({ email, name, password });
       localStorage.setItem("breakgen_token", data.token);
-      set({ user: data.user, token: data.token, loading: false });
+      set({
+        user: data.user,
+        token: data.token,
+        initialized: true,
+        sessionState: "authenticated",
+        sessionNotice: null,
+        loading: false,
+      });
       return true;
-    } catch {
-      set({ loading: false, error: "Network error" });
+    } catch (error) {
+      set({
+        loading: false,
+        initialized: true,
+        error: isApiError(error) ? error.detail : "Account creation failed",
+      });
       return false;
     }
   },
 
   login: async (email, password) => {
-    set({ loading: true, error: null });
+    set({ loading: true, error: null, sessionNotice: null });
     try {
-      const res = await fetch(`${BASE}/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        set({ loading: false, error: data.detail || "Login failed" });
-        return false;
-      }
-      const data = await res.json();
+      const data = await api.auth.login({ email, password });
       localStorage.setItem("breakgen_token", data.token);
-      set({ user: data.user, token: data.token, loading: false });
+      set({
+        user: data.user,
+        token: data.token,
+        initialized: true,
+        sessionState: "authenticated",
+        sessionNotice: null,
+        loading: false,
+      });
       return true;
-    } catch {
-      set({ loading: false, error: "Network error" });
+    } catch (error) {
+      set({
+        loading: false,
+        initialized: true,
+        error: isApiError(error) ? error.detail : "Login failed",
+      });
       return false;
     }
   },
 
   logout: () => {
     localStorage.removeItem("breakgen_token");
-    set({ user: null, token: null });
+    set({
+      user: null,
+      token: null,
+      initialized: true,
+      sessionState: "unauthenticated",
+      sessionNotice: null,
+      error: null,
+    });
   },
 
   loadSession: async () => {
     const token = get().token;
-    if (!token) return;
-    try {
-      const res = await fetch(`${BASE}/me`, {
-        headers: { Authorization: `Bearer ${token}` },
+    if (!token) {
+      set({
+        initialized: true,
+        sessionState: "unauthenticated",
+        sessionNotice: null,
       });
-      if (res.ok) {
-        const user = await res.json();
-        set({ user });
-      } else {
+      return;
+    }
+    set({ sessionState: "loading" });
+    try {
+      const user = await api.auth.me();
+      set({
+        user,
+        initialized: true,
+        sessionState: "authenticated",
+        sessionNotice: null,
+      });
+    } catch (error) {
+      if (isApiError(error) && error.status === 401) {
         localStorage.removeItem("breakgen_token");
-        set({ token: null });
+        set({
+          user: null,
+          token: null,
+          initialized: true,
+          sessionState: "expired",
+          sessionNotice: "Your authenticated alpha session expired. Sign in again to continue editing.",
+        });
+        return;
       }
-    } catch {
-      // Silently fail — server might be down
+
+      set({
+        initialized: true,
+        sessionState: "offline",
+        sessionNotice:
+          "BreakGen cannot reach the backend right now. Saved projects and compile actions are unavailable until the API is back.",
+      });
     }
   },
 
   clearError: () => set({ error: null }),
+  clearSessionNotice: () => set({ sessionNotice: null }),
+  handleUnauthorized: (message) => {
+    localStorage.removeItem("breakgen_token");
+    set({
+      user: null,
+      token: null,
+      initialized: true,
+      sessionState: "expired",
+      sessionNotice:
+        message ??
+        "Your authenticated alpha session expired. Sign in again to continue editing.",
+      error: null,
+    });
+  },
 }));

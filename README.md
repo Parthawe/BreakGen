@@ -1,140 +1,150 @@
 # BreakGen
 
-> A spec-first product and system design for turning keyboard intent into fabrication-ready artifacts.
+> A private-alpha studio for turning programmable hardware intent into revisioned product state, validation records, and export bundles.
 
-BreakGen began as an NYU ITP thesis project shown in Spring 2025. The core idea is simple: most people can describe the keyboard they want, but very few can move cleanly from taste and intent through CAD, PCB design, firmware configuration, and fabrication. BreakGen treats that gap as a product problem, not a user problem.
+BreakGen started as an NYU ITP thesis project about custom mechanical keyboards. The current product direction is broader and more useful: help makers, hardware founders, designers, and creative technologists move from a described physical control surface to structured build evidence without stitching together CAD, EDA, firmware, and fabrication tools by hand.
 
-This repository currently documents the product, architecture, validation model, and rebuild direction. It is not yet a production codebase.
+The important product idea is not "AI generates hardware." BreakGen keeps AI at the appearance and exploration layer, then uses deterministic compilers for the engineering layer: geometry, electronics metadata, validation, firmware-facing maps, artifacts, and export manifests.
 
-## What BreakGen Is
+## Current MVP
 
-BreakGen is an AI-assisted workflow for custom mechanical keyboards. A user describes what they want a board to feel like and look like, arranges the layout visually, and receives a validated export bundle for fabrication.
+BreakGen is now an authenticated private-alpha product studio with a FastAPI backend and React workspace.
 
-The important architectural idea is that BreakGen is not just "AI for keyboards." It is two systems joined together:
+Reviewer-facing alpha scope:
 
-1. An intent-capture layer for aesthetics, feel, and layout.
-2. A manufacturing compiler that turns those choices into deterministic geometry, PCB data, firmware metadata, and export artifacts.
+- `keyboard`
+- `macropad`
+- `streamdeck`
+- `midi`
+- `gamepad`
 
-That distinction matters. AI can help generate visual variety, but manufacturability still depends on deterministic geometry, constraints, and validation.
+Implemented proof templates also exist for `pedal_controller`, `breath_controller`, and `handheld_companion`, but those are intentionally marked as proof-stage paths rather than default reviewer-facing product scope.
 
-## Product Thesis
+## Why It Matters
 
-Anyone who can describe a keyboard should be able to design one.
+The existing custom-device workflow is fragmented. A small programmable object can require layout tools, CAD, PCB tooling, firmware configuration, slicers, fabrication portals, and manual version tracking. BreakGen treats that fragmentation as the product problem.
 
-BreakGen removes the technical gatekeeping between a user's idea and a buildable result by hiding toolchain complexity behind a guided experience:
+The MVP focuses on one narrow promise:
 
-- switch exploration instead of raw spec-sheet comparison
-- natural-language keycap style generation instead of manual 3D modeling
-- visual layout editing instead of config-file-first tooling
-- compiled PCB output instead of direct exposure to schematic editors
-- validation before export instead of discovering fabrication errors after ordering
+> A user should be able to create a constrained programmable device, edit its authored state, compile evidence from that state, validate the result, and export a traceable bundle tied to a specific revision.
 
-## Why This Exists
+## What Works Now
 
-The existing custom keyboard workflow is fragmented. Even a straightforward custom build commonly crosses layout tools, CAD, PCB design tools, firmware configurators, slicers, and fabrication portals. The current ecosystem is powerful, but it assumes the user can already translate creative intent into engineering artifacts.
+- Authenticated project creation and listing
+- Product domains, families, templates, and hardware module manifests
+- Canonical project state with immutable revision snapshots
+- Optimistic locking for spec-changing mutations
+- Electronics compilation for keyboard, macro pad, stream deck, MIDI, gamepad, and proof-stage control families
+- Family-aware mechanical panel outputs and handheld shell proof outputs
+- Validation reports tied to project revisions
+- Durable artifact and job records
+- Export bundles with manifests, build guides, checksums, and validation lineage
+- Private-alpha signup controls, seeded reviewer accounts, and JWT auth
+- Public client-only demo for browsing the product model
+- Deterministic reviewer proof command that creates a real Stream Deck project, compiles it, validates it, and exports a ZIP bundle
 
-BreakGen is aimed at three user groups:
+## Reviewer Proof
 
-- aspiring enthusiasts with taste but no EDA or CAD background
-- intermediate builders who can spec a board but stall at PCB and firmware
-- artists and designers who want a keyboard as a physical object without learning a full electronics workflow
+From the repo root:
 
-## Product Boundary
-
-BreakGen should be explicit about what is proven, what is proposed, and what remains out of scope.
-
-| Layer | Status | Notes |
-| --- | --- | --- |
-| Thesis prototype | Proven in physical exhibition | Validated the end-to-end concept with fabricated keyboards and public demos |
-| Documentation and architecture | Current repo focus | This repository defines the target product and rebuild direction |
-| Production SaaS | Not yet built | Authentication, storage, jobs, billing, provider abstraction, and operations remain future work |
-
-## End-to-End Flow
-
-```mermaid
-flowchart LR
-    A["User intent"] --> B["Switch selection"]
-    B --> C["Keycap style generation"]
-    C --> D["Layout editing"]
-    D --> E["PCB + plate compilation"]
-    E --> F["Validation gates"]
-    F --> G["Export bundle"]
-    G --> H["Fabrication"]
+```bash
+make demo-proof
 ```
 
-The product should feel linear for beginners, but the underlying data model should support non-linear editing and re-entry. The UX can be guided while the system remains modular.
+That command creates a deterministic `yc_proof_streamdeck` project, compiles electronics and mechanical artifacts, runs validation, exports a bundle, and prints the bundle path plus SHA-256 provenance.
+
+Example output:
+
+```text
+BreakGen YC proof complete
+project: yc_proof_streamdeck (streamdeck)
+revision: r2 status=exported
+electronics: physical_rows 14/26 GPIO target=hid_control_surface
+mechanical: panel artifacts=mech_panel_dxf_r2, mech_panel_summary_r2
+validation: pass checks=9 warnings=0
+export: bundle_... readiness=prototype_ready sha256=...
+```
+
+## Local Development
+
+Install dependencies:
+
+```bash
+make install
+```
+
+Seed a reviewer account:
+
+```bash
+BREAKGEN_ALPHA_PASSWORD="replace-with-a-strong-local-password" make seed-alpha-user
+```
+
+Run the full local stack:
+
+```bash
+make dev
+```
+
+Expected local URLs:
+
+- frontend: [http://localhost:5173](http://localhost:5173)
+- backend: [http://localhost:8000](http://localhost:8000)
+- API docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+## Verification
+
+Before handing a build to a reviewer:
+
+```bash
+make demo-proof
+./server/.venv/bin/pytest server/tests
+cd client && pnpm build
+```
 
 ## System Shape
 
-The rebuild should be organized around a canonical project model rather than around individual tools.
+```mermaid
+flowchart LR
+    A["Human intent"] --> B["Canonical project state"]
+    B --> C["Family-specific editor"]
+    C --> D["Mechanical compiler"]
+    C --> E["Electronics compiler"]
+    D --> F["Validation"]
+    E --> F
+    F --> G["Export bundle"]
+    G --> H["Artifact and job records"]
+```
 
-| Subsystem | Responsibility | Key Output |
-| --- | --- | --- |
-| Project model | Stores canonical keyboard intent and configuration | Versioned `KeyboardProject` record |
-| Web app | Guided UX, layout editing, 3D preview, export controls | Interactive client state and user actions |
-| AI generation worker | Sends prompt-wrapped jobs to Meshy and tracks status | Raw mesh assets and generation metadata |
-| Geometry worker | Normalizes meshes, applies stems, derives plate/case geometry | Printable meshes and mechanical geometry |
-| EDA worker | Compiles layout into PCB project, runs DRC, exports Gerbers | KiCad project, Gerbers, drill files, BOM |
-| Export worker | Bundles validated outputs with provenance and manifests | Downloadable fabrication package |
-| Validation layer | Enforces geometry, manufacturing, and project integrity rules | Machine-readable validation report |
+## Engineering Principles
 
-## Core Engineering Principles
+- The canonical project record is the source of truth.
+- Spec-changing edits create immutable revisions.
+- Derived work creates artifact and job records tied to a revision.
+- AI-generated assets are not canonical until explicitly accepted.
+- Fabrication claims must match the actual bundle contents and validation checks.
+- Shared platform services must remain product-family-safe, not keyboard-only.
 
-- AI is a style layer, not the source of dimensional truth.
-- The layout model is the canonical source for downstream geometry and PCB generation.
-- KiCad files are compiled artifacts, not the primary source of truth.
-- Every export should be traceable to a specific project revision and validation report.
-- "Fabrication-ready" should only be claimed when digital checks and physical calibration assumptions are both explicit.
+## Honest Limits
 
-## What "Production-Ready" Means Here
+BreakGen is not yet a general-purpose hardware factory.
 
-BreakGen should avoid vague claims. In this project, "production-ready" means:
+Current gaps that still need product work:
 
-- the project passes deterministic geometry and manufacturing validation
-- the output bundle includes the files a fab shop or maker actually needs
-- tolerances and defaults are tied either to external vendor guidance or to clearly labeled prototype calibration
-- outputs are versioned, reproducible, and attributable to a single project revision
+- Hosted production deployment and migration discipline
+- Async worker infrastructure for long-running generation and compile jobs
+- Deeper CAD and enclosure outputs beyond panel and shell proof artifacts
+- Fabrication partner presets and physical calibration data
+- Billing, team workflows, and production observability
+- Full self-serve onboarding beyond the private-alpha reviewer path
 
-It does not mean the system can support every switch family, every layout topology, or every fabrication partner on day one.
+## Repository Map
 
-## Recommended Rebuild Direction
-
-If BreakGen is rebuilt, the strongest architecture is:
-
-1. Keep a single canonical project schema.
-2. Generate preview, PCB, and export artifacts from that schema.
-3. Use AI only where ambiguity is valuable: surface style, ornament, aesthetic exploration.
-4. Keep critical mechanical and electrical outputs deterministic.
-5. Treat validation as a first-class product surface, not a background implementation detail.
-
-Two especially important implementation choices:
-
-- For keycaps, prefer applying AI-generated style to a deterministic keycap shell over trusting arbitrary mesh topology.
-- For PCBs, prefer rule-based keyboard-specific compilation over a general-purpose autorouter-first architecture.
-
-## Repository Contents
-
-- [README.md](README.md): executive summary and rebuild framing
-- [PRODUCT_SPEC.md](PRODUCT_SPEC.md): architecture-grade product specification, requirements, subsystem design, risks, and references
-
-## Selected References
-
-The full bibliography lives in [PRODUCT_SPEC.md](PRODUCT_SPEC.md). Key external references used for the spec include:
-
-- [Meshy Text to 3D API](https://docs.meshy.ai/api/text-to-3d)
-- [KiCad Documentation](https://docs.kicad.org/)
-- [QMK Firmware Documentation](https://docs.qmk.fm/)
-- [VIA Documentation](https://www.caniusevia.com/docs/specification/)
-- [JLCPCB PCB Capabilities & Instructions](https://jlcpcb.com/help/catalog/187-PCB%20Capabilities%20%26%20Instructions)
-- [Cherry MX Series Datasheet](https://www.digikey.jp/ja/htmldatasheets/production/57428/0/0/1/mx-series.html)
-- [Ergogen Documentation](https://docs.ergogen.xyz/)
-- [Keyboard Layout Editor Repository](https://github.com/ijprest/keyboard-layout-editor)
-
-## Document Status
-
-- Thesis context: Spring 2025, NYU Tisch ITP
-- Documentation revision: April 7, 2026
-- Repository state: documentation-only, architecture/specification phase
+- [server/](server/): FastAPI backend, compilers, validation, artifacts, auth, and tests
+- [client/](client/): React workspace, public demo, authenticated alpha UI
+- [docs/PRIVATE_ALPHA_RUNBOOK.md](docs/PRIVATE_ALPHA_RUNBOOK.md): reviewer and operator runbook
+- [PRODUCT.md](PRODUCT.md): product context and positioning
+- [DESIGN.md](DESIGN.md): interface and brand direction
+- [PRODUCT_SPEC.md](PRODUCT_SPEC.md): longer-form architecture and product specification
 
 ## License
 

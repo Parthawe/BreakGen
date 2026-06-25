@@ -129,6 +129,16 @@ def test_midi_panel_includes_encoder_holes_and_switch_cutouts():
     assert len(rects) == 25
 
 
+def test_midi_pad_panel_includes_pad_recesses_and_encoder_holes():
+    layout = _load_layout("midi_pad_4x4")
+    doc = generate_plate_dxf(layout, PlateConfig())
+    msp = doc.modelspace()
+    circles = [e for e in msp if e.dxf.layer == "Cutouts" and e.dxftype() == "CIRCLE"]
+    rects = [e for e in msp if e.dxf.layer == "Cutouts" and e.dxftype() == "LWPOLYLINE"]
+    assert len(circles) == 4
+    assert len(rects) == 16
+
+
 def test_gamepad_panel_includes_button_and_joystick_cutouts():
     layout = _load_layout("gamepad_compact")
     doc = generate_plate_dxf(layout, PlateConfig())
@@ -139,6 +149,26 @@ def test_gamepad_panel_includes_button_and_joystick_cutouts():
     assert len(circles) == 9  # 8 face/d-pad buttons + 1 joystick shaft
     assert len(rects) == 2  # shoulder button slots
     assert len(holes) == 9  # 5 board holes + 4 joystick mounting holes
+
+
+def test_pedal_controller_panel_includes_footswitch_and_expression_cutouts():
+    layout = _load_layout("pedal_controller_3switch")
+    doc = generate_plate_dxf(layout, PlateConfig())
+    msp = doc.modelspace()
+    circles = [e for e in msp if e.dxf.layer == "Cutouts" and e.dxftype() == "CIRCLE"]
+    rects = [e for e in msp if e.dxf.layer == "Cutouts" and e.dxftype() == "LWPOLYLINE"]
+    assert len(circles) == 3
+    assert len(rects) == 1
+
+
+def test_breath_controller_panel_includes_sensor_mic_button_and_display_cutouts():
+    layout = _load_layout("breath_controller_basic")
+    doc = generate_plate_dxf(layout, PlateConfig())
+    msp = doc.modelspace()
+    circles = [e for e in msp if e.dxf.layer == "Cutouts" and e.dxftype() == "CIRCLE"]
+    rects = [e for e in msp if e.dxf.layer == "Cutouts" and e.dxftype() == "LWPOLYLINE"]
+    assert len(circles) == 5  # 2 sensor ports + 1 mic port + 2 button apertures
+    assert len(rects) == 1  # status display window
 
 
 def test_streamdeck_display_panel_includes_display_and_encoder_cutouts():
@@ -157,7 +187,7 @@ def test_handheld_panel_includes_speaker_and_usb_access_cutouts():
     msp = doc.modelspace()
     circles = [e for e in msp if e.dxf.layer == "Cutouts" and e.dxftype() == "CIRCLE"]
     rects = [e for e in msp if e.dxf.layer == "Cutouts" and e.dxftype() == "LWPOLYLINE"]
-    assert len(circles) == 15  # 8 button apertures + 7 speaker grille holes
+    assert len(circles) == 16  # 8 button apertures + 7 speaker grille holes + mic port
     assert len(rects) == 2  # display window + usb port slot
 
 

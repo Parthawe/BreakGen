@@ -22,11 +22,13 @@ async def load_project_state(
     project_id: str,
     *,
     expected_revision: int | None = None,
+    owner_user_id: int | None = None,
 ) -> tuple[ProjectRow, KeyboardProject]:
     """Load the current project row and canonical project state."""
-    result = await db.execute(
-        select(ProjectRow).where(ProjectRow.project_id == project_id)
-    )
+    stmt = select(ProjectRow).where(ProjectRow.project_id == project_id)
+    if owner_user_id is not None:
+        stmt = stmt.where(ProjectRow.user_id == owner_user_id)
+    result = await db.execute(stmt)
     row = result.scalar_one_or_none()
     if not row:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -48,6 +50,7 @@ async def create_project_record(
     project: KeyboardProject,
     *,
     change_summary: str,
+    owner_user_id: int | None = None,
 ) -> dict:
     """Persist a newly-created project and its initial immutable snapshot."""
     project_dict = project.model_dump(mode="json")
@@ -55,6 +58,7 @@ async def create_project_record(
     row = ProjectRow(
         project_id=project.project_id,
         product_family=project.product_family.value,
+        user_id=owner_user_id,
         name=project.name,
         revision=project.revision,
         status=project.status.value,

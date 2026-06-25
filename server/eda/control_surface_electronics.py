@@ -11,6 +11,7 @@ from server.models.project import ElementType, KeyboardProject, LayoutSpec, Prod
 MATRIX_ELEMENT_TYPES = {ElementType.KEY_SWITCH, ElementType.BUTTON}
 DIRECT_PIN_REQUIREMENTS = {
     ElementType.ENCODER: 2,
+    ElementType.PAD: 1,
     ElementType.JOYSTICK: 3,
     ElementType.DISPLAY: 4,
     ElementType.SLIDER: 1,
@@ -75,25 +76,35 @@ class ElectronicsCompileResult:
 def firmware_target_for_family(family: ProductFamily) -> str:
     if family == ProductFamily.MIDI:
         return "midi_control_surface"
+    if family == ProductFamily.PEDAL_CONTROLLER:
+        return "midi_pedal_controller"
+    if family == ProductFamily.BREATH_CONTROLLER:
+        return "midi_breath_controller"
     if family == ProductFamily.GAMEPAD:
         return "hid_gamepad"
     if family == ProductFamily.HANDHELD_COMPANION:
         return "handheld_companion_proof"
     if family == ProductFamily.STREAMDECK:
-        return "hid_macro_pad"
+        return "hid_control_surface"
     if family == ProductFamily.MACROPAD:
         return "hid_macro_pad"
     return "qmk_via_keyboard"
 
 
 def control_protocol_for_family(family: ProductFamily) -> str:
-    if family == ProductFamily.MIDI:
+    if family in {
+        ProductFamily.MIDI,
+        ProductFamily.PEDAL_CONTROLLER,
+        ProductFamily.BREATH_CONTROLLER,
+    }:
         return "usb_midi"
     if family == ProductFamily.GAMEPAD:
         return "usb_hid_gamepad"
     if family == ProductFamily.HANDHELD_COMPANION:
         return "usb_hid_companion"
-    if family in {ProductFamily.MACROPAD, ProductFamily.STREAMDECK}:
+    if family == ProductFamily.STREAMDECK:
+        return "usb_hid_control_surface"
+    if family == ProductFamily.MACROPAD:
         return "usb_hid_macro"
     return "usb_hid_keyboard"
 
@@ -146,7 +157,13 @@ def _balanced_matrix(keys) -> MatrixAssignment:
 
 def compile_project_matrix(project: KeyboardProject) -> tuple[MatrixAssignment, str]:
     """Compile a family-aware matrix assignment for a project."""
-    if project.product_family in {ProductFamily.MIDI, ProductFamily.GAMEPAD}:
+    if project.product_family in {
+        ProductFamily.MIDI,
+        ProductFamily.GAMEPAD,
+        ProductFamily.PEDAL_CONTROLLER,
+        ProductFamily.BREATH_CONTROLLER,
+        ProductFamily.HANDHELD_COMPANION,
+    }:
         return _balanced_matrix(_matrix_keys(project.layout)), "balanced"
     return compile_matrix(project.layout), "physical_rows"
 

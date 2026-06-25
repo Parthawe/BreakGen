@@ -40,8 +40,12 @@ function getCachedMechanicalResult(
 
 function ArtifactLinks({
   artifactUrls,
+  downloadingKey,
+  onDownload,
 }: {
   artifactUrls: Record<string, string>;
+  downloadingKey: string | null;
+  onDownload: (key: string, url: string) => void;
 }) {
   return (
     <div className="space-y-2">
@@ -50,14 +54,15 @@ function ArtifactLinks({
           key={key}
           className="glass-subcard flex items-center justify-between px-4 py-2.5 rounded-xl"
         >
-          <span className="text-[12px] font-mono text-zinc-400">{key}</span>
-          <a
-            href={url}
-            download
-            className="text-[11px] font-medium px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 transition-colors"
+          <span className="text-[12px] font-mono text-[var(--text-secondary)]">{key}</span>
+          <button
+            type="button"
+            onClick={() => onDownload(key, url)}
+            disabled={downloadingKey === key}
+            className="text-[11px] font-medium px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 transition-colors disabled:cursor-wait disabled:opacity-60"
           >
-            Download
-          </a>
+            {downloadingKey === key ? "Downloading..." : "Download"}
+          </button>
         </div>
       ))}
     </div>
@@ -75,6 +80,7 @@ export function MechanicalReviewPanel({
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<MechanicalCompileResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
 
   useEffect(() => {
     if (!project) {
@@ -134,16 +140,29 @@ export function MechanicalReviewPanel({
     }
   };
 
+  const handleArtifactDownload = async (key: string, url: string) => {
+    const artifactName = url.split("/").pop() || `${key}.bin`;
+    setDownloadingKey(key);
+    setError(null);
+    try {
+      await api.geometry.downloadMechanicalArtifactUrl(url, artifactName);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Artifact download failed");
+    } finally {
+      setDownloadingKey(null);
+    }
+  };
+
   if (!project) return null;
 
   return (
     <div className="h-full overflow-y-auto p-5">
       <div className="flex items-start justify-between gap-4 mb-5">
         <div>
-          <h3 className="text-[15px] font-semibold text-white mb-1">
+          <h3 className="mb-1 text-[15px] font-semibold text-[var(--text-primary)]">
             Mechanical Review
           </h3>
-          <p className="text-[12px] text-zinc-500 leading-[1.6] max-w-[44ch]">
+          <p className="max-w-[44ch] text-[12px] leading-[1.6] text-[var(--text-secondary)]">
             Deterministic mechanical compile for the saved project revision. This
             stays family-aware: panel output for control surfaces, shell output for
             planned handheld proof families.
@@ -152,7 +171,7 @@ export function MechanicalReviewPanel({
         <button
           onClick={handleRecompile}
           disabled={loading}
-          className="glass-button shrink-0 h-9 px-4 text-[12px] font-medium rounded-xl text-zinc-300 hover:text-white disabled:opacity-50 transition-colors"
+          className="surface-button h-9 shrink-0 rounded-xl px-4 text-[12px] font-semibold transition-colors disabled:opacity-50"
         >
           {loading ? "Compiling..." : "Recompile"}
         </button>
@@ -172,7 +191,7 @@ export function MechanicalReviewPanel({
       )}
 
       {!result && !loading && !error && (
-        <div className="glass glass-soft px-4 py-3 rounded-xl text-[12px] text-zinc-500">
+        <div className="glass glass-soft rounded-xl px-4 py-3 text-[12px] text-[var(--text-secondary)]">
           Mechanical output has not been compiled yet.
         </div>
       )}
@@ -181,23 +200,23 @@ export function MechanicalReviewPanel({
         <div className="space-y-4">
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
             <div className="glass-subcard rounded-xl px-4 py-3">
-              <div className="text-[11px] text-zinc-600 uppercase tracking-[0.08em]">
+              <div className="text-[11px] uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
                 Revision
               </div>
-              <div className="text-[18px] font-mono text-white mt-1">
+              <div className="mt-1 text-[18px] font-mono text-[var(--text-primary)]">
                 {result.revision}
               </div>
             </div>
             <div className="glass-subcard rounded-xl px-4 py-3">
-              <div className="text-[11px] text-zinc-600 uppercase tracking-[0.08em]">
+              <div className="text-[11px] uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
                 Kind
               </div>
-              <div className="text-[13px] text-zinc-300 mt-1 capitalize">
+              <div className="mt-1 text-[13px] capitalize text-[var(--text-primary)]">
                 {humanize(result.mechanical_kind)}
               </div>
             </div>
             <div className="glass-subcard rounded-xl px-4 py-3">
-              <div className="text-[11px] text-zinc-600 uppercase tracking-[0.08em]">
+              <div className="text-[11px] uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
                 Status
               </div>
               <div className="text-[13px] text-emerald-400 mt-1 capitalize">
@@ -205,47 +224,47 @@ export function MechanicalReviewPanel({
               </div>
             </div>
             <div className="glass-subcard rounded-xl px-4 py-3">
-              <div className="text-[11px] text-zinc-600 uppercase tracking-[0.08em]">
+              <div className="text-[11px] uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
                 Artifacts
               </div>
-              <div className="text-[13px] text-zinc-300 mt-1">
+              <div className="mt-1 text-[13px] text-[var(--text-primary)]">
                 {result.artifact_ids.length} durable outputs
               </div>
             </div>
           </div>
 
-          <div className="glass-subcard rounded-xl px-4 py-3 text-[12px] text-zinc-400">
-            Compiled at <span className="text-zinc-200">{formatTimestamp(result.compiled_at)}</span>
+          <div className="glass-subcard rounded-xl px-4 py-3 text-[12px] text-[var(--text-secondary)]">
+            Compiled at <span className="text-[var(--text-primary)]">{formatTimestamp(result.compiled_at)}</span>
           </div>
 
           {result.mechanical_kind === "panel" ? (
             <>
               <div className="glass glass-soft rounded-2xl p-4">
-                <div className="text-[11px] font-semibold text-zinc-600 uppercase tracking-[0.1em] mb-3">
+                <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
                   Panel Summary
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-[12px]">
                   <div className="glass-subcard rounded-xl px-4 py-3">
-                    <div className="text-zinc-600">Geometry</div>
-                    <div className="text-zinc-300 mt-1 capitalize">
+                    <div className="text-[var(--text-tertiary)]">Geometry</div>
+                    <div className="mt-1 capitalize text-[var(--text-primary)]">
                       {humanize(result.geometry_kind)}
                     </div>
                   </div>
                   <div className="glass-subcard rounded-xl px-4 py-3">
-                    <div className="text-zinc-600">Size</div>
-                    <div className="text-zinc-300 mt-1">
+                    <div className="text-[var(--text-tertiary)]">Size</div>
+                    <div className="mt-1 text-[var(--text-primary)]">
                       {result.plate_width_mm} × {result.plate_height_mm} mm
                     </div>
                   </div>
                   <div className="glass-subcard rounded-xl px-4 py-3">
-                    <div className="text-zinc-600">Elements</div>
-                    <div className="text-zinc-300 mt-1">
+                    <div className="text-[var(--text-tertiary)]">Elements</div>
+                    <div className="mt-1 text-[var(--text-primary)]">
                       {result.element_count} placed controls
                     </div>
                   </div>
                   <div className="glass-subcard rounded-xl px-4 py-3">
-                    <div className="text-zinc-600">Mounting holes</div>
-                    <div className="text-zinc-300 mt-1">
+                    <div className="text-[var(--text-tertiary)]">Mounting holes</div>
+                    <div className="mt-1 text-[var(--text-primary)]">
                       {result.mounting_hole_count}
                     </div>
                   </div>
@@ -253,14 +272,14 @@ export function MechanicalReviewPanel({
               </div>
 
               <div className="glass glass-soft rounded-2xl p-4">
-                <div className="text-[11px] font-semibold text-zinc-600 uppercase tracking-[0.1em] mb-3">
+                <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
                   Cutout Summary
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(result.cutout_summary).map(([key, count]) => (
                     <span
                       key={key}
-                      className="glass-chip px-3 py-1.5 rounded-full text-[11px] text-zinc-400"
+                      className="glass-chip rounded-full px-3 py-1.5 text-[11px] text-[var(--text-secondary)]"
                     >
                       {humanize(key)}: {count}
                     </span>
@@ -271,50 +290,50 @@ export function MechanicalReviewPanel({
           ) : (
             <>
               <div className="glass glass-soft rounded-2xl p-4">
-                <div className="text-[11px] font-semibold text-zinc-600 uppercase tracking-[0.1em] mb-3">
+                <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
                   Shell Summary
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-[12px]">
                   <div className="glass-subcard rounded-xl px-4 py-3">
-                    <div className="text-zinc-600">Shell kind</div>
-                    <div className="text-zinc-300 mt-1 capitalize">
+                    <div className="text-[var(--text-tertiary)]">Shell kind</div>
+                    <div className="mt-1 capitalize text-[var(--text-primary)]">
                       {humanize(result.shell_kind)}
                     </div>
                   </div>
                   <div className="glass-subcard rounded-xl px-4 py-3">
-                    <div className="text-zinc-600">Outer shell</div>
-                    <div className="text-zinc-300 mt-1">
+                    <div className="text-[var(--text-tertiary)]">Outer shell</div>
+                    <div className="mt-1 text-[var(--text-primary)]">
                       {result.outer_shell.width_mm} × {result.outer_shell.height_mm} mm
                     </div>
                   </div>
                   <div className="glass-subcard rounded-xl px-4 py-3">
-                    <div className="text-zinc-600">Front features</div>
-                    <div className="text-zinc-300 mt-1">{result.front_features.length}</div>
+                    <div className="text-[var(--text-tertiary)]">Front features</div>
+                    <div className="mt-1 text-[var(--text-primary)]">{result.front_features.length}</div>
                   </div>
                   <div className="glass-subcard rounded-xl px-4 py-3">
-                    <div className="text-zinc-600">Rear features</div>
-                    <div className="text-zinc-300 mt-1">{result.rear_features.length}</div>
+                    <div className="text-[var(--text-tertiary)]">Rear features</div>
+                    <div className="mt-1 text-[var(--text-primary)]">{result.rear_features.length}</div>
                   </div>
                   <div className="glass-subcard rounded-xl px-4 py-3">
-                    <div className="text-zinc-600">Side ports</div>
-                    <div className="text-zinc-300 mt-1">{result.side_ports.length}</div>
+                    <div className="text-[var(--text-tertiary)]">Side ports</div>
+                    <div className="mt-1 text-[var(--text-primary)]">{result.side_ports.length}</div>
                   </div>
                   <div className="glass-subcard rounded-xl px-4 py-3">
-                    <div className="text-zinc-600">Mounting holes</div>
-                    <div className="text-zinc-300 mt-1">{result.mounting_holes.length}</div>
+                    <div className="text-[var(--text-tertiary)]">Mounting holes</div>
+                    <div className="mt-1 text-[var(--text-primary)]">{result.mounting_holes.length}</div>
                   </div>
                 </div>
               </div>
 
               <div className="glass glass-soft rounded-2xl p-4">
-                <div className="text-[11px] font-semibold text-zinc-600 uppercase tracking-[0.1em] mb-3">
+                <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
                   Control Summary
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(result.control_summary).map(([key, count]) => (
                     <span
                       key={key}
-                      className="glass-chip px-3 py-1.5 rounded-full text-[11px] text-zinc-400"
+                      className="glass-chip rounded-full px-3 py-1.5 text-[11px] text-[var(--text-secondary)]"
                     >
                       {humanize(key)}: {count}
                     </span>
@@ -325,10 +344,14 @@ export function MechanicalReviewPanel({
           )}
 
           <div className="glass glass-soft rounded-2xl p-4">
-            <div className="text-[11px] font-semibold text-zinc-600 uppercase tracking-[0.1em] mb-3">
+            <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
               Mechanical Artifacts
             </div>
-            <ArtifactLinks artifactUrls={result.artifact_urls} />
+            <ArtifactLinks
+              artifactUrls={result.artifact_urls}
+              downloadingKey={downloadingKey}
+              onDownload={handleArtifactDownload}
+            />
           </div>
         </div>
       )}

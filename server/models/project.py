@@ -79,6 +79,7 @@ class ElementType(str, Enum):
     KEY_SWITCH = "key_switch"
     ENCODER = "encoder"
     BUTTON = "button"
+    PAD = "pad"
     SLIDER = "slider"
     JOYSTICK = "joystick"
     DISPLAY = "display"

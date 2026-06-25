@@ -28,6 +28,10 @@ def _project_from_template(template_id: str) -> tuple:
         project.product_family = ProductFamily.MIDI
     elif template_id.startswith("gamepad_"):
         project.product_family = ProductFamily.GAMEPAD
+    elif template_id.startswith("pedal_"):
+        project.product_family = ProductFamily.PEDAL_CONTROLLER
+    elif template_id.startswith("breath_"):
+        project.product_family = ProductFamily.BREATH_CONTROLLER
     elif template_id.startswith("handheld_"):
         project.product_family = ProductFamily.HANDHELD_COMPANION
     project.switch_profile.part_id = "cherry_mx_red"
@@ -92,6 +96,19 @@ def test_midi_control_map_uses_midi_semantics():
     assert first_encoder["mapping"]["cc"] == 16
 
 
+def test_midi_pad_control_map_uses_pad_note_semantics():
+    project, matrix = _project_from_template("midi_pad_4x4")
+    control_map = generate_control_map(project, matrix)
+
+    assert control_map["product_family"] == "midi"
+    pad = next(item for item in control_map["mappings"] if item["id"] == "pad_0_0")
+    assert pad["element_type"] == "pad"
+    assert pad["mapping"]["kind"] == "midi_note"
+    assert pad["mapping"]["channel"] == 10
+    assert pad["mapping"]["note"] == 36
+    assert pad["mapping"]["trigger"] == "pad"
+
+
 def test_gamepad_control_map_uses_gamepad_semantics():
     project, matrix = _project_from_template("gamepad_compact")
     control_map = generate_control_map(project, matrix)
@@ -107,6 +124,43 @@ def test_gamepad_control_map_uses_gamepad_semantics():
     assert face_a["mapping"]["button"] == "south"
 
 
+def test_pedal_controller_control_map_uses_midi_footswitch_semantics():
+    project, matrix = _project_from_template("pedal_controller_3switch")
+    control_map = generate_control_map(project, matrix)
+
+    assert control_map["product_family"] == "pedal_controller"
+    assert control_map["firmware_target"] == "midi_pedal_controller"
+    assert control_map["control_protocol"] == "usb_midi"
+    footswitch = next(item for item in control_map["mappings"] if item["id"] == "footswitch_1")
+    expression = next(item for item in control_map["mappings"] if item["id"] == "expression_1")
+    assert footswitch["mapping"]["kind"] == "midi_program_change"
+    assert footswitch["mapping"]["program"] == 0
+    assert expression["mapping"]["kind"] == "midi_cc"
+    assert expression["mapping"]["cc"] == 11
+    assert expression["mapping"]["role"] == "expression"
+
+
+def test_breath_controller_control_map_uses_breath_semantics():
+    project, matrix = _project_from_template("breath_controller_basic")
+    control_map = generate_control_map(project, matrix)
+
+    assert control_map["product_family"] == "breath_controller"
+    assert control_map["firmware_target"] == "midi_breath_controller"
+    assert control_map["control_protocol"] == "usb_midi"
+    breath = next(item for item in control_map["mappings"] if item["id"] == "breath_pressure")
+    bite = next(item for item in control_map["mappings"] if item["id"] == "bite_pressure")
+    mic = next(item for item in control_map["mappings"] if item["id"] == "breath_mic")
+    octave_up = next(item for item in control_map["mappings"] if item["id"] == "octave_up")
+    assert breath["mapping"]["kind"] == "midi_cc"
+    assert breath["mapping"]["cc"] == 2
+    assert breath["mapping"]["role"] == "breath"
+    assert bite["mapping"]["cc"] == 1
+    assert bite["mapping"]["role"] == "bite"
+    assert mic["mapping"]["kind"] == "breath_articulation"
+    assert octave_up["mapping"]["kind"] == "octave_shift"
+    assert octave_up["mapping"]["direction"] == "up"
+
+
 def test_handheld_control_map_uses_companion_semantics():
     project, matrix = _project_from_template("handheld_companion_compact")
     control_map = generate_control_map(project, matrix)
@@ -116,7 +170,9 @@ def test_handheld_control_map_uses_companion_semantics():
     assert control_map["control_protocol"] == "usb_hid_companion"
     display = next(item for item in control_map["mappings"] if item["id"] == "main_display")
     speaker = next(item for item in control_map["mappings"] if item["id"] == "speaker_main")
+    microphone = next(item for item in control_map["mappings"] if item["id"] == "voice_mic")
     usb_port = next(item for item in control_map["mappings"] if item["id"] == "usb_c")
     assert display["mapping"]["kind"] == "display_surface"
     assert speaker["mapping"]["kind"] == "audio_output"
+    assert microphone["mapping"]["kind"] == "voice_input"
     assert usb_port["mapping"]["kind"] == "service_port"

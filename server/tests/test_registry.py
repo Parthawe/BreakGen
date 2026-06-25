@@ -46,6 +46,12 @@ def _project_with_keys() -> KeyboardProject:
     )
 
 
+def _project_with_id(project_id: str) -> KeyboardProject:
+    project = _project_with_keys()
+    project.project_id = project_id
+    return project
+
+
 def _handheld_project() -> KeyboardProject:
     project = _project_with_keys()
     project.project_id = "handheld_registry"
@@ -223,6 +229,49 @@ async def test_record_mechanical_panel_compile_persists_files_and_rows(tmp_path:
             }
             assert "panel.dxf" in stored_paths
             assert any(row.details["source_spec_hash"] == "spec_hash" for row in stored)
+    finally:
+        await engine.dispose()
+
+
+@pytest.mark.anyio
+async def test_mechanical_artifact_ids_are_project_scoped(tmp_path: Path):
+    engine, session_factory = await _make_session(tmp_path)
+    panel_path = tmp_path / "panel.dxf"
+    panel_path.write_text("0\nSECTION\n2\nENTITIES\n0\nENDSEC\n0\nEOF\n")
+    try:
+        async with session_factory() as db:
+            for project_id in ("registry_alpha", "registry_beta"):
+                rows = await record_mechanical_panel_compile(
+                    db,
+                    project=_project_with_id(project_id),
+                    summary_payload={
+                        "project_id": project_id,
+                        "revision": 1,
+                        "status": "compiled",
+                        "mechanical_kind": "panel",
+                        "geometry_kind": "switch_plate",
+                        "artifact_urls": {"panel_dxf": "/demo"},
+                    },
+                    panel_dxf_path=panel_path,
+                    source_spec_hash=f"{project_id}_hash",
+                    base_dir=tmp_path,
+                )
+                assert len(rows) == 2
+            await db.commit()
+
+            stored = list(
+                (
+                    await db.execute(
+                        select(ProjectArtifactRow).where(
+                            ProjectArtifactRow.kind == "mechanical_panel_dxf"
+                        )
+                    )
+                ).scalars()
+            )
+
+            assert {row.project_id for row in stored} == {"registry_alpha", "registry_beta"}
+            assert len({row.artifact_id for row in stored}) == 2
+            assert all(row.artifact_id.endswith("_mech_panel_dxf_r1") for row in stored)
     finally:
         await engine.dispose()
 

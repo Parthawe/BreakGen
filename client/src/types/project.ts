@@ -47,6 +47,7 @@ export type ElementType =
   | "key_switch"
   | "encoder"
   | "button"
+  | "pad"
   | "slider"
   | "joystick"
   | "display"
@@ -63,6 +64,7 @@ export type AcceptanceState =
   | "candidate"
   | "accepted"
   | "rejected"
+  | "prototype_ready"
   | "production_ready";
 
 // --- Key ---
@@ -314,7 +316,7 @@ export interface ProductFamilyManifest {
   family: ProductFamily;
   display_name: string;
   description: string;
-  status: "enabled" | "planned";
+  status: "enabled" | "proof" | "planned";
   stages: WorkspaceStageManifest[];
   required_inputs: string[];
   supported_capabilities: string[];
@@ -361,7 +363,8 @@ export interface ArtifactRecord {
   producer_id: string | null;
   lineage: Record<string, unknown>;
   acceptance_state: AcceptanceState | null;
-  path: string;
+  path: string | null;
+  file_name: string | null;
   sha256: string | null;
   content_type: string | null;
   details: Record<string, unknown>;

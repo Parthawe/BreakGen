@@ -34,8 +34,16 @@ def _project_from_template(template_id: str) -> KeyboardProject:
     )
     if template_id.startswith("midi_"):
         project.product_family = ProductFamily.MIDI
+    elif template_id.startswith("streamdeck_"):
+        project.product_family = ProductFamily.STREAMDECK
     elif template_id.startswith("gamepad_"):
         project.product_family = ProductFamily.GAMEPAD
+    elif template_id.startswith("pedal_"):
+        project.product_family = ProductFamily.PEDAL_CONTROLLER
+    elif template_id.startswith("breath_"):
+        project.product_family = ProductFamily.BREATH_CONTROLLER
+    elif template_id.startswith("handheld_"):
+        project.product_family = ProductFamily.HANDHELD_COMPANION
     if project.product_family.value in {"keyboard", "macropad", "streamdeck", "midi"}:
         project.switch_profile.part_id = "cherry_mx_red"
     return project
@@ -64,6 +72,31 @@ def test_midi_electronics_use_balanced_matrix():
     assert electronics.control_protocol == "usb_midi"
 
 
+def test_midi_pad_electronics_use_direct_pad_inputs():
+    project = _project_from_template("midi_pad_4x4")
+    electronics = compile_control_surface_electronics(project)
+
+    assert electronics.matrix_strategy == "balanced"
+    assert electronics.matrix.matrix_rows == 0
+    assert electronics.matrix.matrix_cols == 0
+    assert electronics.matrix_pins == 0
+    assert electronics.direct_pins == 24
+    assert electronics.total_pins == 24
+    assert electronics.firmware_target == "midi_control_surface"
+    assert electronics.control_protocol == "usb_midi"
+    usage = {item.element_type: item.total_pins for item in electronics.direct_pin_usage}
+    assert usage["encoder"] == 8
+    assert usage["pad"] == 16
+
+
+def test_streamdeck_uses_control_surface_firmware_target():
+    project = _project_from_template("streamdeck_display_3x5")
+    electronics = compile_control_surface_electronics(project)
+
+    assert electronics.firmware_target == "hid_control_surface"
+    assert electronics.control_protocol == "usb_hid_control_surface"
+
+
 def test_gamepad_electronics_use_balanced_matrix():
     project = _project_from_template("gamepad_compact")
     electronics = compile_control_surface_electronics(project)
@@ -78,6 +111,57 @@ def test_gamepad_electronics_use_balanced_matrix():
     assert electronics.control_protocol == "usb_hid_gamepad"
     assert electronics.direct_pin_usage[0].element_type == "joystick"
     assert electronics.direct_pin_usage[0].total_pins == 3
+
+
+def test_pedal_controller_electronics_use_midi_expression_semantics():
+    project = _project_from_template("pedal_controller_3switch")
+    electronics = compile_control_surface_electronics(project)
+
+    assert electronics.matrix_strategy == "balanced"
+    assert electronics.matrix.matrix_rows == 2
+    assert electronics.matrix.matrix_cols == 2
+    assert electronics.matrix_pins == 4
+    assert electronics.direct_pins == 1
+    assert electronics.total_pins == 5
+    assert electronics.firmware_target == "midi_pedal_controller"
+    assert electronics.control_protocol == "usb_midi"
+    assert electronics.direct_pin_usage[0].element_type == "slider"
+
+
+def test_breath_controller_electronics_use_sensor_and_mic_inputs():
+    project = _project_from_template("breath_controller_basic")
+    electronics = compile_control_surface_electronics(project)
+
+    assert electronics.matrix_strategy == "balanced"
+    assert electronics.matrix.matrix_rows == 1
+    assert electronics.matrix.matrix_cols == 2
+    assert electronics.matrix_pins == 3
+    assert electronics.direct_pins == 9
+    assert electronics.total_pins == 12
+    assert electronics.firmware_target == "midi_breath_controller"
+    assert electronics.control_protocol == "usb_midi"
+    usage = {item.element_type: item.total_pins for item in electronics.direct_pin_usage}
+    assert usage["sensor"] == 4
+    assert usage["microphone"] == 1
+    assert usage["display"] == 4
+
+
+def test_handheld_companion_electronics_use_shell_module_baseline():
+    project = _project_from_template("handheld_companion_compact")
+    electronics = compile_control_surface_electronics(project)
+
+    assert electronics.matrix_strategy == "balanced"
+    assert electronics.matrix.matrix_rows == 3
+    assert electronics.matrix.matrix_cols == 3
+    assert electronics.matrix_pins == 6
+    assert electronics.direct_pins == 7
+    assert electronics.total_pins == 13
+    assert electronics.firmware_target == "handheld_companion_proof"
+    assert electronics.control_protocol == "usb_hid_companion"
+    usage = {item.element_type: item.total_pins for item in electronics.direct_pin_usage}
+    assert usage["display"] == 4
+    assert usage["speaker"] == 2
+    assert usage["microphone"] == 1
 
 
 def test_firmware_info_includes_breakgen_family_metadata():

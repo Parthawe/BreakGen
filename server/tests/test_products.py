@@ -4,9 +4,13 @@ import json
 from pathlib import Path
 
 from server.models.product_adapter import (
+    generate_breath_controller_layout,
     generate_gamepad_layout,
     generate_grid_layout,
+    generate_handheld_companion_layout,
     generate_midi_layout,
+    generate_midi_pad_layout,
+    generate_pedal_controller_layout,
 )
 from server.models.project import LayoutSpec, ProductFamily
 from server.models.supported_configs import SUPPORTED_TEMPLATES
@@ -62,6 +66,17 @@ def test_midi_layout_has_keys_and_encoders():
     assert len(keys) == 25
 
 
+def test_midi_pad_layout_has_pads_and_encoders():
+    layout = generate_midi_pad_layout()
+    assert len(layout.elements) == 20
+    assert len(layout.keys) == 0
+    pads = [element for element in layout.elements if element.element_type.value == "pad"]
+    encoders = [element for element in layout.elements if element.element_type.value == "encoder"]
+    assert len(pads) == 16
+    assert len(encoders) == 4
+    assert {pad.footprint_id for pad in pads} == {"rubber_drum_pad"}
+
+
 def test_gamepad_layout_generates_button_elements():
     layout = generate_gamepad_layout()
     assert len(layout.elements) == 11
@@ -70,6 +85,46 @@ def test_gamepad_layout_generates_button_elements():
     joysticks = [element for element in layout.elements if element.element_type.value == "joystick"]
     assert len(buttons) == 10
     assert len(joysticks) == 1
+
+
+def test_pedal_controller_layout_uses_footswitches_and_expression_input():
+    layout = generate_pedal_controller_layout()
+    assert len(layout.elements) == 4
+    assert len(layout.keys) == 3
+    buttons = [element for element in layout.elements if element.element_type.value == "button"]
+    sliders = [element for element in layout.elements if element.element_type.value == "slider"]
+    assert len(buttons) == 3
+    assert len(sliders) == 1
+    assert {button.footprint_id for button in buttons} == {"stomp_switch"}
+    assert sliders[0].footprint_id == "expression_pedal"
+
+
+def test_breath_controller_layout_uses_sensors_microphone_and_controls():
+    layout = generate_breath_controller_layout()
+    assert len(layout.elements) == 6
+    assert len(layout.keys) == 2
+    sensors = [element for element in layout.elements if element.element_type.value == "sensor"]
+    microphones = [element for element in layout.elements if element.element_type.value == "microphone"]
+    buttons = [element for element in layout.elements if element.element_type.value == "button"]
+    displays = [element for element in layout.elements if element.element_type.value == "display"]
+    assert len(sensors) == 2
+    assert len(microphones) == 1
+    assert len(buttons) == 2
+    assert len(displays) == 1
+    assert {sensor.footprint_id for sensor in sensors} == {"pressure_sensor", "bite_sensor"}
+
+
+def test_handheld_companion_layout_uses_portable_modules():
+    layout = generate_handheld_companion_layout()
+    assert len(layout.elements) == 13
+    assert len(layout.keys) == 8
+    element_types = [element.element_type.value for element in layout.elements]
+    assert element_types.count("button") == 8
+    assert element_types.count("display") == 1
+    assert element_types.count("speaker") == 1
+    assert element_types.count("microphone") == 1
+    assert element_types.count("battery") == 1
+    assert element_types.count("usb_port") == 1
 
 
 def test_macropad_matrix_compiles():
@@ -108,12 +163,16 @@ def test_template_family_filter():
     streamdecks = [t for t in SUPPORTED_TEMPLATES if t.product_family == ProductFamily.STREAMDECK]
     midi = [t for t in SUPPORTED_TEMPLATES if t.product_family == ProductFamily.MIDI]
     gamepads = [t for t in SUPPORTED_TEMPLATES if t.product_family == ProductFamily.GAMEPAD]
+    pedals = [t for t in SUPPORTED_TEMPLATES if t.product_family == ProductFamily.PEDAL_CONTROLLER]
+    breaths = [t for t in SUPPORTED_TEMPLATES if t.product_family == ProductFamily.BREATH_CONTROLLER]
     handhelds = [t for t in SUPPORTED_TEMPLATES if t.product_family == ProductFamily.HANDHELD_COMPANION]
     assert len(keyboards) == 3
     assert len(macropads) == 2
     assert len(streamdecks) == 3
-    assert len(midi) == 1
+    assert len(midi) == 2
     assert len(gamepads) == 1
+    assert len(pedals) == 1
+    assert len(breaths) == 1
     assert len(handhelds) == 1
 
 

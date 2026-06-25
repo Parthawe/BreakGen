@@ -33,7 +33,9 @@ def test_handheld_shell_spec_contains_core_features():
     assert spec["control_summary"]["display"] == 1
     assert spec["control_summary"]["battery"] == 1
     assert spec["control_summary"]["speaker"] == 1
+    assert spec["control_summary"]["microphone"] == 1
     assert spec["control_summary"]["usb_port"] == 1
+    assert any(feature["role"] == "microphone_port" for feature in spec["front_features"])
 
 
 def test_handheld_shell_artifacts_write_expected_files(tmp_path: Path):

@@ -161,6 +161,19 @@ def compile_handheld_shell_spec(
                     shape="circle",
                 )
             )
+        elif element.element_type == ElementType.MICROPHONE:
+            front_features.append(
+                ShellFeature(
+                    id=element.id,
+                    role="microphone_port",
+                    x_mm=element.x_mm,
+                    y_mm=element.y_mm,
+                    w_mm=element.w_mm,
+                    h_mm=element.h_mm,
+                    shape="circle",
+                    metadata={"diameter_mm": 2.2},
+                )
+            )
         elif element.element_type == ElementType.BATTERY:
             rear_features.append(
                 ShellFeature(

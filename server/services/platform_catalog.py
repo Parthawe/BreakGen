@@ -103,7 +103,7 @@ FAMILY_METADATA: dict[ProductFamily, dict[str, object]] = {
             "firmware_export",
             "display_surfaces",
         ],
-        "module_types": ["input_switch", "input_encoder", "output_display", "compute"],
+        "module_types": ["input_switch", "input_encoder", "input_pad", "output_display", "compute"],
     },
     ProductFamily.MIDI: {
         "display_name": "MIDI Controller",
@@ -131,19 +131,49 @@ FAMILY_METADATA: dict[ProductFamily, dict[str, object]] = {
         ],
         "module_types": ["input_button", "input_joystick", "compute"],
     },
+    ProductFamily.PEDAL_CONTROLLER: {
+        "display_name": "Pedal Controller",
+        "description": "Foot-operated performance controllers with stomp switches, expression input, MIDI mapping, and panel exports.",
+        "status": "proof",
+        "capabilities": [
+            "layout_editing",
+            "button_mapping",
+            "expression_mapping",
+            "panel_geometry",
+            "firmware_export",
+            "midi_mapping",
+        ],
+        "module_types": ["input_button", "input_slider", "compute"],
+    },
+    ProductFamily.BREATH_CONTROLLER: {
+        "display_name": "Breath Controller",
+        "description": "Expressive wind-style MIDI controllers with breath pressure, bite sensing, microphone input, and octave controls.",
+        "status": "proof",
+        "capabilities": [
+            "layout_editing",
+            "breath_mapping",
+            "sensor_validation",
+            "panel_geometry",
+            "firmware_export",
+            "midi_mapping",
+        ],
+        "module_types": ["input_sensor", "input_microphone", "input_button", "output_display", "compute"],
+    },
     ProductFamily.HANDHELD_COMPANION: {
         "display_name": "Handheld Companion",
-        "description": "Portable display-first electronics with power, audio, controls, and enclosure access planning.",
-        "status": "planned",
+        "description": "Portable display-first electronics with controls, battery power, charging/data access, audio, microphone input, and enclosure access planning.",
+        "status": "proof",
         "capabilities": [
             "layout_editing",
             "panel_geometry",
             "display_surfaces",
             "power_validation",
             "audio_layout",
+            "voice_input",
+            "shell_proof_export",
             "firmware_export",
         ],
-        "module_types": ["input_button", "input_joystick", "output_display", "power", "audio_output", "io_port", "compute"],
+        "module_types": ["input_button", "input_joystick", "input_microphone", "output_display", "power", "audio_output", "io_port", "compute"],
     },
 }
 
@@ -210,6 +240,24 @@ def _family_stage_overrides() -> dict[ProductFamily, dict[str, dict[str, object]
             "appearance": {"description": "Style caps, face buttons, and shell treatments."},
             "electronics": {"description": "Compile HID-facing button metadata and panel geometry."},
         },
+        ProductFamily.PEDAL_CONTROLLER: {
+            "define": {
+                "description": "Choose a pedal controller template and foot-control baseline.",
+                "modules": ["template_selector"],
+            },
+            "layout": {"description": "Arrange footswitches and expression controls for clearance, routing, and panel fit."},
+            "appearance": {"description": "Style switch caps, tread surfaces, and non-structural faceplate treatments."},
+            "electronics": {"description": "Compile MIDI-facing footswitch and expression-control metadata."},
+        },
+        ProductFamily.BREATH_CONTROLLER: {
+            "define": {
+                "description": "Choose a breath-controller template with sensor, mic, and octave-control assumptions.",
+                "modules": ["template_selector"],
+            },
+            "layout": {"description": "Arrange pressure sensors, microphone pickup, buttons, and status surfaces for instrument fit."},
+            "appearance": {"description": "Style visible controls and panels while keeping mouthpiece and sensor geometry deterministic."},
+            "electronics": {"description": "Compile MIDI breath, bite, and octave-control metadata."},
+        },
         ProductFamily.HANDHELD_COMPANION: {
             "define": {
                 "description": "Choose a handheld proof template with display, audio, power, and shell-access assumptions.",
@@ -246,7 +294,7 @@ def list_product_domain_manifests() -> list[ProductDomainManifest]:
 
 
 def list_product_family_manifests() -> list[ProductFamilyManifest]:
-    """Return workspace manifests for every enabled product family."""
+    """Return workspace manifests for enabled and proof-stage product families."""
     templates_by_family: dict[ProductFamily, list[str]] = defaultdict(list)
     for template in SUPPORTED_TEMPLATES:
         templates_by_family[template.product_family].append(template.template_id)
