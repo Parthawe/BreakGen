@@ -5,7 +5,9 @@ from __future__ import annotations
 import pytest
 
 from server.api.platform import (
+    get_footprint_sources,
     get_generation_providers,
+    get_hardware_sources,
     get_hardware_modules,
     get_platform_integrations,
     get_product_domains,
@@ -113,6 +115,31 @@ async def test_hardware_modules_include_handheld_companion_modules():
         "usb_c_port",
         "rp2040_devboard",
     } <= module_ids
+
+
+@pytest.mark.anyio
+async def test_hardware_sources_expose_realistic_keyboard_references():
+    sources = await get_hardware_sources()
+    source_ids = {entry["source_id"] for entry in sources}
+
+    assert {
+        "kicad_official_libraries",
+        "qmk_info_json",
+        "ergogen_pcbs",
+        "ai03_keyboard_parts_index",
+    } <= source_ids
+    kicad = next(entry for entry in sources if entry["source_id"] == "kicad_official_libraries")
+    assert "CC-BY-SA-4.0" in kicad["license"]
+
+
+@pytest.mark.anyio
+async def test_footprint_sources_mark_mx_as_library_ready():
+    footprints = await get_footprint_sources()
+    mx = next(entry for entry in footprints if entry["footprint_id"] == "mx_switch")
+
+    assert mx["readiness"] == "library_ready"
+    assert "key_switch" in mx["element_types"]
+    assert "qmk_info_json" in mx["source_ids"]
 
 
 @pytest.mark.anyio

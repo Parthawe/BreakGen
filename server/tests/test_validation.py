@@ -195,6 +195,56 @@ def test_no_switch_selected_warns():
     assert switch_check.status == CheckStatus.WARN
 
 
+def test_unknown_footprint_source_fails():
+    project = KeyboardProject(
+        project_id="test",
+        layout=LayoutSpec(
+            elements=[
+                PlacedElementSpec(
+                    id="k1",
+                    element_type=ElementType.KEY_SWITCH,
+                    label="A",
+                    footprint_id="mystery_switch",
+                    x_mm=0,
+                    y_mm=0,
+                    w_mm=19.05,
+                    h_mm=19.05,
+                )
+            ]
+        ),
+    )
+    project.switch_profile.part_id = "cherry_mx_red"
+    report = validate_project(project)
+    footprint_check = next(c for c in report.checks if c.id == "footprint_source_coverage")
+    assert footprint_check.status == CheckStatus.FAIL
+    assert "mystery_switch" in footprint_check.details
+
+
+def test_proof_placeholder_footprint_warns():
+    project = KeyboardProject(
+        project_id="test",
+        product_family=ProductFamily.MIDI,
+        layout=LayoutSpec(
+            elements=[
+                PlacedElementSpec(
+                    id="pad_1",
+                    element_type=ElementType.PAD,
+                    label="P1",
+                    footprint_id="rubber_drum_pad",
+                    x_mm=0,
+                    y_mm=0,
+                    w_mm=24,
+                    h_mm=24,
+                )
+            ]
+        ),
+    )
+    report = validate_project(project)
+    footprint_check = next(c for c in report.checks if c.id == "footprint_source_coverage")
+    assert footprint_check.status == CheckStatus.WARN
+    assert "proof placeholder" in footprint_check.details
+
+
 def test_unaccepted_assigned_asset_fails_export_readiness():
     project = KeyboardProject(
         project_id="test",

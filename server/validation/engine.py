@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from server.eda.control_surface_electronics import compile_control_surface_electronics
 from server.models.project import ElementType, KeyboardProject, ProductFamily
 from server.models.validation_schema import CheckStatus, ValidationCheck, ValidationReport
+from server.services.hardware_sources import summarize_project_footprint_sources
 
 UNIT_MM = 19.05
 GEOMETRY_EPSILON_MM = 0.05
@@ -53,6 +54,7 @@ def validate_project(project: KeyboardProject) -> ValidationReport:
     checks.append(_check_control_clearance(project))
     checks.append(_check_stabilizers(project))
     checks.append(_check_matrix_feasibility(project))
+    checks.append(_check_footprint_source_coverage(project))
     checks.append(_check_control_labels(project))
     checks.append(_check_switch_selected(project))
     checks.append(_check_assigned_asset_acceptance(project))
@@ -354,6 +356,47 @@ def _check_matrix_feasibility(project: KeyboardProject) -> ValidationCheck:
             f"Estimated GPIO usage fits controller budget: {electronics.matrix_pins} matrix pin(s) + "
             f"{electronics.direct_pins} direct pin(s) = {electronics.total_pins} / {electronics.gpio_budget}. "
             f"Matrix strategy: {electronics.matrix_strategy}."
+        ),
+    )
+
+
+def _check_footprint_source_coverage(project: KeyboardProject) -> ValidationCheck:
+    summary = summarize_project_footprint_sources(project)
+    if summary.unknown_footprints:
+        return ValidationCheck(
+            id="footprint_source_coverage",
+            category="electronics",
+            status=CheckStatus.FAIL,
+            details=(
+                "Unsupported footprint id(s): "
+                f"{', '.join(summary.unknown_footprints)}. "
+                "Use a cataloged footprint before compiling PCB outputs."
+            ),
+        )
+
+    proof_count = summary.readiness_counts.get("proof_placeholder", 0)
+    reference_count = summary.readiness_counts.get("reference_only", 0)
+    library_count = summary.readiness_counts.get("library_ready", 0)
+    if proof_count:
+        return ValidationCheck(
+            id="footprint_source_coverage",
+            category="electronics",
+            status=CheckStatus.WARN,
+            details=(
+                f"{library_count} library-ready footprint(s), "
+                f"{reference_count} reference-only footprint(s), and "
+                f"{proof_count} proof placeholder footprint(s) are used. "
+                "Proof placeholders need vetted KiCad footprints before fabrication claims."
+            ),
+        )
+
+    return ValidationCheck(
+        id="footprint_source_coverage",
+        category="electronics",
+        status=CheckStatus.PASS,
+        details=(
+            f"All footprint ids are source-cataloged: {library_count} library-ready "
+            f"and {reference_count} reference-only footprint(s)."
         ),
     )
 

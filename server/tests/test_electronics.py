@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 import pytest
+from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
@@ -195,9 +196,17 @@ async def test_compile_pcb_persists_family_aware_electronics_summary(tmp_path: P
             assert response["matrix_strategy"] == "balanced"
             assert response["firmware_target"] == "midi_control_surface"
             assert response["pins_needed"] == 18
+            assert response["footprint_source_summary"]["readiness_counts"]["library_ready"] == 25
+            assert response["footprint_source_summary"]["readiness_counts"]["reference_only"] == 4
+            assert response["footprint_source_summary"]["unknown_footprints"] == []
             assert row.revision == 2
             assert row.data["derived"]["electronics"]["matrix_strategy"] == "balanced"
             assert row.data["derived"]["electronics"]["firmware_target"] == "midi_control_surface"
+            persisted_summary = row.data["derived"]["electronics"]["footprint_source_summary"]
+            assert persisted_summary["readiness_counts"]["library_ready"] == 25
+            assert "ergogen_pcbs" in {
+                source["source_id"] for source in persisted_summary["sources"]
+            }
             matrix_elements = [
                 element
                 for element in row.data["layout"]["elements"]
@@ -205,5 +214,38 @@ async def test_compile_pcb_persists_family_aware_electronics_summary(tmp_path: P
             ]
             assert matrix_elements[0]["row"] is not None
             assert matrix_elements[0]["col"] is not None
+    finally:
+        await engine.dispose()
+
+
+@pytest.mark.anyio
+async def test_compile_pcb_rejects_unknown_footprint(tmp_path: Path):
+    engine, session_factory = await _make_session(tmp_path)
+    try:
+        async with session_factory() as db:
+            project = KeyboardProject(
+                project_id="unknown_footprint_test",
+                name="Unknown Footprint",
+                layout=LayoutSpec(
+                    elements=[
+                        {
+                            "id": "k1",
+                            "element_type": "key_switch",
+                            "label": "A",
+                            "footprint_id": "mystery_switch",
+                            "x_mm": 0,
+                            "y_mm": 0,
+                            "w_mm": 19.05,
+                            "h_mm": 19.05,
+                        }
+                    ]
+                ),
+            )
+            await create_project_record(db, project, change_summary="Project created")
+
+            with pytest.raises(HTTPException) as exc_info:
+                await compile_pcb(project.project_id, db)
+            assert exc_info.value.status_code == 400
+            assert exc_info.value.detail == "Unsupported footprint id(s): mystery_switch"
     finally:
         await engine.dispose()

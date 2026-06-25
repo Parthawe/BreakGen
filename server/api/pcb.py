@@ -20,6 +20,7 @@ from server.firmware.qmk_generator import (
     generate_via_definition,
 )
 from server.models.project import KeyboardProject
+from server.services.hardware_sources import summarize_project_footprint_sources
 from server.services.project_state import (
     commit_project_mutation,
     invalidate_derived_state,
@@ -61,6 +62,15 @@ async def compile_pcb_for_project(
         raise HTTPException(status_code=400, detail="Layout has no placed elements")
 
     electronics = compile_control_surface_electronics(project)
+    footprint_summary = summarize_project_footprint_sources(project)
+    if footprint_summary.unknown_footprints:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Unsupported footprint id(s): "
+                f"{', '.join(footprint_summary.unknown_footprints)}"
+            ),
+        )
     if electronics.total_pins > electronics.gpio_budget:
         raise HTTPException(
             status_code=400,
@@ -76,7 +86,9 @@ async def compile_pcb_for_project(
     apply_project_matrix(project, electronics.matrix)
     project.pcb.matrix_rows = electronics.matrix.matrix_rows
     project.pcb.matrix_cols = electronics.matrix.matrix_cols
-    project.derived["electronics"] = electronics.model_dump()
+    electronics_payload = electronics.model_dump()
+    electronics_payload["footprint_source_summary"] = footprint_summary.model_dump(mode="json")
+    project.derived["electronics"] = electronics_payload
     invalidate_derived_state(project)
 
     await commit_project_mutation(
@@ -102,6 +114,7 @@ async def compile_pcb_for_project(
         "firmware_target": electronics.firmware_target,
         "control_protocol": electronics.control_protocol,
         "direct_pin_usage": electronics.model_dump()["direct_pin_usage"],
+        "footprint_source_summary": footprint_summary.model_dump(mode="json"),
         "status": "electronics_compiled",
     }
 

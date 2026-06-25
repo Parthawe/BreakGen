@@ -7,6 +7,10 @@ from fastapi import APIRouter, HTTPException
 from server.ai.providers import provider_registry
 from server.models.project import ProductDomain, ProductFamily
 from server.services.hardware_catalog import list_hardware_modules
+from server.services.hardware_sources import (
+    list_footprint_source_specs,
+    list_hardware_sources,
+)
 from server.services.platform_catalog import (
     list_technology_integrations,
     list_product_domain_manifests,
@@ -50,6 +54,18 @@ async def get_hardware_modules(
         manifest.model_dump(mode="json")
         for manifest in list_hardware_modules(family=selected_family, domain=selected_domain)
     ]
+
+
+@router.get("/api/hardware-sources")
+async def get_hardware_sources():
+    """Return source references used to ground hardware and PCB decisions."""
+    return [source.model_dump(mode="json") for source in list_hardware_sources()]
+
+
+@router.get("/api/footprint-sources")
+async def get_footprint_sources():
+    """Return supported footprint IDs with library/source readiness metadata."""
+    return [spec.model_dump(mode="json") for spec in list_footprint_source_specs()]
 
 
 @router.get("/api/generation/providers")
