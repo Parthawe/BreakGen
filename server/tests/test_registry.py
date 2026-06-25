@@ -271,7 +271,7 @@ async def test_mechanical_artifact_ids_are_project_scoped(tmp_path: Path):
 
             assert {row.project_id for row in stored} == {"registry_alpha", "registry_beta"}
             assert len({row.artifact_id for row in stored}) == 2
-            assert all(row.artifact_id.endswith("_mech_panel_dxf_r1") for row in stored)
+            assert all("_mech_panel_dxf_r1_default" in row.artifact_id for row in stored)
     finally:
         await engine.dispose()
 

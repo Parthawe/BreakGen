@@ -15,6 +15,8 @@ interface CompileResult {
   gpio_remaining: number;
   firmware_target: string;
   control_protocol: string;
+  source_revision?: number;
+  source_spec_hash?: string;
   direct_pin_usage: Array<{
     element_type: string;
     control_count: number;
@@ -30,6 +32,12 @@ export function PCBPanel() {
   const [error, setError] = useState<string | null>(null);
   const [downloadingArtifact, setDownloadingArtifact] = useState<string | null>(null);
   const persistedSummary = (project?.derived?.electronics as CompileResult | undefined) ?? null;
+  const currentPersistedSummary =
+    persistedSummary?.source_revision === project?.revision ? persistedSummary : null;
+  const stalePersistedSummary =
+    persistedSummary && persistedSummary.source_revision !== project?.revision
+      ? persistedSummary
+      : null;
 
   const handleCompile = async () => {
     if (!project) return;
@@ -55,7 +63,7 @@ export function PCBPanel() {
     }
   };
 
-  const ready = !!persistedSummary || (project?.pcb.matrix_rows !== null && (project?.pcb.matrix_rows ?? 0) >= 0);
+  const ready = !!result || !!currentPersistedSummary;
   const isHandheldProofFamily =
     project?.product_family === "handheld_companion" ||
     project?.product_family === "retro_handheld";
@@ -89,6 +97,13 @@ export function PCBPanel() {
         </div>
       )}
 
+      {!error && stalePersistedSummary && !result && (
+        <div className="mb-6 rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-[12px] leading-[1.6] text-amber-700 dark:text-amber-300">
+          The saved electronics compile belongs to revision {stalePersistedSummary.source_revision ?? "unknown"}.
+          Recompile before using firmware or GPIO data for revision {project?.revision}.
+        </div>
+      )}
+
       {(result || ready) && (
         <div className="space-y-5">
           {/* Matrix */}
@@ -96,9 +111,9 @@ export function PCBPanel() {
             <div className="mb-4 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-tertiary)]">Electronics</div>
             <div className="grid grid-cols-3 gap-4 mb-4">
               {[
-                { v: String(result?.matrix_rows ?? persistedSummary?.matrix_rows ?? project?.pcb.matrix_rows ?? "?"), l: "Rows" },
-                { v: String(result?.matrix_cols ?? persistedSummary?.matrix_cols ?? project?.pcb.matrix_cols ?? "?"), l: "Cols" },
-                { v: String(result?.pins_needed ?? persistedSummary?.pins_needed ?? ((project?.pcb.matrix_rows ?? 0) + (project?.pcb.matrix_cols ?? 0))), l: "GPIO" },
+                { v: String(result?.matrix_rows ?? currentPersistedSummary?.matrix_rows ?? "?"), l: "Rows" },
+                { v: String(result?.matrix_cols ?? currentPersistedSummary?.matrix_cols ?? "?"), l: "Cols" },
+                { v: String(result?.pins_needed ?? currentPersistedSummary?.pins_needed ?? "?"), l: "GPIO" },
               ].map(s => (
                 <div key={s.l} className="text-center">
                   <div className="text-[22px] font-bold font-mono text-[var(--text-primary)]">{s.v}</div>
@@ -112,26 +127,26 @@ export function PCBPanel() {
                   {isKeyboardLike ? "Matrix strategy" : "Control routing"}
                 </div>
                 <div className="mt-1 capitalize text-[var(--text-primary)]">
-                  {(result?.matrix_strategy ?? persistedSummary?.matrix_strategy ?? "physical_rows").replace(/_/g, " ")}
+                  {(result?.matrix_strategy ?? currentPersistedSummary?.matrix_strategy ?? "physical_rows").replace(/_/g, " ")}
                 </div>
               </div>
               <div className="glass-subcard rounded-xl px-4 py-3">
                 <div className="text-[var(--text-tertiary)]">Firmware target</div>
                 <div className="mt-1 text-[var(--text-primary)]">
-                  {(result?.firmware_target ?? persistedSummary?.firmware_target ?? "qmk_via_keyboard").replace(/_/g, " ")}
+                  {(result?.firmware_target ?? currentPersistedSummary?.firmware_target ?? "qmk_via_keyboard").replace(/_/g, " ")}
                 </div>
               </div>
               <div className="glass-subcard rounded-xl px-4 py-3">
                 <div className="text-[var(--text-tertiary)]">Control protocol</div>
                 <div className="mt-1 text-[var(--text-primary)]">
-                  {(result?.control_protocol ?? persistedSummary?.control_protocol ?? "usb_hid_keyboard").replace(/_/g, " ")}
+                  {(result?.control_protocol ?? currentPersistedSummary?.control_protocol ?? "usb_hid_keyboard").replace(/_/g, " ")}
                 </div>
               </div>
               <div className="glass-subcard rounded-xl px-4 py-3">
                 <div className="text-[var(--text-tertiary)]">Controller budget</div>
                 <div className="mt-1 text-[var(--text-primary)]">
-                  {result?.pins_needed ?? persistedSummary?.pins_needed ?? ((project?.pcb.matrix_rows ?? 0) + (project?.pcb.matrix_cols ?? 0))}/
-                  {result?.gpio_budget ?? persistedSummary?.gpio_budget ?? 26} GPIO
+                  {result?.pins_needed ?? currentPersistedSummary?.pins_needed ?? "?"}/
+                  {result?.gpio_budget ?? currentPersistedSummary?.gpio_budget ?? "?"} GPIO
                 </div>
               </div>
             </div>
@@ -140,11 +155,11 @@ export function PCBPanel() {
             </div>
           </div>
 
-          {(result ?? persistedSummary) && (
+          {(result ?? currentPersistedSummary) && (
             <div className="glass glass-soft rounded-2xl p-5">
               <div className="mb-4 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-tertiary)]">Pin Allocation</div>
               {(() => {
-                const summary = result ?? persistedSummary!;
+                const summary = result ?? currentPersistedSummary!;
                 return (
                   <>
               <div className="grid grid-cols-2 gap-3 mb-4">

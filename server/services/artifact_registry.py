@@ -69,6 +69,14 @@ def scoped_artifact_id(project_id: str, artifact_name: str) -> str:
     return f"{project_hash}_{artifact_name}"
 
 
+def _artifact_config_suffix(config: dict | None) -> str:
+    """Return a short stable suffix for config-specific artifact variants."""
+    if not config:
+        return "default"
+    payload = json.dumps(config, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha1(payload).hexdigest()[:10]
+
+
 def write_json_artifact(
     project_id: str,
     category: str,
@@ -283,7 +291,8 @@ async def record_mechanical_panel_compile(
 ) -> list[ProjectArtifactRow]:
     """Persist and register a control-surface mechanical panel compile."""
     created_at = created_at or datetime.now(timezone.utc)
-    subdir = f"revision_{project.revision}"
+    config_suffix = _artifact_config_suffix(compile_config)
+    subdir = f"revision_{project.revision}/{config_suffix}"
     stored_panel = copy_project_artifact(
         project.project_id,
         "mechanical",
@@ -317,7 +326,10 @@ async def record_mechanical_panel_compile(
     rows = [
         await upsert_artifact(
             db,
-            artifact_id=scoped_artifact_id(project.project_id, f"mech_panel_dxf_r{project.revision}"),
+            artifact_id=scoped_artifact_id(
+                project.project_id,
+                f"mech_panel_dxf_r{project.revision}_{config_suffix}",
+            ),
             project_id=project.project_id,
             revision=project.revision,
             kind="mechanical_panel_dxf",
@@ -333,7 +345,10 @@ async def record_mechanical_panel_compile(
         ),
         await upsert_artifact(
             db,
-            artifact_id=scoped_artifact_id(project.project_id, f"mech_panel_summary_r{project.revision}"),
+            artifact_id=scoped_artifact_id(
+                project.project_id,
+                f"mech_panel_summary_r{project.revision}_{config_suffix}",
+            ),
             project_id=project.project_id,
             revision=project.revision,
             kind="mechanical_panel_summary",

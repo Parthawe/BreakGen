@@ -177,7 +177,7 @@ function stageComplete(
       asset.acceptance_state === "production_ready",
   ).length;
   const electronicsSummary =
-    (project.derived?.electronics as { pins_needed?: number; revision?: number } | undefined) ?? null;
+    (project.derived?.electronics as { pins_needed?: number; source_revision?: number } | undefined) ?? null;
   const requiresSwitchProfile = ["keyboard", "macropad", "streamdeck", "midi"].includes(project.product_family);
   const latestValidation =
     records?.latest_validation_report?.revision === project.revision
@@ -195,11 +195,7 @@ function stageComplete(
     case "appearance":
       return acceptedAssetCount > 0;
     case "electronics":
-      return (
-        (electronicsSummary?.revision ?? null) === project.revision ||
-        !!electronicsSummary ||
-        project.pcb.matrix_rows !== null
-      );
+      return (electronicsSummary?.source_revision ?? null) === project.revision;
     case "validate":
       return latestValidation !== null;
     case "export":

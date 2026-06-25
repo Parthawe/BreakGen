@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.api.auth import require_user, user_scope_id
 from server.db.database import get_db
-from server.db.models import ProjectRow, UserRow
+from server.db.models import ProjectArtifactRow, ProjectRow, UserRow
 from server.geometry.plate_generator import (
     PlateConfig,
     generate_plate_dxf,
@@ -357,18 +357,20 @@ async def _resolve_or_build_mechanical_artifact(
         else _shell_config_details(HandheldShellConfig())
     )
 
-    artifact_row = await find_latest_artifact(
-        db,
-        project.project_id,
-        kind=kind,
-        revision=project.revision,
-    )
-    if (
-        artifact_row
-        and Path(artifact_row.path).exists()
-        and artifact_row.details.get("compile_config") == expected_config
-    ):
-        return Path(artifact_row.path), _mechanical_download_filename(project, artifact_name)
+    if artifact_name == "panel.dxf":
+        artifact_row = await _find_panel_artifact_for_config(db, project, PlateConfig())
+    else:
+        artifact_row = await find_latest_artifact(
+            db,
+            project.project_id,
+            kind=kind,
+            revision=project.revision,
+        )
+    if artifact_row and Path(artifact_row.path).exists():
+        if artifact_name != "panel.dxf" and artifact_row.details.get("compile_config") != expected_config:
+            artifact_row = None
+        else:
+            return Path(artifact_row.path), _mechanical_download_filename(project, artifact_name)
 
     if artifact_name == "panel.dxf":
         _, artifact_rows = await _compile_and_record_panel(
@@ -397,6 +399,30 @@ async def _resolve_or_build_mechanical_artifact(
             return Path(artifact_row.path), _mechanical_download_filename(project, artifact_name)
 
     raise HTTPException(status_code=500, detail="Mechanical artifact compilation failed")
+
+
+async def _find_panel_artifact_for_config(
+    db: AsyncSession,
+    project: KeyboardProject,
+    config: PlateConfig,
+) -> ProjectArtifactRow | None:
+    expected_config = _plate_config_details(config)
+    result = await db.execute(
+        select(ProjectArtifactRow)
+        .where(
+            ProjectArtifactRow.project_id == project.project_id,
+            ProjectArtifactRow.kind == "mechanical_panel_dxf",
+            ProjectArtifactRow.revision == project.revision,
+        )
+        .order_by(ProjectArtifactRow.created_at.desc())
+    )
+    for artifact_row in result.scalars().all():
+        if (
+            artifact_row.details.get("compile_config") == expected_config
+            and Path(artifact_row.path).exists()
+        ):
+            return artifact_row
+    return None
 
 
 @router.post("/{project_id}/compile/plate")
@@ -506,30 +532,32 @@ async def export_plate_dxf(
     project = KeyboardProject(**row.data)
     _require_layout(project)
 
-    if kerf_mm == 0.0:
-        artifact_row = await find_latest_artifact(
-            db,
-            project.project_id,
-            kind="mechanical_panel_dxf",
-            revision=project.revision,
-        )
-        if artifact_row and Path(artifact_row.path).exists():
-            return FileResponse(
-                artifact_row.path,
-                media_type="application/dxf",
-                filename=f"{_download_basename(project)}_plate.dxf",
-            )
-
     plate_config = PlateConfig(kerf_compensation_mm=kerf_mm)
+    artifact_row = await _find_panel_artifact_for_config(db, project, plate_config)
+    if artifact_row is None:
+        _, artifact_rows = await _compile_and_record_panel(
+            db,
+            row,
+            project,
+            plate_config,
+        )
+        artifact_row = next(
+            (
+                artifact_row
+                for artifact_row in artifact_rows
+                if artifact_row.kind == "mechanical_panel_dxf"
+                and Path(artifact_row.path).exists()
+            ),
+            None,
+        )
 
-    # Generate to a temp file
-    tmp = tempfile.NamedTemporaryFile(suffix=".dxf", delete=False)
-    generate_plate_dxf(project.layout, plate_config, output_path=tmp.name)
+    if artifact_row is None:
+        raise HTTPException(status_code=500, detail="Plate artifact compilation failed")
 
     return FileResponse(
-        tmp.name,
+        artifact_row.path,
         media_type="application/dxf",
-        filename=f"{project.name.replace(' ', '_')}_plate.dxf",
+        filename=f"{_download_basename(project)}_plate.dxf",
     )
 
 

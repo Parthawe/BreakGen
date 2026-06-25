@@ -10,7 +10,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from server.api.geometry import compile_mechanical, compile_shell, export_mechanical_artifact
+from server.api.geometry import compile_mechanical, compile_shell, export_mechanical_artifact, export_plate_dxf
 from server.db.models import Base, ProjectArtifactRow, ProjectRow
 from server.models.project import KeyboardProject, LayoutSpec
 from server.services.project_state import create_project_record
@@ -171,5 +171,39 @@ async def test_export_mechanical_artifact_supports_panel_and_shell_files(tmp_pat
             assert "mechanical" in str(panel_response.path)
             assert "projects" in str(shell_response.path)
             assert "mechanical" in str(shell_response.path)
+    finally:
+        await engine.dispose()
+
+
+@pytest.mark.anyio
+async def test_direct_plate_export_records_kerf_specific_artifacts(tmp_path: Path):
+    engine, session_factory = await _make_session(tmp_path)
+    try:
+        async with session_factory() as db:
+            project = _load_project("65_percent")
+            await create_project_record(db, project, change_summary="Project created")
+
+            default_response = await export_plate_dxf(project.project_id, 0.0, db)
+            kerf_response = await export_plate_dxf(project.project_id, 0.12, db)
+
+            assert default_response.filename.endswith("_plate.dxf")
+            assert kerf_response.filename.endswith("_plate.dxf")
+            assert Path(default_response.path).exists()
+            assert Path(kerf_response.path).exists()
+            assert default_response.path != kerf_response.path
+
+            artifact_rows = list(
+                (
+                    await db.execute(
+                        select(ProjectArtifactRow).where(
+                            ProjectArtifactRow.project_id == project.project_id,
+                            ProjectArtifactRow.kind == "mechanical_panel_dxf",
+                        )
+                    )
+                ).scalars()
+            )
+            configs = [row.details["compile_config"]["kerf_compensation_mm"] for row in artifact_rows]
+            assert sorted(configs) == [0.0, 0.12]
+            assert len({row.artifact_id for row in artifact_rows}) == 2
     finally:
         await engine.dispose()

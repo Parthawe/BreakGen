@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
@@ -36,6 +37,14 @@ async def _make_session(tmp_path: Path):
         await conn.run_sync(Base.metadata.create_all)
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
     return engine, session_factory
+
+
+def test_generate_keycaps_request_bounds_variant_count():
+    with pytest.raises(ValidationError):
+        GenerateKeycapsRequest(prompt="too many", variant_count=9)
+
+    with pytest.raises(ValidationError):
+        GenerateKeycapsRequest(prompt="none", variant_count=0)
 
 
 @pytest.mark.anyio

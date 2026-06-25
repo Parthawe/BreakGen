@@ -90,6 +90,7 @@ def invalidate_derived_state(project: KeyboardProject) -> None:
     project.exports.bundle_id = None
     project.exports.bundle_path = None
     project.exports.exported_at = None
+    project.derived.pop("electronics", None)
     project.derived.pop("mechanical", None)
 
 

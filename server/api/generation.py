@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.api.auth import require_user, user_scope_id
@@ -45,7 +45,7 @@ router = APIRouter(prefix="/api/projects", tags=["generation"])
 class GenerateKeycapsRequest(BaseModel):
     prompt: Optional[str] = None
     preset: Optional[str] = None
-    variant_count: int = 4
+    variant_count: int = Field(default=4, ge=1, le=8)
     provider: Optional[str] = None
 
 

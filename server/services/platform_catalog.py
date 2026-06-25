@@ -56,7 +56,7 @@ def _base_stages() -> list[WorkspaceStageManifest]:
         WorkspaceStageManifest(
             id="export",
             label="Export",
-            description="Package fabrication outputs and traceable artifacts.",
+            description="Package review-ready evidence and traceable artifacts.",
             modules=["export_panel"],
             preview_mode="3d",
         ),

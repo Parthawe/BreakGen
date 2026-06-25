@@ -20,6 +20,7 @@ from server.firmware.qmk_generator import (
     generate_via_definition,
 )
 from server.models.project import KeyboardProject
+from server.services.artifact_registry import project_state_fingerprint
 from server.services.hardware_sources import summarize_project_footprint_sources
 from server.services.project_state import (
     commit_project_mutation,
@@ -82,14 +83,17 @@ async def compile_pcb_for_project(
             ),
         )
 
+    invalidate_derived_state(project)
+
     # Apply matrix assignments back to layout
     apply_project_matrix(project, electronics.matrix)
     project.pcb.matrix_rows = electronics.matrix.matrix_rows
     project.pcb.matrix_cols = electronics.matrix.matrix_cols
     electronics_payload = electronics.model_dump()
     electronics_payload["footprint_source_summary"] = footprint_summary.model_dump(mode="json")
+    electronics_payload["source_revision"] = project.revision + 1
+    electronics_payload["source_spec_hash"] = project_state_fingerprint(project)
     project.derived["electronics"] = electronics_payload
-    invalidate_derived_state(project)
 
     await commit_project_mutation(
         db,
@@ -115,6 +119,8 @@ async def compile_pcb_for_project(
         "control_protocol": electronics.control_protocol,
         "direct_pin_usage": electronics.model_dump()["direct_pin_usage"],
         "footprint_source_summary": footprint_summary.model_dump(mode="json"),
+        "source_revision": project.revision,
+        "source_spec_hash": electronics_payload["source_spec_hash"],
         "status": "electronics_compiled",
     }
 

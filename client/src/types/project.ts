@@ -64,8 +64,9 @@ export type AcceptanceState =
   | "candidate"
   | "accepted"
   | "rejected"
-  | "review_ready"
   | "production_ready";
+
+export type ArtifactAcceptanceState = AcceptanceState | "review_ready";
 
 // --- Key ---
 
@@ -362,7 +363,7 @@ export interface ArtifactRecord {
   producer_kind: string | null;
   producer_id: string | null;
   lineage: Record<string, unknown>;
-  acceptance_state: AcceptanceState | null;
+  acceptance_state: ArtifactAcceptanceState | null;
   path: string | null;
   file_name: string | null;
   sha256: string | null;

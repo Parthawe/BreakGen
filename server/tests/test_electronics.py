@@ -196,10 +196,14 @@ async def test_compile_pcb_persists_family_aware_electronics_summary(tmp_path: P
             assert response["matrix_strategy"] == "balanced"
             assert response["firmware_target"] == "midi_control_surface"
             assert response["pins_needed"] == 18
+            assert response["source_revision"] == 2
+            assert response["source_spec_hash"]
             assert response["footprint_source_summary"]["readiness_counts"]["library_ready"] == 25
             assert response["footprint_source_summary"]["readiness_counts"]["reference_only"] == 4
             assert response["footprint_source_summary"]["unknown_footprints"] == []
             assert row.revision == 2
+            assert row.data["derived"]["electronics"]["source_revision"] == 2
+            assert row.data["derived"]["electronics"]["source_spec_hash"] == response["source_spec_hash"]
             assert row.data["derived"]["electronics"]["matrix_strategy"] == "balanced"
             assert row.data["derived"]["electronics"]["firmware_target"] == "midi_control_surface"
             persisted_summary = row.data["derived"]["electronics"]["footprint_source_summary"]

@@ -210,6 +210,8 @@ def test_invalidate_derived_state_clears_validation_and_export_metadata():
     project.exports.bundle_id = "bundle_123"
     project.exports.bundle_path = "/tmp/bundle.zip"
     project.exports.exported_at = datetime.now(timezone.utc)
+    project.derived["electronics"] = {"source_revision": project.revision}
+    project.derived["mechanical"] = {"source_revision": project.revision}
 
     invalidate_derived_state(project)
 
@@ -219,3 +221,5 @@ def test_invalidate_derived_state_clears_validation_and_export_metadata():
     assert project.exports.bundle_id is None
     assert project.exports.bundle_path is None
     assert project.exports.exported_at is None
+    assert "electronics" not in project.derived
+    assert "mechanical" not in project.derived

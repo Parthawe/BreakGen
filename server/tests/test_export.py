@@ -193,3 +193,37 @@ async def test_export_with_warnings_stays_validated_and_records_candidate_bundle
             assert artifact.details["validation_status"] == CheckStatus.WARN.value
     finally:
         await engine.dispose()
+
+
+@pytest.mark.anyio
+async def test_review_ready_export_stays_validated_until_fabrication_outputs_exist(tmp_path: Path, monkeypatch):
+    engine, session_factory = await _make_session(tmp_path)
+    monkeypatch.setattr("server.services.artifact_registry.settings.artifacts_dir", str(tmp_path))
+    monkeypatch.setattr("server.export.bundler.settings.artifacts_dir", str(tmp_path))
+
+    try:
+        async with session_factory() as db:
+            project = _project_65()
+            await create_project_record(db, project, change_summary="Project created")
+
+            response = await export_bundle(project.project_id, db)
+            row = (
+                await db.execute(
+                    select(ProjectRow).where(ProjectRow.project_id == project.project_id)
+                )
+            ).scalar_one()
+            artifact = (
+                await db.execute(
+                    select(ProjectArtifactRow).where(
+                        ProjectArtifactRow.project_id == project.project_id,
+                        ProjectArtifactRow.kind == "export_bundle",
+                    )
+                )
+            ).scalar_one()
+
+            assert response.headers["X-Validation-Status"] == CheckStatus.PASS.value
+            assert response.headers["X-Export-Readiness"] == "review_ready"
+            assert row.status == "validated"
+            assert artifact.details["acceptance_state"] == "review_ready"
+    finally:
+        await engine.dispose()

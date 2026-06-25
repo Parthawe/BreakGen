@@ -36,6 +36,16 @@ from server.services.platform_catalog import list_product_family_manifests
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
+PROJECT_CREATION_READY_FAMILIES: frozenset[ProductFamily] = frozenset(
+    {
+        ProductFamily.KEYBOARD,
+        ProductFamily.MACROPAD,
+        ProductFamily.STREAMDECK,
+        ProductFamily.MIDI,
+        ProductFamily.GAMEPAD,
+    }
+)
+
 
 class CreateProjectRequest(BaseModel):
     name: str = "Untitled Project"
@@ -74,10 +84,13 @@ def _get_supported_template(template_id: str):
 
 
 def _enabled_project_families() -> frozenset[ProductFamily]:
+    templated_families = {template.product_family for template in SUPPORTED_TEMPLATES}
     return frozenset(
         manifest.family
         for manifest in list_product_family_manifests()
         if manifest.status == "enabled"
+        and manifest.family in PROJECT_CREATION_READY_FAMILIES
+        and manifest.family in templated_families
     )
 
 

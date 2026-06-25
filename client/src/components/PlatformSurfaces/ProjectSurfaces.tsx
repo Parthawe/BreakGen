@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { api } from "../../lib/api";
 import type {
-  AcceptanceState,
+  ArtifactAcceptanceState,
   ArtifactRecord,
   GenerationProviderManifest,
   KeyboardProject,
@@ -55,7 +55,7 @@ function lineageLabel(item: ArtifactRecord): string {
     .replace(/\b\w/g, (m) => m.toUpperCase());
 }
 
-function acceptanceTone(state: AcceptanceState | null): string {
+function acceptanceTone(state: ArtifactAcceptanceState | null): string {
   switch (state) {
     case "accepted":
       return "text-emerald-300 bg-emerald-500/10 border-emerald-500/20";
@@ -74,7 +74,7 @@ function acceptanceTone(state: AcceptanceState | null): string {
   }
 }
 
-function acceptanceLabel(state: AcceptanceState | null): string {
+function acceptanceLabel(state: ArtifactAcceptanceState | null): string {
   if (!state) return "untracked";
   return state.replace(/_/g, " ");
 }
@@ -218,10 +218,15 @@ export function ProjectSurfaces({
     {
       key: "electronics",
       label: "Compile electronics",
-      complete: !!project.derived?.electronics,
+      complete:
+        (project.derived?.electronics as { source_revision?: number } | undefined)
+          ?.source_revision === project.revision,
       details:
-        project.derived?.electronics
+        (project.derived?.electronics as { source_revision?: number } | undefined)
+          ?.source_revision === project.revision
           ? "Electronics summary recorded"
+          : project.derived?.electronics
+            ? "Electronics summary is stale"
           : "Compile matrix or direct-pin plan",
     },
     {

@@ -143,11 +143,7 @@ async def export_project_bundle(
     project.exports.bundle_path = str(zip_path)
     project.exports.validation_report_id = report.report_id
     project.exports.exported_at = now
-    project.status = (
-        ProjectStatus.EXPORTED
-        if readiness == "review_ready"
-        else ProjectStatus.VALIDATED
-    )
+    project.status = ProjectStatus.VALIDATED
     await persist_project_metadata(
         db,
         row,
