@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { api } from "../../lib/api";
 import type {
   HardwareModuleManifest,
@@ -105,44 +105,55 @@ export function TemplateSelector({ onSelect, domains, families }: TemplateSelect
         { domain: "handheld", family: "handheld_companion", display_name: "Handheld Companion", description: FAMILY_META.handheld_companion.fallbackDesc, status: "proof", stages: [], required_inputs: [], supported_capabilities: [], available_templates: [], editor_modules: [], supported_module_types: [] },
       ];
 
+  const activeDomain = selectedDomain ?? enabledDomains[0]?.domain ?? null;
   const visibleFamilies = useMemo(
-    () => familySource.filter((entry) => entry.domain === selectedDomain && entry.status === "enabled"),
-    [familySource, selectedDomain],
+    () => familySource.filter((entry) => entry.domain === activeDomain && entry.status === "enabled"),
+    [familySource, activeDomain],
   );
 
   useEffect(() => {
-    if (!selectedFamily || !selectedDomain) return;
+    if (!activeDomain) return;
+    if (!selectedDomain) {
+      setSelectedDomain(activeDomain);
+    }
+    if (!visibleFamilies.some((entry) => entry.family === selectedFamily)) {
+      setSelectedFamily(visibleFamilies[0]?.family ?? null);
+    }
+  }, [activeDomain, selectedDomain, selectedFamily, visibleFamilies]);
+
+  useEffect(() => {
+    if (!selectedFamily || !activeDomain) return;
     setLoading(true);
     Promise.all([
-      api.templates.list(selectedFamily, selectedDomain),
-      api.platform.hardwareModules(selectedFamily, selectedDomain),
+      api.templates.list(selectedFamily, activeDomain),
+      api.platform.hardwareModules(selectedFamily, activeDomain),
     ])
       .then(([templateList, moduleList]) => {
         setTemplates(templateList);
         setHardwareModules(moduleList);
       })
       .finally(() => setLoading(false));
-  }, [selectedDomain, selectedFamily]);
+  }, [activeDomain, selectedFamily]);
 
   const handleSelectTemplate = async (templateId: string) => {
-    if (!selectedFamily || !selectedDomain) return;
+    if (!selectedFamily || !activeDomain) return;
     await createProject(
       FAMILY_META[selectedFamily].defaultName ?? "My Project",
       templateId,
       selectedFamily,
-      selectedDomain,
+      activeDomain,
     );
     onSelect();
   };
 
-  if (!selectedDomain) {
+  if (!activeDomain || !selectedFamily) {
     return (
       <div className="template-selector flex min-h-full items-center justify-center p-4 md:p-10">
         <div className="template-flow max-w-[760px] w-full">
           <StepHeader
-            eyebrow="Step 1 of 3 · Product scope"
-            title="Choose the live product domain."
-            copy="BreakGen starts with the product families that can become real revisioned projects today. Planned domains stay out of this flow until their compiler paths are ready."
+            eyebrow="Product scope"
+            title="Choose a live compiler path."
+            copy="BreakGen starts only with families that can become real revisioned projects today. Planned domains stay visible elsewhere, not inside this creation flow."
           />
           <div className="grid gap-3 md:gap-4">
             {enabledDomains.map((domain) => {
@@ -175,114 +186,121 @@ export function TemplateSelector({ onSelect, domains, families }: TemplateSelect
     );
   }
 
-  if (!selectedFamily) {
-    return (
-      <div className="template-selector flex min-h-full items-center justify-center p-4 md:p-10">
-        <div className="template-flow max-w-[760px] w-full">
-          <button onClick={() => setSelectedDomain(null)} className="mb-5 flex min-h-11 items-center gap-1 text-[12px] text-[var(--text-tertiary)] transition-colors hover:text-[var(--text-primary)]">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 3L5 7l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
-            Back to domains
-          </button>
-          <StepHeader
-            eyebrow="Step 2 of 3 · Device family"
-            title="Pick what you are actually building."
-            copy="Each family gets its own layout rules, control semantics, validation checks, and export surface while staying inside the same product record."
-          />
-          <div className="grid gap-3 sm:grid-cols-2 md:gap-4">
-            {visibleFamilies.map((entry) => {
-              const meta = FAMILY_META[entry.family];
-              return (
-                <button
-                  key={entry.family}
-                  onClick={() => setSelectedFamily(entry.family)}
-                  aria-label={`Choose ${entry.display_name}`}
-                  className="template-option-card glass group border text-left transition-all duration-300 hover:-translate-y-0.5"
-                  style={{ background: `linear-gradient(180deg, ${meta.color}0c 0%, transparent 100%)`, borderColor: `${meta.color}15` }}
-                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = `${meta.color}30`; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = `${meta.color}10`; }}
-                  >
-                  <div className="template-option-card__icon template-option-card__icon--wide" style={{ background: `${meta.color}0a` }}>
-                    <Sil rows={meta.icon} color={meta.color} s={entry.family === "keyboard" ? 4.2 : 8} />
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="mb-1 text-[16px] font-semibold text-[var(--text-primary)]">{entry.display_name}</h3>
-                    <p className="text-[13px] leading-[1.55] text-[var(--text-secondary)]">{entry.description}</p>
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {entry.supported_module_types.slice(0, 3).map((type) => (
-                      <span key={type} className="template-chip glass-chip rounded-full px-2 py-0.5 text-[10px] text-[var(--text-tertiary)]">
-                        {type.replaceAll("_", " ")}
-                      </span>
-                      ))}
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const familyManifest = familySource.find((entry) => entry.family === selectedFamily) ?? null;
   const accent = FAMILY_META[selectedFamily].color;
+  const activeDomainManifest = enabledDomains.find((domain) => domain.domain === activeDomain);
 
   return (
-      <div className="template-selector flex min-h-full items-center justify-center p-4 md:p-10">
-        <div className="template-flow max-w-[620px] w-full">
-        <button onClick={() => setSelectedFamily(null)} className="mb-5 flex min-h-11 items-center gap-1 text-[12px] text-[var(--text-tertiary)] transition-colors hover:text-[var(--text-primary)]">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 3L5 7l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
-          Back to families
-        </button>
+    <div className="template-selector flex min-h-full items-center justify-center p-4 md:p-8">
+      <div className="template-flow template-flow--matrix w-full max-w-[1180px]">
         <StepHeader
-          eyebrow="Step 3 of 3 · Starter template"
-          title="Choose the baseline."
-          copy="The template creates the real project record. After this, BreakGen opens the workspace so layout, appearance, electronics, validation, and export all stay attached to one revision."
+          eyebrow="New project"
+          title="Pick the device, baseline, and compiler path together."
+          copy="The first decision should feel like a product cockpit: domain, family, hardware modules, and starter templates stay visible before the project record is created."
         />
 
-        {familyManifest && (
-          <div className="glass glass-soft rounded-[18px] p-4 mb-5">
-            <div className="mb-3 text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">Hardware baseline</div>
-            <div className="flex flex-wrap gap-2 mb-3">
-              {(hardwareModules.length > 0 ? hardwareModules.slice(0, 6).map((module) => module.module_type) : familyManifest.supported_module_types).map((moduleType) => (
-                <span key={moduleType} className="template-chip glass-chip rounded-full px-2.5 py-1 text-[11px] text-[var(--text-secondary)]">
-                  {moduleType.replaceAll("_", " ")}
-                </span>
-              ))}
+        <div className="template-decision-grid">
+          <section className="template-decision-panel">
+            <div className="template-panel-label">Domain</div>
+            <div className="template-domain-list">
+              {enabledDomains.map((domain) => {
+                const meta = DOMAIN_META[domain.domain];
+                const selected = domain.domain === activeDomain;
+                return (
+                  <button
+                    key={domain.domain}
+                    onClick={() => {
+                      setSelectedDomain(domain.domain);
+                      setSelectedFamily(null);
+                    }}
+                    className={`template-decision-button ${selected ? "is-selected" : ""}`}
+                    style={{ "--template-accent": meta.color } as CSSProperties}
+                  >
+                    <span>{meta.icon}</span>
+                    <b>{domain.display_name}</b>
+                    <small>{domain.enabled_families.length} live families</small>
+                  </button>
+                );
+              })}
             </div>
-            <div className="text-[12px] leading-[1.6] text-[var(--text-secondary)]">
-              {familyManifest.description}
-            </div>
-          </div>
-        )}
+            {activeDomainManifest && (
+              <p>{activeDomainManifest.description}</p>
+            )}
+          </section>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <div className="w-6 h-6 animate-spin rounded-full border-2 border-[var(--border-default)]" style={{ borderTopColor: accent }} />
-          </div>
-        ) : (
-          templates.length > 0 ? (
-            <div className="space-y-3">
-              {templates.map((template) => (
-                <button
-                  key={template.template_id}
-                  onClick={() => handleSelectTemplate(template.template_id)}
-                  className="template-list-button glass glass-soft group w-full border text-left transition-all duration-200 hover:border-white/[0.12]"
-                >
-                  <div className="min-w-0">
-                    <h3 className="text-[15px] font-semibold text-[var(--text-primary)] transition-colors group-hover:text-[var(--accent)]">{template.name}</h3>
-                    <p className="mt-0.5 text-[13px] leading-[1.5] text-[var(--text-secondary)]">{template.description}</p>
-                  </div>
-                  <span className="ml-6 shrink-0 text-[12px] font-mono text-[var(--text-tertiary)]">{template.key_count}</span>
-                </button>
-              ))}
+          <section className="template-decision-panel template-decision-panel--families">
+            <div className="template-panel-label">Family</div>
+            <div className="template-family-list">
+              {visibleFamilies.map((entry) => {
+                const meta = FAMILY_META[entry.family];
+                const selected = entry.family === selectedFamily;
+                return (
+                  <button
+                    key={entry.family}
+                    onClick={() => setSelectedFamily(entry.family)}
+                    aria-label={`Choose ${entry.display_name}`}
+                    className={`template-family-button ${selected ? "is-selected" : ""}`}
+                    style={{ "--template-accent": meta.color } as CSSProperties}
+                  >
+                    <div className="template-family-button__icon">
+                      <Sil rows={meta.icon} color={meta.color} s={entry.family === "keyboard" ? 3.9 : 6.6} />
+                    </div>
+                    <div>
+                      <b>{entry.display_name}</b>
+                      <span>{entry.description}</span>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
-          ) : (
-            <div className="surface-panel rounded-[18px] px-5 py-4 text-[13px] leading-[1.7] text-[var(--text-secondary)]">
-              No templates are available for this family yet. Choose another live family while this compiler path is completed.
-            </div>
-          )
-        )}
+          </section>
+
+          <section className="template-decision-panel template-decision-panel--templates">
+            <div className="template-panel-label">Starter baseline</div>
+            {familyManifest && (
+              <div className="template-baseline">
+                <div className="template-baseline__top">
+                  <span style={{ background: accent }} />
+                  <b>{familyManifest.display_name}</b>
+                </div>
+                <p>{familyManifest.description}</p>
+                <div>
+                  {(hardwareModules.length > 0 ? hardwareModules.slice(0, 6).map((module) => module.module_type) : familyManifest.supported_module_types).map((moduleType) => (
+                    <span key={moduleType}>{moduleType.replaceAll("_", " ")}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {loading ? (
+              <div className="flex items-center justify-center py-16">
+                <div className="w-6 h-6 animate-spin rounded-full border-2 border-[var(--border-default)]" style={{ borderTopColor: accent }} />
+              </div>
+            ) : (
+              templates.length > 0 ? (
+                <div className="template-template-list">
+                  {templates.map((template) => (
+                    <button
+                      key={template.template_id}
+                      onClick={() => handleSelectTemplate(template.template_id)}
+                      className="template-list-button glass glass-soft group w-full border text-left transition-all duration-200 hover:border-white/[0.12]"
+                    >
+                      <div className="min-w-0">
+                        <h3 className="text-[15px] font-semibold text-[var(--text-primary)] transition-colors group-hover:text-[var(--accent)]">{template.name}</h3>
+                        <p className="mt-0.5 text-[13px] leading-[1.5] text-[var(--text-secondary)]">{template.description}</p>
+                      </div>
+                      <span className="ml-6 shrink-0 text-[12px] font-mono text-[var(--text-tertiary)]">{template.key_count}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="surface-panel rounded-[18px] px-5 py-4 text-[13px] leading-[1.7] text-[var(--text-secondary)]">
+                  No templates are available for this family yet. Choose another live family while this compiler path is completed.
+                </div>
+              )
+            )}
+          </section>
+        </div>
       </div>
     </div>
   );

@@ -172,7 +172,7 @@ export function PublicDemo() {
           </aside>
 
           <div className="order-1 grid min-h-[620px] gap-6 lg:grid-cols-[minmax(0,1fr)_400px] xl:order-2 xl:min-h-[780px]">
-            <section className="surface-panel flex min-h-[540px] flex-col rounded-[32px] p-4 xl:min-h-0">
+            <section className="surface-panel order-2 flex min-h-[540px] flex-col rounded-[32px] p-4 lg:order-1 xl:min-h-0">
               <div className="mb-4 flex flex-wrap items-center gap-2">
                 {DEMO_SIGNALS.map((item) => (
                   <span
@@ -188,7 +188,7 @@ export function PublicDemo() {
               <div className="min-h-0 flex-1">{renderEditor()}</div>
             </section>
 
-            <div className="flex min-h-0 flex-col gap-6">
+            <div className="order-1 flex min-h-0 flex-col gap-6 lg:order-2">
               <section className="preview-chamber relative h-[420px] flex-none rounded-[32px] sm:h-[520px]">
                 <div className="surface-toolbar absolute left-5 top-5 z-20 rounded-[20px] px-4 py-3">
                   <div className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">
@@ -210,6 +210,19 @@ export function PublicDemo() {
                         <div className="mt-1 text-[16px] font-semibold text-[var(--text-primary)]">{value}</div>
                       </div>
                     ))}
+                  </div>
+                </div>
+                <div className="demo-product-evidence" aria-hidden="true">
+                  <div className="demo-product-evidence__plate">
+                    {Array.from({ length: 15 }).map((_, index) => (
+                      <span key={index} />
+                    ))}
+                    <i />
+                  </div>
+                  <div className="demo-product-evidence__rail">
+                    <span>rev r7</span>
+                    <span>panel.dxf</span>
+                    <span>validated</span>
                   </div>
                 </div>
                 {renderScene()}

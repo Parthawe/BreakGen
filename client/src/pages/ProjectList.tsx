@@ -251,20 +251,18 @@ export function ProjectList() {
           </section>
 
           <aside className="surface-panel rounded-[30px] p-6">
-            <div className="eyebrow">Next action</div>
+            <div className="eyebrow">Alpha scope</div>
             <h2 className="mt-4 text-[24px] font-semibold tracking-[-0.04em] text-[var(--text-primary)]">
-              Start a new device family.
+              One product record per device.
             </h2>
             <p className="mt-3 text-[14px] leading-[1.75] text-[var(--text-secondary)]">
-              Choose a family, lock the baseline, then move through layout, appearance,
-              electronics, validation, and export from one shell.
+              The index is for reading project health quickly: family, revision state,
+              source artifacts, validation, and export history from one shell.
             </p>
-            <button
-              onClick={() => navigate("/app/new")}
-              className="surface-button-primary mt-6 inline-flex h-11 items-center justify-center rounded-[16px] px-5 text-[13px] font-semibold"
-            >
-              New Project
-            </button>
+            <div className="section-rule mt-6 grid gap-3 pt-5 text-[12px] text-[var(--text-secondary)]">
+              <span>Live families are gated by compiler readiness.</span>
+              <span>Review-ready exports stay separate from fabrication-complete status.</span>
+            </div>
           </aside>
         </header>
 

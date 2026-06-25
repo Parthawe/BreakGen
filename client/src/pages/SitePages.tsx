@@ -4,11 +4,13 @@ import { LaunchCapture } from "../components/LaunchCapture";
 import { SiteNav } from "../components/SiteNav";
 import { trackEvent } from "../lib/analytics";
 
-const PHOTO = {
-  makerBench: "https://images.unsplash.com/photo-1756723902363-25de2ac0ffae?auto=format&fit=crop&w=1800&q=82",
-  soldering: "https://images.unsplash.com/photo-1521798604188-0d6595d6d6ae?auto=format&fit=crop&w=1400&q=82",
-  cadPrinter: "https://images.unsplash.com/photo-1760446410679-2d93cd1c2607?auto=format&fit=crop&w=1400&q=82",
-  electronics: "https://images.unsplash.com/photo-1705579607342-13c6dad7b51d?auto=format&fit=crop&w=1400&q=82",
+type ProcessVisual = "marketplace" | "compiler" | "creators" | "manufacturing";
+
+const PROCESS_CAPTION: Record<ProcessVisual, string> = {
+  marketplace: "Customizable products, constrained baselines, and proof before checkout.",
+  compiler: "Layout, electronics, validation, and exports stay tied to one source record.",
+  creators: "Research calls become controls, mappings, templates, and manufacturable pressure.",
+  manufacturing: "Bench constraints, fit checks, sourcing, and pilot economics live together.",
 };
 
 const MARKET_PRODUCTS = [
@@ -134,15 +136,13 @@ function PageHero({
   eyebrow,
   title,
   body,
-  image,
-  alt,
+  visual,
   children,
 }: {
   eyebrow: string;
   title: string;
   body: string;
-  image: string;
-  alt: string;
+  visual: ProcessVisual;
   children?: React.ReactNode;
 }) {
   return (
@@ -154,8 +154,24 @@ function PageHero({
         {children}
       </div>
       <figure className="site-photo-frame">
-        <img src={image} alt={alt} loading="eager" />
-        <figcaption>Real benches, real constraints, then a product surface people can buy from.</figcaption>
+        <div className={`site-process-visual site-process-visual--${visual}`} role="img" aria-label={PROCESS_CAPTION[visual]}>
+          <div className="site-process-visual__bench">
+            <span />
+            <span />
+            <span />
+          </div>
+          <div className="site-process-visual__device">
+            {Array.from({ length: 15 }).map((_, index) => (
+              <i key={index} />
+            ))}
+          </div>
+          <div className="site-process-visual__tools">
+            <span />
+            <span />
+            <span />
+          </div>
+        </div>
+        <figcaption>{PROCESS_CAPTION[visual]}</figcaption>
       </figure>
     </section>
   );
@@ -173,8 +189,7 @@ export function MarketplacePage() {
         eyebrow="Marketplace"
         title="Amazon for customizable hardware, with proof before checkout."
         body="The first BreakGen marketplace is not a warehouse of random files. It is a curated catalog where every item can be customized, validated, priced, and moved into a limited pilot run."
-        image={PHOTO.makerBench}
-        alt="A maker at a workbench using CAD beside a 3D printer"
+        visual="marketplace"
       >
         <div className="site-hero-actions">
           <button type="button" className="surface-button-primary" onClick={() => openCapture("alpha", "marketplace_hero")}>
@@ -238,8 +253,7 @@ export function HowItWorksPage() {
         eyebrow="How it works"
         title="A product configurator with an engineering compiler underneath."
         body="Most custom shops collect options. BreakGen has to collect intent, then maintain the state needed to make the product real: geometry, electronics, validation, exports, and source proof."
-        image={PHOTO.electronics}
-        alt="Electronics components and printed circuit boards arranged on a workbench"
+        visual="compiler"
       >
         <div className="site-hero-actions">
           <Link to="/marketplace/" className="surface-button-primary">
@@ -279,8 +293,7 @@ export function CreatorsPage() {
         eyebrow="Creator network"
         title="The community is the product discovery engine."
         body="BreakGen learns from people who actually build, stream, perform, repair, remix, and ship. Creators get clear paths into alpha access, research calls, and template decisions."
-        image={PHOTO.soldering}
-        alt="People soldering electronics during a workshop"
+        visual="creators"
       >
         <div className="site-hero-actions">
           <button type="button" className="surface-button-primary" onClick={() => openCapture("discord", "creators_hero")}>
@@ -336,8 +349,7 @@ export function ManufacturingPage() {
         eyebrow="Manufacturing"
         title="A custom marketplace only works if the promise survives the bench."
         body="BreakGen keeps the manufacturing promise visible. Customizable products become credible when sourcing, fit, pilot economics, and fulfillment live inside the product record."
-        image={PHOTO.cadPrinter}
-        alt="An engineer working in CAD beside a 3D printer"
+        visual="manufacturing"
       >
         <div className="site-hero-actions">
           <button type="button" className="surface-button-primary" onClick={() => openCapture("alpha", "manufacturing_hero")}>
