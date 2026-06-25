@@ -33,7 +33,8 @@ export function SiteNav({ eyebrow = "Private alpha for custom programmable hardw
       onClick={() => trackEvent("site_nav_cta_click", { target: "workspace", placement: "nav" })}
       className="surface-button-primary inline-flex h-11 items-center rounded-full px-5 text-[13px] font-semibold"
     >
-      Open workspace
+      <span className="hidden sm:inline">Open workspace</span>
+      <span className="sm:hidden">Workspace</span>
     </Link>
   ) : (
     <button
