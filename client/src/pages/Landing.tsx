@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
+import { LaunchCapture } from "../components/LaunchCapture";
 import { ThemeSwitcher } from "../components/ThemeSwitcher";
+import { trackEvent } from "../lib/analytics";
 import { PUBLIC_DEMO_PATH, PUBLIC_SITE, REPO_URL } from "../lib/runtime";
 import { useAuthStore } from "../stores/authStore";
 
@@ -229,6 +231,7 @@ function NavCta() {
     return (
       <Link
         to={PUBLIC_DEMO_PATH}
+        onClick={() => trackEvent("landing_cta_click", { surface: "landing", target: "public_demo", placement: "nav" })}
         className="surface-button-primary inline-flex h-11 items-center rounded-full px-5 text-[13px] font-semibold"
       >
         Open demo
@@ -240,6 +243,7 @@ function NavCta() {
     return (
       <Link
         to="/app"
+        onClick={() => trackEvent("landing_cta_click", { surface: "landing", target: "workspace", placement: "nav" })}
         className="surface-button-primary inline-flex h-11 items-center rounded-full px-5 text-[13px] font-semibold"
       >
         Open workspace
@@ -250,6 +254,7 @@ function NavCta() {
   return (
     <Link
       to="/login"
+      onClick={() => trackEvent("landing_cta_click", { surface: "landing", target: "login", placement: "nav" })}
       className="surface-button-primary inline-flex h-11 items-center rounded-full px-5 text-[13px] font-semibold"
     >
       Enter alpha
@@ -313,6 +318,7 @@ export function Landing() {
     document.title = PUBLIC_SITE
       ? "BreakGen - Public Launch"
       : "BreakGen - Creative and Engineering Platform for Custom Electronic Products";
+    trackEvent("landing_view", { surface: "landing" });
   }, []);
 
   return (
@@ -345,6 +351,7 @@ export function Landing() {
               href={REPO_URL}
               target="_blank"
               rel="noopener"
+              onClick={() => trackEvent("landing_cta_click", { surface: "landing", target: "github", placement: "nav" })}
               className="surface-button hidden h-11 items-center rounded-full px-4 text-[13px] font-semibold lg:inline-flex"
             >
               GitHub
@@ -382,6 +389,7 @@ export function Landing() {
               <NavCta />
               <Link
                 to={PUBLIC_DEMO_PATH}
+                onClick={() => trackEvent("landing_cta_click", { surface: "landing", target: "public_demo", placement: "hero_secondary" })}
                 className="surface-button inline-flex h-11 items-center rounded-full px-5 text-[13px] font-semibold"
               >
                 View workspace demo
@@ -622,6 +630,7 @@ export function Landing() {
                 href={REPO_URL}
                 target="_blank"
                 rel="noopener"
+                onClick={() => trackEvent("landing_cta_click", { surface: "landing", target: "github", placement: "final" })}
                 className="surface-button inline-flex h-11 items-center rounded-full px-5 text-[13px] font-semibold"
               >
                 View repository
@@ -630,6 +639,7 @@ export function Landing() {
           </div>
         </section>
       </div>
+      <LaunchCapture surface="landing" />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { LaunchCapture } from "../components/LaunchCapture";
 import { ProjectSurfaces } from "../components/PlatformSurfaces";
 import { ThemeSwitcher } from "../components/ThemeSwitcher";
 import {
@@ -8,6 +9,7 @@ import {
   publicDemoFamilyManifest,
   publicDemoProviders,
 } from "../demo/publicDemo";
+import { trackEvent } from "../lib/analytics";
 import { REPO_URL } from "../lib/runtime";
 import { useProjectStore } from "../stores/projectStore";
 
@@ -32,6 +34,7 @@ export function PublicDemo() {
 
   useEffect(() => {
     document.title = "BreakGen Demo — Public Launch";
+    trackEvent("public_demo_view", { surface: "demo" });
     if (project?.project_id === "public_demo_streamdeck") return;
     useProjectStore.setState({
       project: createPublicDemoProject(),
@@ -104,12 +107,14 @@ export function PublicDemo() {
               href={REPO_URL}
               target="_blank"
               rel="noopener"
+              onClick={() => trackEvent("public_demo_cta_click", { surface: "demo", target: "github", placement: "nav" })}
               className="surface-button inline-flex h-11 items-center rounded-full px-4 text-[13px] font-semibold"
             >
               GitHub
             </a>
             <Link
               to="/"
+              onClick={() => trackEvent("public_demo_cta_click", { surface: "demo", target: "landing", placement: "nav" })}
               className="surface-button-primary inline-flex h-11 items-center rounded-full px-5 text-[13px] font-semibold"
             >
               Launch page
@@ -227,6 +232,7 @@ export function PublicDemo() {
           </div>
         </section>
       </div>
+      <LaunchCapture surface="demo" />
     </div>
   );
 }

@@ -680,6 +680,226 @@ input[type="number"]::-webkit-outer-spin-button {
   font-weight: 600;
 }
 
+.launch-capture-dock {
+  position: fixed;
+  left: 50%;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: 40;
+  width: min(720px, calc(100vw - 32px));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 14px 14px 18px;
+  color: var(--text-primary);
+  background:
+    linear-gradient(180deg, color-mix(in oklch, var(--surface-strong) 92%, transparent), var(--surface-overlay)),
+    var(--surface-strong);
+  border: 1px solid var(--border-strong);
+  border-radius: 22px;
+  box-shadow:
+    inset 0 1px 0 var(--edge-strong),
+    0 22px 68px rgba(0, 0, 0, 0.34);
+  transform: translateX(-50%);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+}
+
+.launch-capture-dock__actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.launch-capture {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.launch-capture__scrim {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background:
+    radial-gradient(circle at 50% 16%, color-mix(in oklch, var(--accent) 22%, transparent), transparent 26rem),
+    rgba(4, 6, 10, 0.68);
+  cursor: pointer;
+}
+
+.launch-capture__panel {
+  position: relative;
+  z-index: 1;
+  width: min(760px, 100%);
+  max-height: min(720px, calc(100svh - 48px));
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  overflow: hidden;
+  color: var(--text-primary);
+  background:
+    linear-gradient(135deg, color-mix(in oklch, var(--surface-strong) 94%, transparent), var(--surface-primary)),
+    var(--surface-strong);
+  border: 1px solid var(--border-strong);
+  border-radius: 28px;
+  box-shadow:
+    inset 0 1px 0 var(--edge-strong),
+    0 30px 90px rgba(0, 0, 0, 0.42);
+}
+
+.launch-capture__rail {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 22px;
+  background:
+    radial-gradient(circle at 18% 8%, color-mix(in oklch, var(--accent) 20%, transparent), transparent 13rem),
+    color-mix(in oklch, var(--surface-overlay) 78%, transparent);
+  border-right: 1px solid var(--border-subtle);
+}
+
+.launch-capture__rail button {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  color: var(--text-secondary);
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    color 160ms ease,
+    background 160ms ease,
+    border-color 160ms ease;
+}
+
+.launch-capture__rail button:hover,
+.launch-capture__rail button.is-active {
+  color: var(--text-primary);
+  background: var(--surface-chip);
+  border-color: var(--border-default);
+}
+
+.launch-capture__body {
+  position: relative;
+  min-width: 0;
+  overflow: auto;
+  padding: 34px;
+}
+
+.launch-capture__close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 34px;
+  height: 34px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--border-default);
+  border-radius: 999px;
+  color: var(--text-tertiary);
+  background: var(--surface-chip);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.launch-capture__close:hover {
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+.launch-capture__body h2 {
+  max-width: 13ch;
+  margin: 12px 44px 10px 0;
+  color: var(--text-primary);
+  font-size: clamp(30px, 4vw, 48px);
+  line-height: 0.98;
+  font-weight: 760;
+}
+
+.launch-capture__body p {
+  max-width: 48ch;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.launch-capture__form {
+  display: grid;
+  gap: 14px;
+  margin-top: 26px;
+}
+
+.launch-capture__form label {
+  display: grid;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.launch-capture__form input,
+.launch-capture__form select,
+.launch-capture__form textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--border-default);
+  border-radius: 14px;
+  padding: 12px 13px;
+  color: var(--text-primary);
+  background: var(--surface-inset);
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+  box-shadow: inset 0 1px 0 var(--edge-soft);
+}
+
+.launch-capture__form textarea {
+  resize: vertical;
+}
+
+.launch-capture__form input:focus,
+.launch-capture__form select:focus,
+.launch-capture__form textarea:focus {
+  border-color: var(--accent-border);
+  box-shadow:
+    inset 0 1px 0 var(--edge-strong),
+    0 0 0 3px var(--accent-muted);
+}
+
+.launch-capture__status {
+  border: 1px solid var(--border-default);
+  border-radius: 14px;
+  padding: 10px 12px;
+  color: var(--text-secondary);
+  background: var(--surface-chip);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.launch-capture__status[data-state="sent"],
+.launch-capture__status[data-state="fallback"] {
+  color: var(--success);
+  border-color: rgba(72, 212, 139, 0.28);
+  background: rgba(72, 212, 139, 0.1);
+}
+
+.launch-capture__status[data-state="error"] {
+  color: var(--error);
+  border-color: var(--error-border);
+  background: var(--error-surface);
+}
+
 .eyebrow {
   margin: 0;
   color: var(--accent);
@@ -865,6 +1085,61 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 
 @media (max-width: 768px) {
+  .launch-capture-dock {
+    bottom: max(12px, env(safe-area-inset-bottom));
+    width: calc(100vw - 24px);
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  .launch-capture-dock__actions {
+    width: 100%;
+  }
+
+  .launch-capture-dock__actions > button {
+    flex: 1 1 0;
+    min-width: 0;
+    padding-inline: 12px;
+  }
+
+  .launch-capture {
+    align-items: end;
+    padding: 12px;
+  }
+
+  .launch-capture__panel {
+    max-height: calc(100svh - 24px);
+    grid-template-columns: 1fr;
+    border-radius: 24px;
+  }
+
+  .launch-capture__rail {
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    padding: 12px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .launch-capture__rail button {
+    min-height: 40px;
+    padding-inline: 10px;
+    text-align: center;
+  }
+
+  .launch-capture__body {
+    padding: 26px 18px 20px;
+  }
+
+  .launch-capture__body h2 {
+    max-width: 12ch;
+    margin-right: 42px;
+    font-size: 34px;
+  }
+
   .workspace-shell {
     width: 100%;
     height: 100svh;

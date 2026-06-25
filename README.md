@@ -145,6 +145,7 @@ Current gaps that still need product work:
 - [docs/STARTUP_OPERATING_SYSTEM.md](docs/STARTUP_OPERATING_SYSTEM.md): YC/startup execution plan and company operating cadence
 - [docs/FINANCE_AND_OPS_MODEL.md](docs/FINANCE_AND_OPS_MODEL.md): finance, pricing, private-alpha ops, and cost discipline
 - [docs/TECHNOLOGY_AND_MONETIZATION_PLAN.md](docs/TECHNOLOGY_AND_MONETIZATION_PLAN.md): free-tier stack, paid plans, billing, CAD/EDA, storage, and fabrication integrations
+- [docs/LAUNCH_ANALYTICS_COMMUNITY_PLAN.md](docs/LAUNCH_ANALYTICS_COMMUNITY_PLAN.md): public launch funnel, analytics events, waitlist capture, and Discord community setup
 - [PRODUCT.md](PRODUCT.md): product context and positioning
 - [DESIGN.md](DESIGN.md): interface and brand direction
 - [PRODUCT_SPEC.md](PRODUCT_SPEC.md): longer-form architecture and product specification
