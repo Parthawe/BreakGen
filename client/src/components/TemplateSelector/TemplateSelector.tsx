@@ -52,6 +52,24 @@ function Sil({ rows, color, s = 5 }: { rows: number[][]; color: string; s?: numb
   );
 }
 
+function StepHeader({
+  eyebrow,
+  title,
+  copy,
+}: {
+  eyebrow: string;
+  title: string;
+  copy: string;
+}) {
+  return (
+    <div className="template-flow__intro">
+      <div className="eyebrow">{eyebrow}</div>
+      <h2>{title}</h2>
+      <p>{copy}</p>
+    </div>
+  );
+}
+
 export function TemplateSelector({ onSelect, domains, families }: TemplateSelectorProps) {
   const [selectedDomain, setSelectedDomain] = useState<ProductDomain | null>(null);
   const [selectedFamily, setSelectedFamily] = useState<ProductFamily | null>(null);
@@ -119,32 +137,34 @@ export function TemplateSelector({ onSelect, domains, families }: TemplateSelect
 
   if (!selectedDomain) {
     return (
-      <div className="template-selector flex items-center justify-center min-h-full p-5 md:p-10">
-        <div className="max-w-[760px] w-full">
-          <div className="text-center mb-8 md:mb-14">
-            <div className="eyebrow">MVP product scope</div>
-            <h2 className="mb-2 mt-3 text-[24px] font-bold tracking-[-0.02em] text-[var(--text-primary)] md:text-[28px]">Choose a live product domain.</h2>
-            <p className="mx-auto max-w-[620px] text-[14px] leading-[1.7] text-[var(--text-secondary)]">This MVP ships five control-surface families. Proof templates can stay in the platform catalog without becoming reviewer-facing product scope.</p>
-          </div>
-          <div className="grid gap-4">
+      <div className="template-selector flex min-h-full items-center justify-center p-4 md:p-10">
+        <div className="template-flow max-w-[760px] w-full">
+          <StepHeader
+            eyebrow="Step 1 of 3 · Product scope"
+            title="Choose the live product domain."
+            copy="BreakGen starts with the product families that can become real revisioned projects today. Planned domains stay out of this flow until their compiler paths are ready."
+          />
+          <div className="grid gap-3 md:gap-4">
             {enabledDomains.map((domain) => {
               const meta = DOMAIN_META[domain.domain];
               return (
                 <button
                   key={domain.domain}
                   onClick={() => setSelectedDomain(domain.domain)}
-                  className="glass text-left p-6 rounded-[20px] transition-all duration-300 group border hover:-translate-y-0.5"
+                  className="template-option-card glass group border text-left transition-all duration-300 hover:-translate-y-0.5"
                   style={{ background: `linear-gradient(180deg, ${meta.color}0c 0%, transparent 100%)`, borderColor: `${meta.color}15` }}
                   onMouseEnter={(e) => { e.currentTarget.style.borderColor = `${meta.color}30`; }}
                   onMouseLeave={(e) => { e.currentTarget.style.borderColor = `${meta.color}10`; }}
                 >
-                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 text-[26px]" style={{ background: `${meta.color}0a`, color: meta.color }}>
+                  <div className="template-option-card__icon text-[24px]" style={{ background: `${meta.color}0a`, color: meta.color }}>
                     {meta.icon}
                   </div>
-                  <h3 className="mb-1 text-[16px] font-semibold text-[var(--text-primary)]">{domain.display_name}</h3>
-                  <p className="text-[13px] leading-[1.5] text-[var(--text-secondary)]">{domain.description}</p>
-                  <div className="mt-4 text-[11px] text-[var(--text-tertiary)]">
-                    {domain.enabled_families.length} live families
+                  <div className="min-w-0">
+                    <h3 className="mb-1 text-[16px] font-semibold text-[var(--text-primary)]">{domain.display_name}</h3>
+                    <p className="text-[13px] leading-[1.55] text-[var(--text-secondary)]">{domain.description}</p>
+                    <div className="mt-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
+                      {domain.enabled_families.length} live families
+                    </div>
                   </div>
                 </button>
               );
@@ -157,37 +177,43 @@ export function TemplateSelector({ onSelect, domains, families }: TemplateSelect
 
   if (!selectedFamily) {
     return (
-      <div className="template-selector flex items-center justify-center min-h-full p-5 md:p-10">
-        <div className="max-w-[760px] w-full">
-          <button onClick={() => setSelectedDomain(null)} className="mb-6 flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] transition-colors hover:text-[var(--text-primary)]">
+      <div className="template-selector flex min-h-full items-center justify-center p-4 md:p-10">
+        <div className="template-flow max-w-[760px] w-full">
+          <button onClick={() => setSelectedDomain(null)} className="mb-5 flex min-h-11 items-center gap-1 text-[12px] text-[var(--text-tertiary)] transition-colors hover:text-[var(--text-primary)]">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 3L5 7l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
             Back to domains
           </button>
-          <h2 className="mb-2 text-[24px] font-bold tracking-[-0.02em] text-[var(--text-primary)]">Choose a family</h2>
-          <p className="mb-8 text-[14px] leading-[1.7] text-[var(--text-secondary)] md:mb-10">Families share one platform shell, but each one gets its own editor rules, control semantics, validation checks, and export surface.</p>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <StepHeader
+            eyebrow="Step 2 of 3 · Device family"
+            title="Pick what you are actually building."
+            copy="Each family gets its own layout rules, control semantics, validation checks, and export surface while staying inside the same product record."
+          />
+          <div className="grid gap-3 sm:grid-cols-2 md:gap-4">
             {visibleFamilies.map((entry) => {
               const meta = FAMILY_META[entry.family];
               return (
                 <button
                   key={entry.family}
                   onClick={() => setSelectedFamily(entry.family)}
-                  className="glass text-left p-6 rounded-[20px] transition-all duration-300 group hover:-translate-y-0.5 border"
+                  aria-label={`Choose ${entry.display_name}`}
+                  className="template-option-card glass group border text-left transition-all duration-300 hover:-translate-y-0.5"
                   style={{ background: `linear-gradient(180deg, ${meta.color}0c 0%, transparent 100%)`, borderColor: `${meta.color}15` }}
                   onMouseEnter={(e) => { e.currentTarget.style.borderColor = `${meta.color}30`; }}
                   onMouseLeave={(e) => { e.currentTarget.style.borderColor = `${meta.color}10`; }}
-                >
-                  <div className="w-20 h-14 rounded-xl flex items-center justify-center mb-4" style={{ background: `${meta.color}0a` }}>
-                    <Sil rows={meta.icon} color={meta.color} s={entry.family === "keyboard" ? 5 : 8} />
+                  >
+                  <div className="template-option-card__icon template-option-card__icon--wide" style={{ background: `${meta.color}0a` }}>
+                    <Sil rows={meta.icon} color={meta.color} s={entry.family === "keyboard" ? 4.2 : 8} />
                   </div>
-                  <h3 className="mb-1 text-[16px] font-semibold text-[var(--text-primary)]">{entry.display_name}</h3>
-                  <p className="text-[13px] leading-[1.5] text-[var(--text-secondary)]">{entry.description}</p>
-                  <div className="mt-4 flex flex-wrap gap-1.5">
-                    {entry.supported_module_types.slice(0, 3).map((type) => (
-                      <span key={type} className="glass-chip rounded-full px-2 py-0.5 text-[10px] text-[var(--text-tertiary)]">
+                  <div className="min-w-0">
+                    <h3 className="mb-1 text-[16px] font-semibold text-[var(--text-primary)]">{entry.display_name}</h3>
+                    <p className="text-[13px] leading-[1.55] text-[var(--text-secondary)]">{entry.description}</p>
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {entry.supported_module_types.slice(0, 3).map((type) => (
+                      <span key={type} className="template-chip glass-chip rounded-full px-2 py-0.5 text-[10px] text-[var(--text-tertiary)]">
                         {type.replaceAll("_", " ")}
                       </span>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 </button>
               );
@@ -202,21 +228,24 @@ export function TemplateSelector({ onSelect, domains, families }: TemplateSelect
   const accent = FAMILY_META[selectedFamily].color;
 
   return (
-      <div className="template-selector flex items-center justify-center min-h-full p-5 md:p-10">
-        <div className="max-w-[620px] w-full">
-        <button onClick={() => setSelectedFamily(null)} className="mb-6 flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] transition-colors hover:text-[var(--text-primary)]">
+      <div className="template-selector flex min-h-full items-center justify-center p-4 md:p-10">
+        <div className="template-flow max-w-[620px] w-full">
+        <button onClick={() => setSelectedFamily(null)} className="mb-5 flex min-h-11 items-center gap-1 text-[12px] text-[var(--text-tertiary)] transition-colors hover:text-[var(--text-primary)]">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 3L5 7l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
           Back to families
         </button>
-        <h2 className="mb-2 text-[24px] font-bold tracking-[-0.02em] text-[var(--text-primary)]">Choose a template</h2>
-        <p className="mb-6 text-[14px] leading-[1.7] text-[var(--text-secondary)]">Start with a constrained baseline, then move through layout, appearance, electronics, validation, and export from one authenticated workspace.</p>
+        <StepHeader
+          eyebrow="Step 3 of 3 · Starter template"
+          title="Choose the baseline."
+          copy="The template creates the real project record. After this, BreakGen opens the workspace so layout, appearance, electronics, validation, and export all stay attached to one revision."
+        />
 
         {familyManifest && (
-          <div className="glass glass-soft rounded-[18px] p-4 mb-6">
+          <div className="glass glass-soft rounded-[18px] p-4 mb-5">
             <div className="mb-3 text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">Hardware baseline</div>
             <div className="flex flex-wrap gap-2 mb-3">
               {(hardwareModules.length > 0 ? hardwareModules.slice(0, 6).map((module) => module.module_type) : familyManifest.supported_module_types).map((moduleType) => (
-                <span key={moduleType} className="glass-chip rounded-full px-2.5 py-1 text-[11px] text-[var(--text-secondary)]">
+                <span key={moduleType} className="template-chip glass-chip rounded-full px-2.5 py-1 text-[11px] text-[var(--text-secondary)]">
                   {moduleType.replaceAll("_", " ")}
                 </span>
               ))}
@@ -238,11 +267,11 @@ export function TemplateSelector({ onSelect, domains, families }: TemplateSelect
                 <button
                   key={template.template_id}
                   onClick={() => handleSelectTemplate(template.template_id)}
-                  className="glass glass-soft w-full text-left p-5 rounded-[18px] transition-all duration-200 flex items-center justify-between border hover:border-white/[0.12] group"
+                  className="template-list-button glass glass-soft group w-full border text-left transition-all duration-200 hover:border-white/[0.12]"
                 >
-                  <div>
+                  <div className="min-w-0">
                     <h3 className="text-[15px] font-semibold text-[var(--text-primary)] transition-colors group-hover:text-[var(--accent)]">{template.name}</h3>
-                    <p className="mt-0.5 text-[13px] text-[var(--text-secondary)]">{template.description}</p>
+                    <p className="mt-0.5 text-[13px] leading-[1.5] text-[var(--text-secondary)]">{template.description}</p>
                   </div>
                   <span className="ml-6 shrink-0 text-[12px] font-mono text-[var(--text-tertiary)]">{template.key_count}</span>
                 </button>

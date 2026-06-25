@@ -2264,6 +2264,10 @@ input[type="number"]::-webkit-outer-spin-button {
   display: none;
 }
 
+.workspace-mobile-next-step {
+  display: none;
+}
+
 .workspace-stage-body {
   flex: 1;
   min-height: 0;
@@ -2353,6 +2357,69 @@ input[type="number"]::-webkit-outer-spin-button {
   font-size: 11px;
   line-height: 1.2;
   color: var(--text-tertiary);
+}
+
+.template-flow {
+  margin-inline: auto;
+}
+
+.template-flow__intro {
+  margin-bottom: 1.75rem;
+  text-align: center;
+}
+
+.template-flow__intro h2 {
+  margin-top: 0.75rem;
+  color: var(--text-primary);
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.04;
+}
+
+.template-flow__intro p {
+  max-width: 42rem;
+  margin: 0.8rem auto 0;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.7;
+}
+
+.template-option-card {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  gap: 1rem;
+  align-items: center;
+  min-height: 6.5rem;
+  padding: 1rem;
+  border-radius: 1.25rem;
+}
+
+.template-option-card__icon {
+  display: flex;
+  width: 4.5rem;
+  height: 4.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1rem;
+}
+
+.template-option-card__icon--wide {
+  width: 5.25rem;
+}
+
+.template-chip {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.template-list-button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem;
+  border-radius: 1.125rem;
 }
 
 @media (max-width: 1024px) {
@@ -2578,14 +2645,13 @@ input[type="number"]::-webkit-outer-spin-button {
   }
 
   .workspace-mainbar .theme-switcher {
-    transform: scale(0.92);
-    transform-origin: right center;
+    display: none;
   }
 
   .workspace-mobile-stage-nav {
     display: flex;
     gap: 8px;
-    overflow-x: auto;
+    overflow: hidden;
     padding: 10px 12px;
     border-bottom: 1px solid var(--border-subtle);
     background: var(--surface-overlay);
@@ -2593,8 +2659,8 @@ input[type="number"]::-webkit-outer-spin-button {
 
   .workspace-stage-button--compact {
     width: auto;
-    min-width: 106px;
-    flex: 0 0 auto;
+    min-width: 0;
+    flex: 1 1 0;
     gap: 8px;
     padding: 8px 10px;
     border-radius: 14px;
@@ -2608,6 +2674,41 @@ input[type="number"]::-webkit-outer-spin-button {
 
   .workspace-stage-button--compact .workspace-stage-button__label {
     font-size: 12px;
+  }
+
+  .workspace-mobile-next-step {
+    display: flex;
+    min-width: 0;
+    min-height: 42px;
+    flex: 1 1 0;
+    flex-direction: column;
+    justify-content: center;
+    border-radius: 14px;
+    border: 1px solid var(--border-default);
+    background: var(--surface-chip);
+    padding: 7px 10px;
+    color: var(--text-secondary);
+    text-align: left;
+  }
+
+  .workspace-mobile-next-step span {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+  }
+
+  .workspace-mobile-next-step strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
+    color: var(--text-primary);
+  }
+
+  .workspace-mobile-next-step:disabled {
+    opacity: 0.42;
   }
 
   .workspace-stage-body {
@@ -2680,6 +2781,46 @@ input[type="number"]::-webkit-outer-spin-button {
 
   .template-selector {
     align-items: flex-start;
+  }
+
+  .template-flow__intro {
+    margin-bottom: 1.25rem;
+    text-align: left;
+  }
+
+  .template-flow__intro h2 {
+    max-width: 12.5ch;
+    font-size: 2.1rem;
+    line-height: 0.98;
+  }
+
+  .template-flow__intro p {
+    margin-left: 0;
+    font-size: 0.875rem;
+    line-height: 1.65;
+  }
+
+  .template-option-card {
+    min-height: 0;
+    grid-template-columns: 4.25rem minmax(0, 1fr);
+    gap: 0.85rem;
+    padding: 0.9rem;
+    border-radius: 1.1rem;
+  }
+
+  .template-option-card__icon {
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: 0.9rem;
+  }
+
+  .template-option-card__icon--wide {
+    width: 4.25rem;
+  }
+
+  .template-list-button {
+    align-items: start;
+    padding: 0.95rem;
   }
 }
 

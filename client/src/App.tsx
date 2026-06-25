@@ -253,6 +253,8 @@ function App() {
   );
   const stages = activeFamilyManifest?.stages ?? fallbackStages;
   const activeStage = stages.find((stage) => stage.id === currentStageId) ?? stages[0];
+  const activeStageIndex = Math.max(0, stages.findIndex((stage) => stage.id === activeStage?.id));
+  const nextStage = stages[activeStageIndex + 1] ?? null;
   const refreshRecords = useCallback(async (targetProjectId?: string) => {
     const id = targetProjectId ?? project?.project_id;
     if (!id) {
@@ -577,7 +579,21 @@ function App() {
           </div>
         </div>
         <div className="workspace-mobile-stage-nav">
-          {stages.map((stage, index) => renderStageButton(stage, index, true))}
+          {activeStage && renderStageButton(activeStage, activeStageIndex, true)}
+          {nextStage && (
+            <button
+              onClick={() => {
+                if (!nextStage.requires_project || hasProject) {
+                  setCurrentStageId(nextStage.id as StageId);
+                }
+              }}
+              disabled={nextStage.requires_project && !hasProject}
+              className="workspace-mobile-next-step"
+            >
+              <span>{nextStage.requires_project && !hasProject ? "After setup" : "Next"}</span>
+              <strong>{nextStage.label}</strong>
+            </button>
+          )}
         </div>
         <div className="workspace-stage-body">
           {renderStage()}
