@@ -6,10 +6,12 @@ import type {
   MechanicalCompileResult,
   ProductFamilyManifest,
   ProjectRecords,
+  QualityGateSummary,
 } from "../../types/project";
 
 function statusTone(status: string): string {
   switch (status) {
+    case "export_ready":
     case "validated":
     case "pass":
     case "completed":
@@ -17,10 +19,12 @@ function statusTone(status: string): string {
       return "text-emerald-500 dark:text-emerald-400";
     case "exported":
       return "text-indigo-600 dark:text-indigo-400";
+    case "review_ready":
     case "warn":
     case "generating":
     case "submitted":
       return "text-amber-600 dark:text-amber-400";
+    case "blocked":
     case "failed":
     case "fail":
       return "text-red-600 dark:text-red-400";
@@ -111,12 +115,14 @@ export function ProjectSurfaces({
   familyManifest,
   providers,
   records,
+  qualityGate,
   loading,
 }: {
   project: KeyboardProject | null;
   familyManifest: ProductFamilyManifest | null;
   providers: GenerationProviderManifest[];
   records: ProjectRecords | null;
+  qualityGate: QualityGateSummary | null;
   loading: boolean;
 }) {
   if (!project) {
@@ -256,6 +262,57 @@ export function ProjectSurfaces({
               <div className={`mt-1 capitalize ${statusTone(project.status)}`}>{project.status}</div>
             </div>
           </div>
+        </div>
+      </Section>
+
+      <Section title="Quality Gate" eyebrow={qualityGate ? `r${qualityGate.revision}` : "loading"}>
+        <div className="space-y-2">
+          {loading && !qualityGate ? (
+            <div className="text-[12px] text-[var(--text-tertiary)]">Loading quality gate…</div>
+          ) : qualityGate ? (
+            <>
+              <div className="glass-subcard rounded-lg px-3 py-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[12px] text-[var(--text-primary)]">Current revision</span>
+                  <span className={`text-[10px] uppercase tracking-[0.08em] ${statusTone(qualityGate.status)}`}>
+                    {qualityGate.status.replace(/_/g, " ")}
+                  </span>
+                </div>
+                <div className="mt-1 text-[11px] leading-[1.55] text-[var(--text-tertiary)]">
+                  {qualityGate.next_actions[0] ?? "Continue through validation and export."}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-[10px] uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
+                <div className="glass-subcard rounded-lg px-3 py-2">
+                  Blockers
+                  <div className={`mt-1 text-[12px] normal-case ${qualityGate.blockers.length ? "text-red-500 dark:text-red-400" : "text-[var(--text-primary)]"}`}>
+                    {qualityGate.blockers.length}
+                  </div>
+                </div>
+                <div className="glass-subcard rounded-lg px-3 py-2">
+                  Warnings
+                  <div className={`mt-1 text-[12px] normal-case ${qualityGate.warnings.length ? "text-amber-600 dark:text-amber-400" : "text-[var(--text-primary)]"}`}>
+                    {qualityGate.warnings.length}
+                  </div>
+                </div>
+              </div>
+              {qualityGate.gates.slice(0, 5).map((gate) => (
+                <div key={gate.id} className="glass-subcard rounded-lg px-3 py-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[12px] text-[var(--text-primary)]">{gate.label}</span>
+                    <span className={`text-[10px] uppercase tracking-[0.08em] ${statusTone(gate.status)}`}>
+                      {gate.status}
+                    </span>
+                  </div>
+                  <div className="mt-1 text-[11px] leading-[1.55] text-[var(--text-tertiary)]">
+                    {gate.details}
+                  </div>
+                </div>
+              ))}
+            </>
+          ) : (
+            <div className="text-[12px] text-[var(--text-tertiary)]">Quality gate unavailable.</div>
+          )}
         </div>
       </Section>
 

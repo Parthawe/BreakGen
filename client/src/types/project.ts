@@ -394,3 +394,27 @@ export interface ProjectRecords {
   latest_validation_report: ValidationReport | null;
   latest_export: ArtifactRecord | null;
 }
+
+export interface QualityGateItem {
+  id: string;
+  label: string;
+  status: "pass" | "warn" | "fail" | string;
+  details: string;
+}
+
+export interface QualityGateSummary {
+  project_id: string;
+  revision: number;
+  status: "blocked" | "review_ready" | "validated" | "export_ready" | string;
+  gates: QualityGateItem[];
+  blockers: string[];
+  warnings: string[];
+  next_actions: string[];
+  counts: {
+    elements: number;
+    accepted_assets: number;
+    artifacts: number;
+    jobs: number;
+    active_jobs: number;
+  };
+}

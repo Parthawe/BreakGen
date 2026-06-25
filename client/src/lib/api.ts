@@ -15,6 +15,7 @@ import type {
   ProductDomainManifest,
   ProductFamilyManifest,
   ProjectRecords,
+  QualityGateSummary,
   ProjectSummary,
   SupportedSwitch,
   UpdateProjectRequest,
@@ -364,5 +365,7 @@ export const api = {
 
   records: {
     get: (projectId: string) => request<ProjectRecords>(`/projects/${projectId}/records`),
+    qualityGate: (projectId: string) =>
+      request<QualityGateSummary>(`/projects/${projectId}/quality-gate`),
   },
 };

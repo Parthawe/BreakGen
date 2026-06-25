@@ -153,6 +153,7 @@ async def test_project_routes_require_auth_and_enforce_owner_scope(tmp_path: Pat
                 ("GET", f"/api/projects/{project_id}/records", None),
                 ("GET", f"/api/projects/{project_id}/artifacts", None),
                 ("GET", f"/api/projects/{project_id}/jobs", None),
+                ("GET", f"/api/projects/{project_id}/quality-gate", None),
                 ("GET", f"/api/projects/{project_id}/firmware/info.json", None),
             ]
             for method, path, body in unauthenticated:
@@ -174,6 +175,7 @@ async def test_project_routes_require_auth_and_enforce_owner_scope(tmp_path: Pat
                 ("GET", f"/api/projects/{project_id}/records", None),
                 ("GET", f"/api/projects/{project_id}/artifacts", None),
                 ("GET", f"/api/projects/{project_id}/jobs", None),
+                ("GET", f"/api/projects/{project_id}/quality-gate", None),
                 ("GET", f"/api/projects/{project_id}/firmware/info.json", None),
             ]
             for method, path, body in cross_user:

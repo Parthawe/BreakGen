@@ -165,6 +165,7 @@ export function PublicDemo() {
                 familyManifest={publicDemoFamilyManifest}
                 providers={publicDemoProviders}
                 records={records}
+                qualityGate={null}
                 loading={false}
               />
             </div>

@@ -6,14 +6,17 @@ import json
 from pathlib import Path
 
 from fastapi import APIRouter, Depends
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.api.auth import require_user, user_scope_id
 from server.db.database import get_db
 from server.db.models import UserRow
+from server.models.validation_schema import ValidationReport
 from server.services.artifact_registry import list_project_artifacts
 from server.services.job_registry import list_project_jobs
 from server.services.project_state import load_project_state
+from server.services.quality_gate import QualityGateInput, build_quality_gate_summary
 
 router = APIRouter(prefix="/api/projects", tags=["records"])
 
@@ -25,6 +28,16 @@ def _read_json_artifact(path: str | None) -> dict | None:
         with open(path) as f:
             return json.load(f)
     except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return None
+
+
+def _read_validation_report(path: str | None) -> ValidationReport | None:
+    payload = _read_json_artifact(path)
+    if payload is None:
+        return None
+    try:
+        return ValidationReport(**payload)
+    except ValidationError:
         return None
 
 
@@ -115,3 +128,34 @@ async def get_project_records(
         "latest_validation_report": _read_json_artifact(latest_validation_row.path) if latest_validation_row else None,
         "latest_export": latest_export,
     }
+
+
+@router.get("/{project_id}/quality-gate")
+async def get_project_quality_gate(
+    project_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: UserRow = Depends(require_user),
+):
+    """Return an operator-readable quality gate for the current project revision."""
+    _, project = await load_project_state(
+        db,
+        project_id,
+        owner_user_id=user_scope_id(user),
+    )
+    artifact_rows = await list_project_artifacts(db, project_id)
+    latest_validation_row = next(
+        (row for row in artifact_rows if row.kind == "validation_report"),
+        None,
+    )
+    latest_validation_report = _read_validation_report(
+        latest_validation_row.path if latest_validation_row else None
+    )
+    jobs = await list_project_jobs(db, project_id)
+    return build_quality_gate_summary(
+        QualityGateInput(
+            project=project,
+            artifacts=artifact_rows,
+            jobs=jobs,
+            latest_validation_report=latest_validation_report,
+        )
+    )

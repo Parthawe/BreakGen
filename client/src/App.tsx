@@ -10,6 +10,7 @@ import type {
   KeyboardProject,
   ProductDomainManifest,
   ProductFamilyManifest,
+  QualityGateSummary,
   ProjectRecords,
   WorkspaceStageManifest,
 } from "./types/project";
@@ -227,6 +228,7 @@ function App() {
   const [familyManifests, setFamilyManifests] = useState<ProductFamilyManifest[]>([]);
   const [providerManifests, setProviderManifests] = useState<GenerationProviderManifest[]>([]);
   const [records, setRecords] = useState<ProjectRecords | null>(null);
+  const [qualityGate, setQualityGate] = useState<QualityGateSummary | null>(null);
   const [recordsLoading, setRecordsLoading] = useState(false);
   const { projectId } = useParams();
   const project = useProjectStore((state) => state.project);
@@ -259,18 +261,24 @@ function App() {
     const id = targetProjectId ?? project?.project_id;
     if (!id) {
       setRecords(null);
+      setQualityGate(null);
       setRecordsLoading(false);
       return;
     }
     setRecordsLoading(true);
     try {
-      const payload = await api.records.get(id);
+      const [payload, gate] = await Promise.all([
+        api.records.get(id),
+        api.records.qualityGate(id),
+      ]);
       setRecords(payload);
+      setQualityGate(gate);
     } catch (error) {
       if (isApiError(error) && error.status === 401) {
         handleUnauthorized("Your session expired while refreshing project records. Sign in again to continue.");
       }
       setRecords(null);
+      setQualityGate(null);
     } finally {
       setRecordsLoading(false);
     }
@@ -302,6 +310,7 @@ function App() {
   useEffect(() => {
     if (!project) {
       setRecords(null);
+      setQualityGate(null);
       setRecordsLoading(false);
       return;
     }
@@ -518,6 +527,7 @@ function App() {
             familyManifest={activeFamilyManifest}
             providers={providerManifests}
             records={records}
+            qualityGate={qualityGate}
             loading={recordsLoading}
           />
         </div>
