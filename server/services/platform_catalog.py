@@ -7,6 +7,7 @@ from collections import defaultdict
 from server.models.platform import (
     ProductDomainManifest,
     ProductFamilyManifest,
+    TechnologyIntegrationManifest,
     WorkspaceStageManifest,
 )
 from server.models.project import ProductDomain, ProductFamily, domain_for_family
@@ -198,6 +199,164 @@ DOMAIN_METADATA: dict[ProductDomain, dict[str, str]] = {
 }
 
 
+TECHNOLOGY_INTEGRATIONS: list[TechnologyIntegrationManifest] = [
+    TechnologyIntegrationManifest(
+        id="stripe_billing",
+        display_name="Stripe Billing",
+        category="monetization",
+        status="recommended",
+        pricing_model="hybrid",
+        description="Subscription, usage-based billing, invoices, trials, and customer portal for a future paid alpha.",
+        breakgen_use="Use after activation is proven to sell maker/pro plans with metered export or generation credits.",
+        capabilities=["subscriptions", "usage_metering", "customer_portal", "invoicing"],
+        integration_phase="paid_alpha",
+        risk_notes=[
+            "Do not add billing before repeated exports and clear willingness to pay.",
+            "Usage events must come from durable project/job/artifact records, not client-side counters.",
+        ],
+        source_url="https://docs.stripe.com/billing",
+    ),
+    TechnologyIntegrationManifest(
+        id="lemon_squeezy",
+        display_name="Lemon Squeezy",
+        category="monetization",
+        status="candidate",
+        pricing_model="hybrid",
+        description="Merchant-of-record style subscription and usage-based billing option for a simpler paid launch.",
+        breakgen_use="Evaluate as a lower-ops alternative if BreakGen wants subscriptions plus usage reporting without building tax/payment operations early.",
+        capabilities=["subscriptions", "usage_reporting", "merchant_of_record"],
+        integration_phase="paid_alpha",
+        risk_notes=[
+            "Compare tax, payout, webhook, and usage-reporting fit against Stripe before committing.",
+        ],
+        source_url="https://docs.lemonsqueezy.com/help/products/usage-based-billing",
+    ),
+    TechnologyIntegrationManifest(
+        id="neon_postgres",
+        display_name="Neon Postgres",
+        category="infrastructure",
+        status="recommended",
+        pricing_model="free_tier",
+        description="Serverless Postgres with a free tier and branching-friendly workflow.",
+        breakgen_use="Use for hosted alpha database once SQLite is replaced and Alembic migrations exist.",
+        capabilities=["postgres", "branching", "autoscaling", "restore_points"],
+        integration_phase="hosted_alpha",
+        risk_notes=[
+            "Do not put alpha data on free-tier storage without backup and upgrade plan.",
+            "Requires async Postgres driver and migrations.",
+        ],
+        source_url="https://neon.com/pricing",
+    ),
+    TechnologyIntegrationManifest(
+        id="supabase",
+        display_name="Supabase",
+        category="infrastructure",
+        status="candidate",
+        pricing_model="free_tier",
+        description="Hosted Postgres platform with auth/storage options and a free plan.",
+        breakgen_use="Evaluate if BreakGen wants managed auth/storage primitives instead of custom auth plus separate object storage.",
+        capabilities=["postgres", "auth", "storage", "edge_functions"],
+        integration_phase="hosted_alpha",
+        risk_notes=[
+            "Avoid splitting canonical auth/project ownership across two systems unless migration is deliberate.",
+        ],
+        source_url="https://supabase.com/pricing",
+    ),
+    TechnologyIntegrationManifest(
+        id="cloudflare_r2",
+        display_name="Cloudflare R2",
+        category="storage",
+        status="recommended",
+        pricing_model="free_tier",
+        description="S3-compatible artifact storage with no egress bandwidth charges.",
+        breakgen_use="Store export ZIPs, validation reports, generated meshes, and mechanical artifacts outside the API filesystem.",
+        capabilities=["object_storage", "s3_api", "artifact_downloads"],
+        integration_phase="hosted_alpha",
+        risk_notes=[
+            "Operations still cost money after included usage; downloads must remain owner-scoped through registry rows.",
+        ],
+        source_url="https://developers.cloudflare.com/r2/pricing/",
+    ),
+    TechnologyIntegrationManifest(
+        id="kicad_cli",
+        display_name="KiCad CLI",
+        category="eda",
+        status="recommended",
+        pricing_model="open_source",
+        description="Command-line EDA toolchain for exporting Gerbers, drill files, SVGs, and PCB manufacturing evidence.",
+        breakgen_use="Run in a worker to turn revisioned electronics metadata into PCB fabrication outputs for one narrow family first.",
+        capabilities=["gerber_export", "drill_export", "pcb_checks", "worker_toolchain"],
+        integration_phase="hosted_alpha",
+        risk_notes=[
+            "Do not run synchronously in API handlers.",
+            "Record KiCad version and generated artifact hashes in project_artifacts.",
+        ],
+        source_url="https://docs.kicad.org/9.0/en/cli/cli.html",
+    ),
+    TechnologyIntegrationManifest(
+        id="cadquery",
+        display_name="CadQuery",
+        category="cad",
+        status="recommended",
+        pricing_model="open_source",
+        description="Python parametric CAD library for deterministic enclosures and STEP/STL/3MF-style outputs.",
+        breakgen_use="Generate family-aware trays, lids, mounting bosses, USB cutouts, and printable enclosure artifacts.",
+        capabilities=["parametric_cad", "step_export", "stl_export", "python_worker"],
+        integration_phase="hosted_alpha",
+        risk_notes=[
+            "Keep generated CAD derived from canonical project state; do not let edited CAD become source of truth.",
+        ],
+        source_url="https://cadquery.readthedocs.io/",
+    ),
+    TechnologyIntegrationManifest(
+        id="openscad",
+        display_name="OpenSCAD",
+        category="cad",
+        status="candidate",
+        pricing_model="open_source",
+        description="Scriptable CAD option with command-line export for deterministic printable parts.",
+        breakgen_use="Use as a fallback or template-friendly path for simple enclosure/fixture generation.",
+        capabilities=["scriptable_cad", "stl_export", "command_line"],
+        integration_phase="hosted_alpha",
+        risk_notes=[
+            "Better for simple constructive geometry than rich filleted product surfaces.",
+        ],
+        source_url="https://openscad.org/documentation.html",
+    ),
+    TechnologyIntegrationManifest(
+        id="jlcpcb_api",
+        display_name="JLCPCB API",
+        category="fabrication",
+        status="planned",
+        pricing_model="usage_based",
+        description="PCB, stencil, and manufacturing workflow API with quotation/order lifecycle capabilities.",
+        breakgen_use="After Gerber/BOM completeness exists, offer quote handoff or procurement workflow from an export bundle.",
+        capabilities=["pcb_quote", "file_upload", "order_tracking"],
+        integration_phase="scale",
+        risk_notes=[
+            "Never send a design to fabrication before validation and user confirmation.",
+            "Requires complete Gerbers, drill files, BOM, and clear consent.",
+        ],
+        source_url="https://api.jlcpcb.com/",
+    ),
+    TechnologyIntegrationManifest(
+        id="github_releases",
+        display_name="GitHub Releases",
+        category="distribution",
+        status="candidate",
+        pricing_model="free_tier",
+        description="Release and asset API for publishing public sample bundles, proof ZIPs, and versioned demo artifacts.",
+        breakgen_use="Attach real sample export bundles to public demo releases without routing all traffic through app storage.",
+        capabilities=["release_assets", "download_urls", "versioned_samples"],
+        integration_phase="private_alpha",
+        risk_notes=[
+            "Public release assets must not contain user-private project data.",
+        ],
+        source_url="https://docs.github.com/rest/releases/releases",
+    ),
+]
+
+
 def _family_stage_overrides() -> dict[ProductFamily, dict[str, dict[str, object]]]:
     return {
         ProductFamily.KEYBOARD: {
@@ -334,3 +493,25 @@ def list_product_family_manifests() -> list[ProductFamilyManifest]:
             )
         )
     return manifests
+
+
+def list_technology_integrations(
+    *,
+    category: str | None = None,
+    status: str | None = None,
+) -> list[TechnologyIntegrationManifest]:
+    """Return external technology and business integrations on the roadmap."""
+    integrations = TECHNOLOGY_INTEGRATIONS
+    if category is not None:
+        integrations = [
+            integration
+            for integration in integrations
+            if integration.category == category
+        ]
+    if status is not None:
+        integrations = [
+            integration
+            for integration in integrations
+            if integration.status == status
+        ]
+    return integrations

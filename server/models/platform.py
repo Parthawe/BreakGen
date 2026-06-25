@@ -72,3 +72,40 @@ class GenerationProviderManifest(BaseModel):
     supported_asset_types: list[str] = Field(default_factory=list)
     capabilities: list[str] = Field(default_factory=list)
     default_for: list[str] = Field(default_factory=list)
+
+
+class TechnologyIntegrationManifest(BaseModel):
+    """Describes external technology BreakGen can use or integrate with."""
+
+    id: str
+    display_name: str
+    category: Literal[
+        "monetization",
+        "infrastructure",
+        "storage",
+        "cad",
+        "eda",
+        "fabrication",
+        "distribution",
+        "analytics",
+    ]
+    status: Literal["recommended", "candidate", "planned", "deferred"]
+    pricing_model: Literal[
+        "free_tier",
+        "subscription",
+        "usage_based",
+        "hybrid",
+        "open_source",
+        "manual",
+    ]
+    description: str
+    breakgen_use: str
+    capabilities: list[str] = Field(default_factory=list)
+    integration_phase: Literal[
+        "private_alpha",
+        "hosted_alpha",
+        "paid_alpha",
+        "scale",
+    ] = "private_alpha"
+    risk_notes: list[str] = Field(default_factory=list)
+    source_url: str | None = None

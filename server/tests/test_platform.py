@@ -7,6 +7,7 @@ import pytest
 from server.api.platform import (
     get_generation_providers,
     get_hardware_modules,
+    get_platform_integrations,
     get_product_domains,
     get_product_families,
 )
@@ -122,3 +123,43 @@ async def test_generation_providers_include_live_and_planned_backends():
     assert {"meshy", "shell_library", "tripo", "hyper3d_rodin"} <= provider_ids
     meshy = next(entry for entry in providers if entry["id"] == "meshy")
     assert meshy["supported_asset_types"] == ["keycap"]
+
+
+@pytest.mark.anyio
+async def test_platform_integrations_expose_monetization_and_software_stack():
+    integrations = await get_platform_integrations()
+    integration_ids = {entry["id"] for entry in integrations}
+
+    assert {
+        "stripe_billing",
+        "lemon_squeezy",
+        "neon_postgres",
+        "cloudflare_r2",
+        "kicad_cli",
+        "cadquery",
+        "github_releases",
+        "jlcpcb_api",
+    } <= integration_ids
+
+    stripe = next(entry for entry in integrations if entry["id"] == "stripe_billing")
+    assert stripe["category"] == "monetization"
+    assert stripe["pricing_model"] == "hybrid"
+    assert stripe["integration_phase"] == "paid_alpha"
+
+    kicad = next(entry for entry in integrations if entry["id"] == "kicad_cli")
+    assert kicad["pricing_model"] == "open_source"
+    assert "gerber_export" in kicad["capabilities"]
+
+
+@pytest.mark.anyio
+async def test_platform_integrations_can_filter_by_category_and_status():
+    monetization = await get_platform_integrations(category="monetization")
+    assert {entry["id"] for entry in monetization} == {
+        "stripe_billing",
+        "lemon_squeezy",
+    }
+
+    recommended = await get_platform_integrations(status="recommended")
+    assert {"stripe_billing", "cloudflare_r2", "kicad_cli", "cadquery"} <= {
+        entry["id"] for entry in recommended
+    }

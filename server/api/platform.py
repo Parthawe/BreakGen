@@ -8,6 +8,7 @@ from server.ai.providers import provider_registry
 from server.models.project import ProductDomain, ProductFamily
 from server.services.hardware_catalog import list_hardware_modules
 from server.services.platform_catalog import (
+    list_technology_integrations,
     list_product_domain_manifests,
     list_product_family_manifests,
 )
@@ -55,3 +56,15 @@ async def get_hardware_modules(
 async def get_generation_providers():
     """Return generation provider manifests and current availability."""
     return [manifest.model_dump(mode="json") for manifest in provider_registry.manifests()]
+
+
+@router.get("/api/platform/integrations")
+async def get_platform_integrations(
+    category: str | None = None,
+    status: str | None = None,
+):
+    """Return external technology, monetization, and software integration options."""
+    return [
+        manifest.model_dump(mode="json")
+        for manifest in list_technology_integrations(category=category, status=status)
+    ]
