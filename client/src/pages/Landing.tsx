@@ -40,6 +40,41 @@ const CREATIVE_LOOP = [
   },
 ];
 
+const BUILD_PIPELINE = [
+  {
+    label: "State",
+    title: "One canonical product record",
+    body: "The authored project owns family, layout, controls, accepted assets, electronics settings, derived outputs, and revision history.",
+    artifact: "KeyboardProject r2",
+  },
+  {
+    label: "Compile",
+    title: "Family-specific compilers",
+    body: "The same platform spine routes a keyboard, stream deck, MIDI surface, or gamepad through compilers that understand that family.",
+    artifact: "electronics + panel",
+  },
+  {
+    label: "Validate",
+    title: "Truth before download",
+    body: "Geometry, GPIO budget, module compatibility, labels, assets, and export readiness are checked before the bundle is trusted.",
+    artifact: "9 checks / 0 warnings",
+  },
+  {
+    label: "Record",
+    title: "Artifacts with provenance",
+    body: "Mechanical outputs, validation reports, and export bundles are stored with revision, source hash, producer, and checksum metadata.",
+    artifact: "sha256 + lineage",
+  },
+];
+
+const PROOF_RECEIPT = [
+  ["command", "make demo-proof"],
+  ["project", "yc_proof_streamdeck"],
+  ["target", "hid_control_surface"],
+  ["mechanical", "panel.dxf + summary"],
+  ["readiness", "prototype_ready"],
+];
+
 const PRODUCT_FAMILIES = [
   {
     id: "keyboard",
@@ -379,6 +414,83 @@ export function Landing() {
               </article>
             ))}
           </div>
+        </section>
+
+        <section className="section-rule mt-10 grid gap-8 pt-10 lg:grid-cols-[minmax(0,0.84fr)_minmax(360px,0.52fr)]">
+          <div>
+            <div className="eyebrow">How it is built</div>
+            <h2 className="mt-4 max-w-[760px] text-[40px] font-semibold leading-[0.95] tracking-[-0.055em] text-[var(--text-primary)] md:text-[52px]">
+              BreakGen is an intent compiler with a visible evidence trail.
+            </h2>
+            <p className="mt-5 max-w-[700px] text-[15px] leading-[1.85] text-[var(--text-secondary)]">
+              The product does not stop at a render. Each project moves through a
+              revisioned state model, family-aware compilers, validation gates, and
+              durable artifact records so the output can be inspected after the design changes.
+            </p>
+
+            <div className="mt-7 grid gap-4 md:grid-cols-2">
+              {BUILD_PIPELINE.map((item) => (
+                <article key={item.label} className="surface-panel rounded-[26px] p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="eyebrow">{item.label}</div>
+                    <span className="surface-chip rounded-full px-3 py-1 text-[10px] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
+                      {item.artifact}
+                    </span>
+                  </div>
+                  <h3 className="mt-4 text-[20px] font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
+                    {item.title}
+                  </h3>
+                  <p className="mt-3 text-[13px] leading-[1.75] text-[var(--text-secondary)]">
+                    {item.body}
+                  </p>
+                </article>
+              ))}
+            </div>
+          </div>
+
+          <aside className="surface-strong rounded-[32px] p-6">
+            <div className="eyebrow">Reviewer proof path</div>
+            <h3 className="mt-4 text-[28px] font-semibold leading-[1] tracking-[-0.045em] text-[var(--text-primary)]">
+              A real bundle can be generated from the repo.
+            </h3>
+            <p className="mt-4 text-[13px] leading-[1.8] text-[var(--text-secondary)]">
+              The public site is static, but the repository includes a deterministic
+              backend proof that creates a Stream Deck project, compiles it, validates it,
+              exports a ZIP, and prints the SHA-256.
+            </p>
+
+            <div className="mt-6 overflow-hidden rounded-[24px] border border-[var(--border-subtle)] bg-[var(--surface-subtle)]">
+              {PROOF_RECEIPT.map(([label, value]) => (
+                <div key={label} className="grid grid-cols-[110px_minmax(0,1fr)] border-b border-[var(--border-subtle)] px-4 py-3 last:border-b-0">
+                  <span className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">
+                    {label}
+                  </span>
+                  <span className="font-mono text-[12px] text-[var(--text-primary)]">
+                    {value}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <div className="surface-panel rounded-[22px] p-4">
+                <div className="text-[30px] font-semibold leading-none tracking-[-0.05em] text-[var(--text-primary)]">
+                  r2
+                </div>
+                <div className="mt-2 text-[10px] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
+                  exported revision
+                </div>
+              </div>
+              <div className="surface-panel rounded-[22px] p-4">
+                <div className="text-[30px] font-semibold leading-none tracking-[-0.05em] text-[var(--text-primary)]">
+                  4
+                </div>
+                <div className="mt-2 text-[10px] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
+                  durable artifacts
+                </div>
+              </div>
+            </div>
+          </aside>
         </section>
 
         <section className="section-rule mt-10 pt-10">
