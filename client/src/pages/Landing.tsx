@@ -75,6 +75,25 @@ const PROOF_RECEIPT = [
   ["readiness", "prototype_ready"],
 ];
 
+const MAKER_SIGNALS = [
+  {
+    label: "Controls are mixed",
+    body: "DIY projects combine switches, OLEDs, encoders, LCDs, sliders, knobs, joysticks, and arcade buttons. BreakGen should model modules directly instead of forcing every device through keyboard-only fields.",
+  },
+  {
+    label: "Cases are the bottleneck",
+    body: "Shared projects often solve the enclosure around a known board or controller. BreakGen should make mounting, access, screw points, feet, and panel separation first-class constraints.",
+  },
+  {
+    label: "Build notes matter",
+    body: "The useful designs include print orientation, hardware, fasteners, and assembly assumptions. BreakGen exports should include the same practical build evidence alongside geometry.",
+  },
+  {
+    label: "Remix is the workflow",
+    body: "Maker communities improve by modifying proven shapes. BreakGen can turn that habit into templates, locked baselines, revision history, and repeatable proof bundles.",
+  },
+];
+
 const PRODUCT_FAMILIES = [
   {
     id: "keyboard",
@@ -491,6 +510,31 @@ export function Landing() {
               </div>
             </div>
           </aside>
+        </section>
+
+        <section className="section-rule mt-10 grid gap-8 pt-10 lg:grid-cols-[360px_minmax(0,1fr)]">
+          <div>
+            <div className="eyebrow">Thingiverse signal</div>
+            <h2 className="mt-4 text-[36px] font-semibold leading-[0.96] tracking-[-0.05em] text-[var(--text-primary)]">
+              The demand already exists. The missing layer is the compiler.
+            </h2>
+            <p className="mt-4 text-[14px] leading-[1.8] text-[var(--text-secondary)]">
+              Public maker libraries are full of one-off macro pads, stream-deck alternatives,
+              MIDI enclosures, and controller shells. They prove people want custom electronics,
+              but the workflow still depends on copying files, reading comments, and hand-adapting geometry.
+            </p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            {MAKER_SIGNALS.map((signal) => (
+              <article key={signal.label} className="surface-panel rounded-[26px] p-5">
+                <div className="eyebrow">{signal.label}</div>
+                <p className="mt-4 text-[14px] leading-[1.8] text-[var(--text-secondary)]">
+                  {signal.body}
+                </p>
+              </article>
+            ))}
+          </div>
         </section>
 
         <section className="section-rule mt-10 pt-10">
