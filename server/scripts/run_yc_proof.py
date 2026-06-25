@@ -17,7 +17,7 @@ from server.api.geometry import compile_mechanical_for_project
 from server.api.pcb import compile_pcb_for_project
 from server.config import settings
 from server.db.database import async_session, engine
-from server.db.models import ProjectArtifactRow, ProjectJobRow, ProjectRevisionRow, ProjectRow
+from server.db.models import Base, ProjectArtifactRow, ProjectJobRow, ProjectRevisionRow, ProjectRow
 from server.models.project import KeyboardProject, LayoutSpec, ProductDomain, ProductFamily, ProjectStatus, domain_for_family
 from server.models.supported_configs import SUPPORTED_TEMPLATES
 from server.services.artifact_registry import delete_project_artifact_tree
@@ -124,6 +124,9 @@ def _read_json(path: str) -> dict[str, Any]:
 
 
 async def run_proof(*, project_id: str, template_id: str, name: str, reset: bool) -> dict[str, Any]:
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
     async with async_session() as db:
         existing = (
             await db.execute(select(ProjectRow).where(ProjectRow.project_id == project_id))

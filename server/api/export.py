@@ -29,7 +29,7 @@ router = APIRouter(prefix="/api/projects", tags=["export"])
 
 
 def _export_readiness(report_status: CheckStatus) -> str:
-    return "prototype_ready" if report_status == CheckStatus.PASS else "candidate"
+    return "review_ready" if report_status == CheckStatus.PASS else "candidate"
 
 
 @router.post("/{project_id}/validate")
@@ -130,7 +130,7 @@ async def export_project_bundle(
     project.exports.exported_at = now
     project.status = (
         ProjectStatus.EXPORTED
-        if readiness == "prototype_ready"
+        if readiness == "review_ready"
         else ProjectStatus.VALIDATED
     )
     await persist_project_metadata(

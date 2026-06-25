@@ -64,7 +64,7 @@ export type AcceptanceState =
   | "candidate"
   | "accepted"
   | "rejected"
-  | "prototype_ready"
+  | "review_ready"
   | "production_ready";
 
 // --- Key ---

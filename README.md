@@ -62,7 +62,7 @@ revision: r2 status=exported
 electronics: physical_rows 14/26 GPIO target=hid_control_surface
 mechanical: panel artifacts=mech_panel_dxf_r2, mech_panel_summary_r2
 validation: pass checks=9 warnings=0
-export: bundle_... readiness=prototype_ready sha256=...
+export: bundle_... readiness=review_ready sha256=...
 ```
 
 ## Local Development
@@ -142,6 +142,8 @@ Current gaps that still need product work:
 - [server/](server/): FastAPI backend, compilers, validation, artifacts, auth, and tests
 - [client/](client/): React workspace, public demo, authenticated alpha UI
 - [docs/PRIVATE_ALPHA_RUNBOOK.md](docs/PRIVATE_ALPHA_RUNBOOK.md): reviewer and operator runbook
+- [docs/STARTUP_OPERATING_SYSTEM.md](docs/STARTUP_OPERATING_SYSTEM.md): YC/startup execution plan and company operating cadence
+- [docs/FINANCE_AND_OPS_MODEL.md](docs/FINANCE_AND_OPS_MODEL.md): finance, pricing, private-alpha ops, and cost discipline
 - [PRODUCT.md](PRODUCT.md): product context and positioning
 - [DESIGN.md](DESIGN.md): interface and brand direction
 - [PRODUCT_SPEC.md](PRODUCT_SPEC.md): longer-form architecture and product specification

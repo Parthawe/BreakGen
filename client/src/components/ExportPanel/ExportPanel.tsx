@@ -18,7 +18,7 @@ function familyCopy(family: string | undefined) {
   if (!family) {
     return {
       validate: "Run the platform checks and review open issues before exporting.",
-      export: "Run validation checks, then package your fabrication bundle.",
+      export: "Run validation checks, then package your review-ready evidence bundle.",
       scope:
         "Geometry overlap, family-specific module requirements, module clearance, GPIO feasibility, labeling, switch selection, and assigned asset acceptance.",
     };
@@ -27,7 +27,7 @@ function familyCopy(family: string | undefined) {
   if (family === "keyboard" || family === "macropad") {
     return {
       validate: "Run switch, spacing, matrix, and fabrication checks before exporting the control surface.",
-      export: "Package the switch plate, firmware metadata, and revision-linked validation records.",
+      export: "Package the switch plate, firmware metadata, and revision-linked validation records for review.",
       scope:
         "Switch selection, stabilizer fit, spacing, matrix feasibility, GPIO usage, labeling, assigned assets, and export readiness.",
     };
@@ -35,7 +35,7 @@ function familyCopy(family: string | undefined) {
 
   return {
     validate: "Run control, module, GPIO, and mechanical checks before exporting the controller bundle.",
-    export: "Package the control-panel outputs, mapping metadata, and revision-linked validation records.",
+    export: "Package the control-panel outputs, mapping metadata, and revision-linked validation records for review.",
     scope:
       "Control spacing, module compatibility, GPIO feasibility, labels, mechanical readiness, asset acceptance, and export readiness.",
   };
@@ -101,9 +101,9 @@ export function ExportPanel({
       a.click();
       URL.revokeObjectURL(a.href);
       setExportMessage(
-        readiness === "prototype_ready"
-          ? `Bundle exported with ${validationStatus} validation status and prototype-ready readiness.`
-          : `Bundle exported for review with ${validationStatus} validation status. Resolve warnings before treating it as prototype-ready.`
+        readiness === "review_ready"
+          ? `Bundle exported with ${validationStatus} validation status and review-ready evidence.`
+          : `Bundle exported as a candidate with ${validationStatus} validation status. Resolve warnings before relying on it for prototype planning.`
       );
       await loadProject(project.project_id);
       await onRecordsRefresh?.();
@@ -117,7 +117,7 @@ export function ExportPanel({
   const exportLabel = !validation
     ? "Run validation first"
     : validation.status === "pass"
-      ? "Download Production Bundle"
+      ? "Download Review Bundle"
       : validation.status === "warn"
         ? "Download Review Bundle"
         : "Fix errors first";
@@ -205,7 +205,7 @@ export function ExportPanel({
         </div>
         <div className="text-[12px] leading-[1.7] text-[var(--text-secondary)]">
           {showExport
-            ? "Mechanical DXF/spec artifacts, firmware metadata, validation report, manifest, and build guide. Bundle readiness tracks validation status instead of assuming fabrication readiness."
+            ? "Mechanical DXF/spec artifacts, firmware metadata, validation report, manifest, and build guide. Current bundles are review-ready evidence, not complete fabrication packages."
             : copy.scope}
         </div>
       </div>
@@ -213,7 +213,7 @@ export function ExportPanel({
       {project?.exports.bundle_id && (
         <div className="mt-3 text-[11px] text-[var(--text-tertiary)]">
           Last export: {project.exports.bundle_id}
-          {project.status === "exported" ? " · prototype-ready" : " · review bundle"}
+          {project.status === "exported" ? " · review-ready" : " · candidate bundle"}
         </div>
       )}
 

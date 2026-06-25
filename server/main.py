@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from server.api import auth, export, geometry, pcb, platform, projects, records, switches, templates
-from server.config import SERVER_DIR
+from server.config import SERVER_DIR, settings
 from server.db.database import engine
 from server.db.models import Base
 
@@ -32,11 +32,12 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS for local development (Vite dev server on :5173)
+# CORS origins are environment-backed so hosted API deployments only trust
+# the configured frontend origins.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
-    allow_credentials=True,
+    allow_origins=settings.cors_origin_list,
+    allow_credentials=settings.cors_allow_credentials,
     allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
 )

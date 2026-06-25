@@ -72,7 +72,7 @@ const PROOF_RECEIPT = [
   ["project", "yc_proof_streamdeck"],
   ["target", "hid_control_surface"],
   ["mechanical", "panel.dxf + summary"],
-  ["readiness", "prototype_ready"],
+  ["readiness", "review_ready"],
 ];
 
 const MAKER_SIGNALS = [
@@ -186,7 +186,7 @@ const COMPILER_TRACKS = [
   { label: "Layout", value: "17 controls placed", tone: "#7d87ff" },
   { label: "Electronics", value: "hid control surface", tone: "#48d48b" },
   { label: "Mechanical", value: "panel artifacts compiled", tone: "#d0a16c" },
-  { label: "Export", value: "prototype-ready bundle", tone: "#4db7ff" },
+  { label: "Export", value: "review-ready bundle", tone: "#4db7ff" },
 ];
 
 function Glyph({

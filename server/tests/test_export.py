@@ -89,7 +89,7 @@ def test_manifest_has_artifact_hashes_and_readiness():
     assert manifest["project_id"] == "export_test"
     assert manifest["revision"] == 1
     assert manifest["validation_status"] == "pass"
-    assert manifest["export_readiness"] == "prototype_ready"
+    assert manifest["export_readiness"] == "review_ready"
     assert len(manifest["artifacts"]) >= 5
     for artifact in manifest["artifacts"]:
         assert "sha256" in artifact
@@ -114,6 +114,7 @@ def test_bundle_uses_supplied_validation_report():
     assert manifest["export_readiness"] == "candidate"
     assert bundled_report["report_id"] == report.report_id
     assert "candidate" in guide
+    assert "does not yet include Gerbers" in guide
 
 
 def test_handheld_bundle_contains_shell_artifacts():

@@ -103,7 +103,7 @@ Reviewers should test the authenticated product in this order:
 - stale revision conflicts should be explicit
 - expired sessions should be explicit
 - backend outage should be explicit
-- export truth should distinguish review vs prototype-ready states
+- export truth should distinguish candidate, review-ready, and future prototype-ready states
 
 ## Provider Expectations
 
@@ -173,5 +173,6 @@ Check:
 Check:
 
 - validation revision matches current project revision
-- bundle readiness is `prototype_ready` only when validation gates passed
+- bundle readiness is `review_ready` when current validation gates pass
+- do not call a bundle `prototype_ready` until BOM, enclosure, PCB/fabrication, and assembly assumptions are complete enough for a physical build attempt
 - artifact history reflects the current revision

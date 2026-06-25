@@ -233,7 +233,7 @@ def record_export_bundle(
     zip_path: str | Path,
     validation_report_id: str,
     validation_status: str | None = None,
-    acceptance_state: str = "prototype_ready",
+    acceptance_state: str = "review_ready",
     domain: str | None = None,
     family: str | None = None,
     source_spec_hash: str | None = None,

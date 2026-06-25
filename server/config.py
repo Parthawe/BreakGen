@@ -27,11 +27,22 @@ class Settings(BaseSettings):
     min_password_length: int = 8
     public_signup_enabled: bool = False
     signup_invite_code: str = ""
+    cors_origins: str = "http://localhost:5173"
+    cors_allow_credentials: bool = True
 
     # Meshy AI (Phase 3)
     meshy_api_key: str = ""
     meshy_api_url: str = "https://api.meshy.ai"
     meshy_model_download_max_bytes: int = 64 * 1024 * 1024
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        """Return CORS origins from a comma-separated environment value."""
+        return [
+            origin.strip()
+            for origin in self.cors_origins.split(",")
+            if origin.strip()
+        ]
 
     @model_validator(mode="after")
     def validate_security_settings(self) -> "Settings":
@@ -44,6 +55,16 @@ class Settings(BaseSettings):
         if not self.debug and self.public_signup_enabled and not self.signup_invite_code:
             raise ValueError(
                 "BREAKGEN_SIGNUP_INVITE_CODE must be set when public signup is enabled in production"
+            )
+        if not self.cors_origin_list:
+            raise ValueError("BREAKGEN_CORS_ORIGINS must include at least one origin")
+        if (
+            not self.debug
+            and self.cors_allow_credentials
+            and "*" in self.cors_origin_list
+        ):
+            raise ValueError(
+                "BREAKGEN_CORS_ORIGINS cannot include * with credentials in production"
             )
         return self
 

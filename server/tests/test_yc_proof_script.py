@@ -20,6 +20,13 @@ async def _make_session(tmp_path: Path):
     return engine, session_factory
 
 
+async def _make_empty_session(tmp_path: Path):
+    db_path = tmp_path / "yc-proof-empty.db"
+    engine = create_async_engine(f"sqlite+aiosqlite:///{db_path}")
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    return engine, session_factory
+
+
 @pytest.mark.anyio
 async def test_run_yc_proof_creates_real_bundle_and_artifacts(tmp_path: Path, monkeypatch):
     engine, session_factory = await _make_session(tmp_path)
@@ -43,7 +50,7 @@ async def test_run_yc_proof_creates_real_bundle_and_artifacts(tmp_path: Path, mo
         assert summary["electronics"]["firmware_target"] == "hid_control_surface"
         assert summary["mechanical"]["kind"] == "panel"
         assert summary["validation"]["status"] == "pass"
-        assert summary["export"]["readiness"] == "prototype_ready"
+        assert summary["export"]["readiness"] == "review_ready"
         assert summary["export"]["sha256"] and len(summary["export"]["sha256"]) == 64
         assert Path(summary["export"]["path"]).exists()
         assert [artifact["kind"] for artifact in summary["artifacts"]].count("validation_report") == 1
@@ -53,5 +60,29 @@ async def test_run_yc_proof_creates_real_bundle_and_artifacts(tmp_path: Path, mo
             "validation_report",
             "export_bundle",
         }
+    finally:
+        await engine.dispose()
+
+
+@pytest.mark.anyio
+async def test_run_yc_proof_initializes_clean_database(tmp_path: Path, monkeypatch):
+    engine, session_factory = await _make_empty_session(tmp_path)
+    artifacts_dir = tmp_path / "artifacts-clean"
+    monkeypatch.setattr("server.scripts.run_yc_proof.engine", engine)
+    monkeypatch.setattr("server.scripts.run_yc_proof.async_session", session_factory)
+    monkeypatch.setattr("server.services.artifact_registry.settings.artifacts_dir", str(artifacts_dir))
+    monkeypatch.setattr("server.export.bundler.settings.artifacts_dir", str(artifacts_dir))
+
+    try:
+        summary = await run_proof(
+            project_id="yc_proof_clean_db",
+            template_id="streamdeck_display_3x5",
+            name="YC Proof Clean DB",
+            reset=True,
+        )
+
+        assert summary["project_id"] == "yc_proof_clean_db"
+        assert summary["export"]["readiness"] == "review_ready"
+        assert Path(summary["export"]["path"]).exists()
     finally:
         await engine.dispose()

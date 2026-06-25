@@ -242,7 +242,7 @@ const baseValidationReport: ValidationReport = {
       id: "asset_acceptance",
       category: "appearance",
       status: "warn",
-      details: "One candidate cap variant is still pending review before prototype-ready export.",
+      details: "One candidate cap variant is still pending review before review-ready export.",
     },
   ],
 };

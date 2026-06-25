@@ -53,7 +53,7 @@ function acceptanceTone(state: AcceptanceState | null): string {
   switch (state) {
     case "accepted":
       return "text-emerald-300 bg-emerald-500/10 border-emerald-500/20";
-    case "prototype_ready":
+    case "review_ready":
       return "text-sky-300 bg-sky-500/10 border-sky-500/20";
     case "production_ready":
       return "text-indigo-300 bg-indigo-500/10 border-indigo-500/20";
