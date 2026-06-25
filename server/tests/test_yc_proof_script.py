@@ -46,7 +46,7 @@ async def test_run_yc_proof_creates_real_bundle_and_artifacts(tmp_path: Path, mo
         assert summary["project_id"] == "yc_proof_test"
         assert summary["product_family"] == "streamdeck"
         assert summary["revision"] == 2
-        assert summary["status"] == "exported"
+        assert summary["status"] == "validated"
         assert summary["electronics"]["firmware_target"] == "hid_control_surface"
         assert summary["mechanical"]["kind"] == "panel"
         assert summary["validation"]["status"] == "pass"

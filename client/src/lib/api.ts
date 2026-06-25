@@ -306,6 +306,8 @@ export const api = {
         gpio_remaining: number;
         firmware_target: string;
         control_protocol: string;
+        source_revision: number;
+        source_spec_hash: string;
         direct_pin_usage: Array<{
           element_type: string;
           control_count: number;

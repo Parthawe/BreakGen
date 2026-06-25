@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
 import { useProjectStore } from "../../stores/projectStore";
 
@@ -34,10 +34,16 @@ export function PCBPanel() {
   const persistedSummary = (project?.derived?.electronics as CompileResult | undefined) ?? null;
   const currentPersistedSummary =
     persistedSummary?.source_revision === project?.revision ? persistedSummary : null;
+  const currentResult =
+    result?.source_revision === project?.revision ? result : null;
   const stalePersistedSummary =
     persistedSummary && persistedSummary.source_revision !== project?.revision
       ? persistedSummary
       : null;
+
+  useEffect(() => {
+    setResult(null);
+  }, [project?.project_id, project?.revision]);
 
   const handleCompile = async () => {
     if (!project) return;
@@ -63,7 +69,7 @@ export function PCBPanel() {
     }
   };
 
-  const ready = !!result || !!currentPersistedSummary;
+  const ready = !!currentResult || !!currentPersistedSummary;
   const isHandheldProofFamily =
     project?.product_family === "handheld_companion" ||
     project?.product_family === "retro_handheld";
@@ -91,29 +97,29 @@ export function PCBPanel() {
         <div className="mb-6 rounded-xl border border-red-500/15 bg-red-500/8 px-4 py-3 text-[13px] text-red-600 dark:text-red-400">{error}</div>
       )}
 
-      {!error && !result && !ready && (
+      {!error && !currentResult && !ready && (
         <div className="surface-panel mb-6 rounded-xl px-4 py-3 text-[12px] leading-[1.6] text-[var(--text-secondary)]">
           No electronics compile is attached to this revision yet. Run the family-aware compile before treating firmware or GPIO state as current.
         </div>
       )}
 
-      {!error && stalePersistedSummary && !result && (
+      {!error && stalePersistedSummary && !currentResult && (
         <div className="mb-6 rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-[12px] leading-[1.6] text-amber-700 dark:text-amber-300">
           The saved electronics compile belongs to revision {stalePersistedSummary.source_revision ?? "unknown"}.
           Recompile before using firmware or GPIO data for revision {project?.revision}.
         </div>
       )}
 
-      {(result || ready) && (
+      {(currentResult || ready) && (
         <div className="space-y-5">
           {/* Matrix */}
           <div className="glass glass-soft rounded-2xl p-5">
             <div className="mb-4 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-tertiary)]">Electronics</div>
             <div className="grid grid-cols-3 gap-4 mb-4">
               {[
-                { v: String(result?.matrix_rows ?? currentPersistedSummary?.matrix_rows ?? "?"), l: "Rows" },
-                { v: String(result?.matrix_cols ?? currentPersistedSummary?.matrix_cols ?? "?"), l: "Cols" },
-                { v: String(result?.pins_needed ?? currentPersistedSummary?.pins_needed ?? "?"), l: "GPIO" },
+                { v: String(currentResult?.matrix_rows ?? currentPersistedSummary?.matrix_rows ?? "?"), l: "Rows" },
+                { v: String(currentResult?.matrix_cols ?? currentPersistedSummary?.matrix_cols ?? "?"), l: "Cols" },
+                { v: String(currentResult?.pins_needed ?? currentPersistedSummary?.pins_needed ?? "?"), l: "GPIO" },
               ].map(s => (
                 <div key={s.l} className="text-center">
                   <div className="text-[22px] font-bold font-mono text-[var(--text-primary)]">{s.v}</div>
@@ -127,26 +133,26 @@ export function PCBPanel() {
                   {isKeyboardLike ? "Matrix strategy" : "Control routing"}
                 </div>
                 <div className="mt-1 capitalize text-[var(--text-primary)]">
-                  {(result?.matrix_strategy ?? currentPersistedSummary?.matrix_strategy ?? "physical_rows").replace(/_/g, " ")}
+                  {(currentResult?.matrix_strategy ?? currentPersistedSummary?.matrix_strategy ?? "physical_rows").replace(/_/g, " ")}
                 </div>
               </div>
               <div className="glass-subcard rounded-xl px-4 py-3">
                 <div className="text-[var(--text-tertiary)]">Firmware target</div>
                 <div className="mt-1 text-[var(--text-primary)]">
-                  {(result?.firmware_target ?? currentPersistedSummary?.firmware_target ?? "qmk_via_keyboard").replace(/_/g, " ")}
+                  {(currentResult?.firmware_target ?? currentPersistedSummary?.firmware_target ?? "qmk_via_keyboard").replace(/_/g, " ")}
                 </div>
               </div>
               <div className="glass-subcard rounded-xl px-4 py-3">
                 <div className="text-[var(--text-tertiary)]">Control protocol</div>
                 <div className="mt-1 text-[var(--text-primary)]">
-                  {(result?.control_protocol ?? currentPersistedSummary?.control_protocol ?? "usb_hid_keyboard").replace(/_/g, " ")}
+                  {(currentResult?.control_protocol ?? currentPersistedSummary?.control_protocol ?? "usb_hid_keyboard").replace(/_/g, " ")}
                 </div>
               </div>
               <div className="glass-subcard rounded-xl px-4 py-3">
                 <div className="text-[var(--text-tertiary)]">Controller budget</div>
                 <div className="mt-1 text-[var(--text-primary)]">
-                  {result?.pins_needed ?? currentPersistedSummary?.pins_needed ?? "?"}/
-                  {result?.gpio_budget ?? currentPersistedSummary?.gpio_budget ?? "?"} GPIO
+                  {currentResult?.pins_needed ?? currentPersistedSummary?.pins_needed ?? "?"}/
+                  {currentResult?.gpio_budget ?? currentPersistedSummary?.gpio_budget ?? "?"} GPIO
                 </div>
               </div>
             </div>
@@ -155,11 +161,11 @@ export function PCBPanel() {
             </div>
           </div>
 
-          {(result ?? currentPersistedSummary) && (
+          {(currentResult ?? currentPersistedSummary) && (
             <div className="glass glass-soft rounded-2xl p-5">
               <div className="mb-4 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-tertiary)]">Pin Allocation</div>
               {(() => {
-                const summary = result ?? currentPersistedSummary!;
+                const summary = currentResult ?? currentPersistedSummary!;
                 return (
                   <>
               <div className="grid grid-cols-2 gap-3 mb-4">
