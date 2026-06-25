@@ -5034,8 +5034,93 @@ input[type="number"]::-webkit-outer-spin-button {
   }
 
   .theme-switcher__option {
+    min-width: 0;
     min-height: 44px;
     height: 44px;
     flex: 1 1 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .marketing-shell--revamp.px-5,
+  .app-shell.px-5 {
+    padding-inline: 0.875rem !important;
+  }
+
+  .marketing-shell--revamp > .relative,
+  .app-shell > .mx-auto,
+  .app-shell > .mx-auto > section,
+  .app-shell > .mx-auto > header,
+  .front-system .front-hero,
+  .site-page-hero {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .app-shell > .mx-auto > section > *,
+  .front-system .front-hero > *,
+  .site-page-hero > * {
+    min-width: 0;
+  }
+
+  .site-nav {
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    border-radius: 1.35rem;
+  }
+
+  .site-nav__brand,
+  .site-nav__actions,
+  .site-nav__links {
+    min-width: 0;
+  }
+
+  .site-nav__actions {
+    gap: 0.55rem;
+  }
+
+  .site-nav__actions .theme-switcher,
+  .app-shell header .theme-switcher {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .theme-switcher__option {
+    padding-inline: 0.55rem;
+  }
+
+  .site-nav__links {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow: visible;
+  }
+
+  .site-nav__link {
+    justify-content: center;
+    padding-inline: 0.68rem;
+  }
+
+  .front-system .front-hero__copy h1 {
+    max-width: min(7.2ch, 100%);
+    font-size: clamp(2.8rem, 13.2vw, 3.7rem);
+    overflow-wrap: anywhere;
+  }
+
+  .front-system .front-hero__copy p,
+  .site-page-hero__copy p,
+  .site-page-hero__copy h1 {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .site-page-hero__copy h1 {
+    font-size: clamp(2.25rem, 10.4vw, 3.2rem);
+  }
+
+  .app-shell header {
+    min-width: 0;
+    overflow: hidden;
   }
 }

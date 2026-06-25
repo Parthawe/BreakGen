@@ -10,6 +10,7 @@ import {
   publicDemoProviders,
 } from "../demo/publicDemo";
 import { trackEvent } from "../lib/analytics";
+import { PUBLIC_PROOF_FACTS, PUBLIC_PROOF_LINKS } from "../lib/proof";
 import { REPO_URL } from "../lib/runtime";
 import { useProjectStore } from "../stores/projectStore";
 
@@ -157,6 +158,45 @@ export function PublicDemo() {
               <p className="mt-3 text-[13px] leading-[1.75] text-[var(--text-secondary)]">
                 {statusMessage}
               </p>
+            </div>
+
+            <div className="section-rule p-6">
+              <div className="eyebrow">Inspectable proof</div>
+              <div className="mt-4 grid gap-3">
+                {[
+                  ["project", PUBLIC_PROOF_FACTS.projectId],
+                  ["revision", PUBLIC_PROOF_FACTS.revision],
+                  ["bundle", PUBLIC_PROOF_FACTS.readiness],
+                  ["validation", PUBLIC_PROOF_FACTS.validation],
+                ].map(([label, value]) => (
+                  <div key={label} className="flex items-center justify-between gap-4 text-[12px]">
+                    <span className="uppercase tracking-[0.12em] text-[var(--text-tertiary)]">{label}</span>
+                    <b className="text-right font-mono text-[var(--text-primary)]">{value}</b>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-4 text-[12px] leading-[1.7] text-[var(--text-secondary)]">
+                These public files are copied from a real `make demo-proof` run. They are review evidence, not a fabrication-complete package.
+              </p>
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                {[
+                  ["Manifest", PUBLIC_PROOF_LINKS.manifest],
+                  ["Validation", PUBLIC_PROOF_LINKS.validation],
+                  ["Build guide", PUBLIC_PROOF_LINKS.buildGuide],
+                  ["Summary", PUBLIC_PROOF_LINKS.summary],
+                ].map(([label, href]) => (
+                  <a
+                    key={label}
+                    href={href}
+                    target="_blank"
+                    rel="noopener"
+                    onClick={() => trackEvent("public_demo_proof_click", { surface: "demo", target: label.toLowerCase().replace(" ", "_") })}
+                    className="surface-button inline-flex min-h-10 items-center justify-center rounded-full px-3 text-center text-[12px] font-semibold"
+                  >
+                    {label}
+                  </a>
+                ))}
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto px-4 pb-4">

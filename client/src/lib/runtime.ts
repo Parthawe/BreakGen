@@ -16,5 +16,7 @@ export const POSTHOG_KEY = import.meta.env.VITE_POSTHOG_KEY || "";
 export const POSTHOG_HOST = import.meta.env.VITE_POSTHOG_HOST || "https://app.posthog.com";
 
 export function publicPath(path: string): string {
-  return path;
+  const cleanPath = path.startsWith("/") ? path.slice(1) : path;
+  const base = ROUTER_BASENAME.endsWith("/") ? ROUTER_BASENAME : `${ROUTER_BASENAME}/`;
+  return `${base}${cleanPath}`;
 }

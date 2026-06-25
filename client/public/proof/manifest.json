@@ -1,0 +1,62 @@
+{
+  "bundle_id": "bundle_4af704039efa",
+  "project_id": "yc_proof_streamdeck",
+  "revision": 2,
+  "created_at": "2026-06-25T21:39:01.212953Z",
+  "toolchain": {
+    "breakgen": "0.1.0",
+    "meshy_api": "not_used",
+    "kicad": "not_available",
+    "qmk_schema": "data_driven_v1"
+  },
+  "artifacts": [
+    {
+      "path": "BOM.md",
+      "sha256": "991ec31db513dd0a96ac38d337b59d97131b138ff940235e04122716580d24ce",
+      "category": "doc"
+    },
+    {
+      "path": "BUILD_GUIDE.md",
+      "sha256": "332eb4325a655314e81cb8d7214fd8e7c780e3a4ab91d5ab0b03e1fd5003c467",
+      "category": "doc"
+    },
+    {
+      "path": "bom.json",
+      "sha256": "eb63489fe45cc5be2a9c2707c1e281725fda826c573d2011b0d46b2f3f915123",
+      "category": "doc"
+    },
+    {
+      "path": "firmware/control-map.json",
+      "sha256": "ec8c8432b31f7ec56547be00ff9a64fb90a16fc87e27178d8b86c6209ec90688",
+      "category": "firmware"
+    },
+    {
+      "path": "firmware/info.json",
+      "sha256": "1729b6b1e79dc47184d9fe3bf11c98aeb3f654574e02522eba25a64eb12f8d13",
+      "category": "firmware"
+    },
+    {
+      "path": "firmware/keymap.json",
+      "sha256": "057acde843979e129b1ad9bac0f19cc8bf665046ae78ae72e90dfb1e7f2b3c58",
+      "category": "firmware"
+    },
+    {
+      "path": "firmware/via.json",
+      "sha256": "0afb8a53c1dcbec12a18222e3c22c4a0eae1c3f398b6cb3d6f2fd0bd0b8c8c3a",
+      "category": "firmware"
+    },
+    {
+      "path": "plate/plate.dxf",
+      "sha256": "1bab23d33c6bb7903435d44d34301e8e32a7b2a3d45d2aa4334b144e532ced2e",
+      "category": "plate"
+    },
+    {
+      "path": "validation_report.json",
+      "sha256": "b0313753ca766744df42674e613088c7110154c856055fb53a41e0e57e174b1a",
+      "category": "doc"
+    }
+  ],
+  "validation_report_id": "vr_9e859fbb7cdd",
+  "validation_status": "pass",
+  "export_readiness": "review_ready"
+}

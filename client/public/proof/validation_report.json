@@ -1,0 +1,80 @@
+{
+  "report_id": "vr_9e859fbb7cdd",
+  "project_id": "yc_proof_streamdeck",
+  "revision": 2,
+  "status": "pass",
+  "created_at": "2026-06-25T21:39:01.207296Z",
+  "checks": [
+    {
+      "id": "layout_nonempty",
+      "category": "geometry",
+      "status": "pass",
+      "details": "Layout has 17 placed element(s).",
+      "source": "digital"
+    },
+    {
+      "id": "family_required_modules",
+      "category": "module_compatibility",
+      "status": "skipped",
+      "details": "No additional family-specific module requirements for this product family.",
+      "source": "digital"
+    },
+    {
+      "id": "element_overlap",
+      "category": "geometry",
+      "status": "pass",
+      "details": "No overlapping elements detected.",
+      "source": "digital"
+    },
+    {
+      "id": "control_clearance",
+      "category": "module_compatibility",
+      "status": "pass",
+      "details": "Control spacing satisfies the current default clearance rules.",
+      "source": "digital"
+    },
+    {
+      "id": "stabilizer_assignment",
+      "category": "geometry",
+      "status": "pass",
+      "details": "All wide key-like elements have stabilizers assigned.",
+      "source": "digital"
+    },
+    {
+      "id": "matrix_feasibility",
+      "category": "electronics",
+      "status": "pass",
+      "details": "Estimated GPIO usage fits controller budget: 8 matrix pin(s) + 6 direct pin(s) = 14 / 26. Matrix strategy: physical_rows.",
+      "source": "digital"
+    },
+    {
+      "id": "footprint_source_coverage",
+      "category": "electronics",
+      "status": "pass",
+      "details": "All footprint ids are source-cataloged: 15 library-ready and 2 reference-only footprint(s).",
+      "source": "digital"
+    },
+    {
+      "id": "control_labels",
+      "category": "firmware",
+      "status": "pass",
+      "details": "All interactive elements have labels for default mappings and UI surfaces.",
+      "source": "digital"
+    },
+    {
+      "id": "switch_selected",
+      "category": "export",
+      "status": "pass",
+      "details": "Switch selected: cherry_mx_red",
+      "source": "digital"
+    },
+    {
+      "id": "assigned_asset_acceptance",
+      "category": "export",
+      "status": "skipped",
+      "details": "No appearance assets are attached to the project yet.",
+      "source": "digital"
+    }
+  ],
+  "notes": null
+}

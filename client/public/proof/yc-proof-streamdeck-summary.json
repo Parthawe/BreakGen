@@ -1,0 +1,41 @@
+{
+  "title": "BreakGen YC proof stream deck",
+  "generated_by": "make demo-proof",
+  "generated_at": "2026-06-25T21:39:01.212953Z",
+  "project_id": "yc_proof_streamdeck",
+  "product_family": "streamdeck",
+  "revision": 2,
+  "project_status": "validated",
+  "export_readiness": "review_ready",
+  "bundle_id": "bundle_4af704039efa",
+  "bundle_sha256": "90d147820c756ece310c21af4373d69afd68f1b9287936b393f813d6673e1fa7",
+  "validation_report_id": "vr_9e859fbb7cdd",
+  "validation_report_sha256": "b0313753ca766744df42674e613088c7110154c856055fb53a41e0e57e174b1a",
+  "panel_dxf_sha256": "130b2fdf7d9c4671b8108430a4764d181c00c80ff651f211661414463aa79b91",
+  "verification": {
+    "validation_status": "pass",
+    "validation_checks": 10,
+    "validation_warnings": 0,
+    "electronics_strategy": "physical_rows",
+    "gpio_usage": "14 / 26",
+    "firmware_target": "hid_control_surface"
+  },
+  "public_files": {
+    "manifest": "proof/manifest.json",
+    "validation_report": "proof/validation_report.json",
+    "build_guide": "proof/BUILD_GUIDE.md"
+  },
+  "bundle_contents": [
+    "BOM.md",
+    "BUILD_GUIDE.md",
+    "bom.json",
+    "firmware/control-map.json",
+    "firmware/info.json",
+    "firmware/keymap.json",
+    "firmware/via.json",
+    "manifest.json",
+    "plate/plate.dxf",
+    "validation_report.json"
+  ],
+  "caveat": "This is a revision-linked review-ready evidence bundle. It is not fabrication-complete until Gerbers, drill files, supplier-ready PCB BOM, final enclosure STL, and assembly outputs are included."
+}

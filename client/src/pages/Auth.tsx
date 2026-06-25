@@ -82,12 +82,12 @@ function AuthForm({ mode }: { mode: "login" | "signup" }) {
 
   return (
     <div className="app-shell min-h-screen px-5 py-5 md:px-8 md:py-8">
-      <div className="mx-auto flex min-h-[calc(100vh-2.5rem)] max-w-[1340px] flex-col gap-6 lg:flex-row">
-        <section className="surface-strong relative flex flex-1 overflow-hidden rounded-[34px] p-7 md:p-10">
+      <div className="mx-auto flex min-h-[calc(100vh-2.5rem)] max-w-[1340px] min-w-0 flex-col gap-6 lg:flex-row">
+        <section className="surface-strong relative flex min-w-0 flex-1 overflow-hidden rounded-[34px] p-6 md:p-10">
           <div className="landing-grid absolute inset-0 opacity-70" />
           <div className="landing-orb absolute -left-10 top-0 h-[24rem] w-[24rem]" />
           <div className="landing-orb-secondary absolute bottom-0 right-0 h-[20rem] w-[20rem]" />
-          <div className="relative z-10 flex max-w-[560px] flex-col">
+          <div className="relative z-10 flex min-w-0 max-w-[560px] flex-col">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <Link to="/" className="inline-flex min-w-0 items-center gap-3">
                 <div className="surface-chip flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl">
@@ -107,9 +107,9 @@ function AuthForm({ mode }: { mode: "login" | "signup" }) {
               </div>
             </div>
 
-            <div className="mt-16 max-w-[480px]">
+            <div className="mt-12 max-w-[480px] min-w-0 md:mt-16">
               <div className="eyebrow">Custom electronic products</div>
-              <h1 className="mt-5 text-[44px] font-semibold leading-[0.94] tracking-[-0.06em] text-[var(--text-primary)] md:text-[58px]">
+              <h1 className="mt-5 max-w-full text-[36px] font-semibold leading-[0.96] tracking-[-0.04em] text-[var(--text-primary)] sm:text-[44px] md:text-[58px] md:leading-[0.94] md:tracking-[-0.06em]">
                 Build the object and the proof around it in one system.
               </h1>
               <p className="mt-6 max-w-[430px] text-[15px] leading-[1.85] text-[var(--text-secondary)]">

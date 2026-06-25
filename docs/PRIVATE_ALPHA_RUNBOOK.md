@@ -148,6 +148,16 @@ Optional local smoke checks:
 - compile electronics and mechanical outputs
 - run validation and export
 
+## Operator Snapshot
+
+For a quick read-only view of alpha traction and failure signals:
+
+```bash
+./server/.venv/bin/python -m server.scripts.operator_snapshot
+```
+
+The snapshot returns user, project, launch lead, artifact, job, and usage-event counts plus grouped lead/project/job summaries. Lead emails are masked by default. Use `--show-emails` only for an explicit operator workflow.
+
 ## Failure Triage
 
 ### Frontend loads, API actions fail

@@ -53,6 +53,13 @@ make demo-proof
 
 That command creates a deterministic `yc_proof_streamdeck` project, compiles electronics and mechanical artifacts, runs validation, exports a bundle, and prints the bundle path plus SHA-256 provenance.
 
+The public client also exposes a checked-in proof snapshot for reviewers:
+
+- `/proof/yc-proof-streamdeck-summary.json`
+- `/proof/manifest.json`
+- `/proof/validation_report.json`
+- `/proof/BUILD_GUIDE.md`
+
 Example output:
 
 ```text
@@ -61,7 +68,7 @@ project: yc_proof_streamdeck (streamdeck)
 revision: r2 status=validated
 electronics: physical_rows 14/26 GPIO target=hid_control_surface
 mechanical: panel artifacts=mech_panel_dxf_r2, mech_panel_summary_r2
-validation: pass checks=9 warnings=0
+validation: pass checks=10 warnings=0
 export: bundle_... readiness=review_ready sha256=...
 ```
 

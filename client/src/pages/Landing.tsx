@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { LaunchCapture } from "../components/LaunchCapture";
 import { SiteNav } from "../components/SiteNav";
 import { trackEvent } from "../lib/analytics";
+import { PUBLIC_PROOF_LINKS } from "../lib/proof";
 import { PUBLIC_DEMO_PATH, PUBLIC_SITE, REPO_URL } from "../lib/runtime";
 import { useAuthStore } from "../stores/authStore";
 
@@ -307,13 +308,32 @@ function EvidencePanel() {
             ["project", "yc_proof_streamdeck"],
             ["mechanical", "panel.dxf + summary"],
             ["electronics", "hid control surface"],
-            ["validation", "9 checks, 0 blockers"],
+            ["validation", "10 checks, 0 warnings"],
             ["export", "zip + sha256"],
           ].map(([label, value]) => (
             <div key={label}>
               <span>{label}</span>
               <b>{value}</b>
             </div>
+          ))}
+        </div>
+        <div className="mt-5 grid grid-cols-2 gap-2">
+          {[
+            ["Manifest", PUBLIC_PROOF_LINKS.manifest],
+            ["Validation", PUBLIC_PROOF_LINKS.validation],
+            ["Build guide", PUBLIC_PROOF_LINKS.buildGuide],
+            ["Summary", PUBLIC_PROOF_LINKS.summary],
+          ].map(([label, href]) => (
+            <a
+              key={label}
+              href={href}
+              target="_blank"
+              rel="noopener"
+              onClick={() => trackEvent("landing_proof_click", { target: label.toLowerCase().replace(" ", "_") })}
+              className="surface-button inline-flex min-h-10 items-center justify-center rounded-full px-3 text-center text-[12px] font-semibold"
+            >
+              {label}
+            </a>
           ))}
         </div>
       </div>
