@@ -5,6 +5,8 @@ import tailwindcss from "@tailwindcss/vite";
 import { defineConfig, loadEnv } from "vite";
 
 function spaFallbackPlugin() {
+  const publicRoutes = ["marketplace", "how-it-works", "creators", "manufacturing", "demo"];
+
   return {
     name: "breakgen-spa-fallback",
     closeBundle() {
@@ -13,6 +15,11 @@ function spaFallbackPlugin() {
       const notFoundPath = path.join(distDir, "404.html");
       if (fs.existsSync(indexPath)) {
         fs.copyFileSync(indexPath, notFoundPath);
+        for (const route of publicRoutes) {
+          const routeDir = path.join(distDir, route);
+          fs.mkdirSync(routeDir, { recursive: true });
+          fs.copyFileSync(indexPath, path.join(routeDir, "index.html"));
+        }
       }
     },
   };
