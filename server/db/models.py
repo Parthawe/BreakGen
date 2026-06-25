@@ -108,3 +108,23 @@ class ProjectJobRow(Base):
     completed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+
+
+class LaunchLeadRow(Base):
+    """Consented public-launch lead captured from the website."""
+
+    __tablename__ = "launch_leads"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    email: Mapped[str] = mapped_column(String(320), index=True)
+    role: Mapped[str] = mapped_column(String(64))
+    intent: Mapped[str] = mapped_column(String(32), index=True)
+    note: Mapped[str] = mapped_column(Text, default="")
+    surface: Mapped[str] = mapped_column(String(32), index=True)
+    path: Mapped[str] = mapped_column(String(512), default="")
+    referrer: Mapped[str] = mapped_column(String(1024), default="")
+    source: Mapped[dict] = mapped_column(JSON, default=dict)
+    user_agent: Mapped[str] = mapped_column(String(512), default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )

@@ -55,14 +55,17 @@ Sources:
 No analytics keys or waitlist endpoints should be committed. Configure these in the hosting provider:
 
 ```bash
+VITE_API_BASE_URL=/api
 VITE_WAITLIST_ENDPOINT=
 VITE_DISCORD_INVITE_URL=
 VITE_PLAUSIBLE_DOMAIN=
 VITE_POSTHOG_KEY=
 VITE_POSTHOG_HOST=https://app.posthog.com
+BREAKGEN_LAUNCH_LEAD_RATE_LIMIT_PER_MINUTE=12
+BREAKGEN_LAUNCH_LEAD_NOTE_MAX_LENGTH=1000
 ```
 
-If `VITE_WAITLIST_ENDPOINT` is empty, the capture form falls back to a prefilled email handoff. This keeps the live site usable before backend lead capture is deployed.
+If `VITE_WAITLIST_ENDPOINT` is empty, the capture form posts to `VITE_API_BASE_URL + /launch/leads`. If that endpoint is unavailable, the form falls back to a prefilled email handoff. This keeps the live site usable on GitHub Pages while making hosted API deployments capture real rows.
 
 ## Waitlist Options
 
@@ -77,6 +80,49 @@ Use the smallest tool that closes the loop:
 Tally hidden fields can carry URL parameters and campaign source into a form submission. If Tally is used, include fields for `surface`, `path`, `intent`, `role`, `utm_source`, `utm_campaign`, and `referrer`.
 
 Source: [Tally hidden fields](https://tally.so/help/hidden-fields)
+
+## Backend Lead Intake
+
+The product backend now exposes:
+
+```text
+POST /api/launch/leads
+```
+
+Required payload:
+
+```json
+{
+  "email": "maker@example.com",
+  "role": "Maker",
+  "intent": "private_alpha",
+  "surface": "landing"
+}
+```
+
+Optional fields:
+
+```json
+{
+  "note": "A 16-key stream deck with encoders.",
+  "path": "/",
+  "referrer": "https://example.com",
+  "timestamp": "2026-06-25T06:00:00.000Z",
+  "utm_source": "discord",
+  "utm_medium": "community",
+  "utm_campaign": "alpha"
+}
+```
+
+Validation rules:
+
+- `intent` must be `private_alpha`, `community`, or `research`.
+- `surface` must be `landing` or `demo`.
+- Email is normalized to lowercase.
+- Notes are length-limited by `BREAKGEN_LAUNCH_LEAD_NOTE_MAX_LENGTH`.
+- Requests are throttled per client by `BREAKGEN_LAUNCH_LEAD_RATE_LIMIT_PER_MINUTE`.
+
+The endpoint stores only consented launch data and user-agent context. It uses in-memory rate limiting for MVP abuse protection and does not persist IP addresses.
 
 ## Discord Community Setup
 

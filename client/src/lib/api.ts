@@ -20,8 +20,9 @@ import type {
   UpdateProjectRequest,
   ValidationReport,
 } from "../types/project";
+import { API_BASE_URL } from "./runtime";
 
-const BASE = "/api";
+const BASE = API_BASE_URL;
 
 type ApiErrorCode =
   | "network_error"
@@ -110,7 +111,8 @@ async function parseErrorBody(res: Response): Promise<{ detail: string; body: un
 
 async function requestResponse(path: string, options?: RequestInit): Promise<Response> {
   try {
-    return await fetch(`${BASE}${path}`, {
+    const url = /^https?:\/\//i.test(path) ? path : `${BASE}${path}`;
+    return await fetch(url, {
       ...options,
       headers: {
         ...getAuthHeaders(),

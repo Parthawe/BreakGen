@@ -69,6 +69,17 @@ function mailtoUrl(email: string, role: string, mode: CaptureMode, note: string)
   return `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
 }
 
+function launchSourceParams() {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    utm_source: params.get("utm_source") || undefined,
+    utm_medium: params.get("utm_medium") || undefined,
+    utm_campaign: params.get("utm_campaign") || undefined,
+    utm_content: params.get("utm_content") || undefined,
+    utm_term: params.get("utm_term") || undefined,
+  };
+}
+
 export function LaunchCapture({ surface }: { surface: "landing" | "demo" }) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<CaptureMode>("alpha");
@@ -116,29 +127,25 @@ export function LaunchCapture({ surface }: { surface: "landing" | "demo" }) {
       path: window.location.pathname,
       referrer: document.referrer || "",
       timestamp: new Date().toISOString(),
+      ...launchSourceParams(),
     };
 
     try {
-      if (WAITLIST_ENDPOINT) {
-        const response = await fetch(WAITLIST_ENDPOINT, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        if (!response.ok) throw new Error(`Waitlist endpoint returned ${response.status}`);
-        markCaptured();
-        setSubmitState("sent");
-        trackEvent("launch_capture_submit", { surface, mode, role, endpoint: "configured" });
-        return;
-      }
-
+      const response = await fetch(WAITLIST_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) throw new Error(`Waitlist endpoint returned ${response.status}`);
+      markCaptured();
+      setSubmitState("sent");
+      trackEvent("launch_capture_submit", { surface, mode, role, endpoint: "configured" });
+    } catch {
       markCaptured();
       setSubmitState("fallback");
+      trackEvent("launch_capture_error", { surface, mode });
       trackEvent("launch_capture_submit", { surface, mode, role, endpoint: "email_fallback" });
       window.location.href = mailtoUrl(email.trim(), role, mode, note.trim());
-    } catch {
-      setSubmitState("error");
-      trackEvent("launch_capture_error", { surface, mode });
     }
   };
 

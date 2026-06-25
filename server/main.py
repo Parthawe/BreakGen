@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from server.api import auth, export, geometry, pcb, platform, projects, records, switches, templates
+from server.api import auth, export, geometry, launch, pcb, platform, projects, records, switches, templates
 from server.config import SERVER_DIR, settings
 from server.db.database import engine
 from server.db.models import Base
@@ -52,6 +52,7 @@ app.include_router(pcb.router)
 app.include_router(export.router)
 app.include_router(records.router)
 app.include_router(platform.router)
+app.include_router(launch.router)
 
 # AI generation router — isolated so missing httpx/meshy deps don't crash the server
 try:

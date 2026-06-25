@@ -29,6 +29,8 @@ class Settings(BaseSettings):
     signup_invite_code: str = ""
     cors_origins: str = "http://localhost:5173"
     cors_allow_credentials: bool = True
+    launch_lead_rate_limit_per_minute: int = 12
+    launch_lead_note_max_length: int = 1000
 
     # Meshy AI (Phase 3)
     meshy_api_key: str = ""
@@ -66,6 +68,10 @@ class Settings(BaseSettings):
             raise ValueError(
                 "BREAKGEN_CORS_ORIGINS cannot include * with credentials in production"
             )
+        if self.launch_lead_rate_limit_per_minute < 1:
+            raise ValueError("BREAKGEN_LAUNCH_LEAD_RATE_LIMIT_PER_MINUTE must be at least 1")
+        if self.launch_lead_note_max_length < 1:
+            raise ValueError("BREAKGEN_LAUNCH_LEAD_NOTE_MAX_LENGTH must be at least 1")
         return self
 
 
