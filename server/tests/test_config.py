@@ -48,9 +48,15 @@ def test_production_rejects_sqlite_database_url():
             )
 
 
-def test_r2_storage_requires_complete_configuration():
-    with pytest.raises(ValidationError, match="BREAKGEN_R2"):
-        Settings(artifact_storage_backend="r2", r2_bucket="breakgen")
+def test_r2_storage_backend_is_planned_not_active():
+    with pytest.raises(ValidationError, match="planned but not active"):
+        Settings(
+            artifact_storage_backend="r2",
+            r2_endpoint_url="https://example.r2.cloudflarestorage.com",
+            r2_bucket="breakgen",
+            r2_access_key_id="key",
+            r2_secret_access_key="secret",
+        )
 
 
 def test_usage_limits_must_be_positive():

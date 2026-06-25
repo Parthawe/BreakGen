@@ -38,6 +38,9 @@ class ProductFamilyManifest(BaseModel):
     display_name: str
     description: str
     status: Literal["enabled", "proof", "planned"] = Field(default="enabled")
+    readiness_tier: Literal["proven", "alpha", "proof", "planned"] = Field(default="planned")
+    readiness_label: str = ""
+    readiness_detail: str = ""
     stages: list[WorkspaceStageManifest] = Field(default_factory=list)
     required_inputs: list[str] = Field(default_factory=list)
     supported_capabilities: list[str] = Field(default_factory=list)

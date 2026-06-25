@@ -32,8 +32,7 @@ export type ProjectStatus =
   | "configured"
   | "generating"
   | "previewable"
-  | "validated"
-  | "exported";
+  | "validated";
 
 export type SwitchFamily = "mx" | "choc_v1" | "choc_v2";
 
@@ -318,6 +317,9 @@ export interface ProductFamilyManifest {
   display_name: string;
   description: string;
   status: "enabled" | "proof" | "planned";
+  readiness_tier: "proven" | "alpha" | "proof" | "planned";
+  readiness_label: string;
+  readiness_detail: string;
   stages: WorkspaceStageManifest[];
   required_inputs: string[];
   supported_capabilities: string[];

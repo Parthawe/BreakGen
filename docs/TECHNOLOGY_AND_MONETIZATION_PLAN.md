@@ -265,7 +265,7 @@ Do not add:
 P0:
 
 - Add hosted API and production database plan.
-- Add artifact storage abstraction. **Implemented for local/R2 configuration and artifact registry metadata; R2 upload transport remains credential-gated.**
+- Add artifact storage abstraction. **Implemented for local artifact registry metadata; R2 remains planned and is rejected as an active backend until upload/download transport exists.**
 - Add usage-event table fed from durable jobs/artifacts. **Implemented for create, generation, validation, export, artifact download, and billing-intent events.**
 - Add real public sample proof bundle.
 - Add KiCad/CadQuery worker design doc and first job interface.
@@ -290,7 +290,7 @@ Use this stack for the YC-ready hosted alpha:
 
 - API: FastAPI, deployed as one hosted service.
 - DB: Neon Postgres first, Supabase only if managed auth/storage becomes desirable.
-- Storage: Cloudflare R2.
+- Storage: local artifacts for private alpha; Cloudflare R2 after the upload/download adapter is implemented.
 - Billing: no billing yet; instrument Stripe-compatible usage events.
 - CAD: CadQuery worker first.
 - EDA: KiCad CLI worker after one family has a real PCB target.

@@ -115,11 +115,6 @@ function MiniSilhouette({
 
 function projectStatusTone(status: string) {
   switch (status) {
-    case "exported":
-      return {
-        color: "var(--warn)",
-        background: "rgba(246, 174, 45, 0.12)",
-      };
     case "validated":
       return {
         color: "var(--success)",
@@ -131,10 +126,6 @@ function projectStatusTone(status: string) {
         background: "var(--surface-chip)",
       };
   }
-}
-
-function projectStatusLabel(status: string) {
-  return status === "exported" ? "review bundle" : status;
 }
 
 function ProjectListSkeleton() {
@@ -415,7 +406,7 @@ export function ProjectList() {
                             className="mt-1 inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em]"
                             style={status}
                           >
-                            {projectStatusLabel(project.status)}
+                            {project.status}
                           </div>
                         </div>
                       </div>

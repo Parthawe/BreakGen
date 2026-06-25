@@ -164,3 +164,40 @@ async def test_launch_lead_capture_rate_limits(tmp_path: Path, monkeypatch):
         app.dependency_overrides.pop(get_db, None)
         launch._rate_events.clear()
         await engine.dispose()
+
+
+@pytest.mark.anyio
+async def test_launch_lead_capture_persists_rate_limit_across_process_memory(tmp_path: Path, monkeypatch):
+    engine, session_factory = await _make_session(tmp_path)
+    launch._rate_events.clear()
+    monkeypatch.setattr("server.api.launch.settings.launch_lead_rate_limit_per_minute", 1)
+
+    async def override_get_db():
+        async with session_factory() as session:
+            yield session
+
+    app.dependency_overrides[get_db] = override_get_db
+    transport = httpx.ASGITransport(app=app)
+    payload = {
+        "email": "maker@example.com",
+        "role": "Maker",
+        "intent": "private_alpha",
+        "surface": "landing",
+    }
+
+    try:
+        async with httpx.AsyncClient(
+            transport=transport,
+            base_url="http://testserver",
+        ) as client:
+            first = await client.post("/api/launch/leads", json=payload)
+            assert first.status_code == 201
+
+            launch._rate_events.clear()
+            second = await client.post("/api/launch/leads", json=payload)
+            assert second.status_code == 429
+            assert second.json()["detail"] == "Too many lead submissions; try again later"
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        launch._rate_events.clear()
+        await engine.dispose()

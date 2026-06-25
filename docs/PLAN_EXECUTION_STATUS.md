@@ -36,7 +36,7 @@ This file consolidates the scattered BreakGen plans into one execution view. The
 - Owner-scoped artifact download by artifact id from the project History panel.
 - Usage-event table and owner-scoped usage summaries.
 - Billing-intent capture in the export flow without enabling payments.
-- Artifact storage abstraction metadata with local/R2 configuration guardrails.
+- Artifact storage abstraction metadata with local-only activation; R2 is documented as planned until upload/download transport is implemented.
 
 ## Closed In This Slice
 
@@ -53,7 +53,7 @@ This file consolidates the scattered BreakGen plans into one execution view. The
 
 1. Operator dashboard or admin script for leads, users, jobs, validation failures, exports, and usage signals.
 2. Supabase/Postgres migration plan with RLS policies, kept behind configuration until credentials exist.
-3. R2 upload/download transport behind the artifact storage abstraction, with owner-scoped signed downloads.
+3. R2 upload/download transport behind the artifact storage abstraction, then enable `BREAKGEN_ARTIFACT_STORAGE_BACKEND=r2` with owner-scoped signed downloads.
 4. Worker boundary for long-running CAD, EDA, export, and provider jobs.
 5. Manufacturing escalation workflow for quote-ready and future prototype-ready states.
 6. Supplier-ready BOM and placement files after KiCad worker support exists.

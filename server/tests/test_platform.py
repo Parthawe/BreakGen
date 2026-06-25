@@ -41,15 +41,19 @@ async def test_product_families_expose_shared_workspace_stages():
         "export",
     ]
     assert "layout_editor" in keyboard["editor_modules"]
+    assert keyboard["readiness_tier"] == "proven"
+    assert keyboard["readiness_label"] == "Safest path"
     gamepad = next(entry for entry in families if entry["family"] == "gamepad")
     assert gamepad["domain"] == "control_surface"
     assert "input_button" in gamepad["supported_module_types"]
+    assert gamepad["readiness_tier"] == "proof"
     pedal = next(entry for entry in families if entry["family"] == "pedal_controller")
     assert pedal["domain"] == "control_surface"
     assert pedal["status"] == "proof"
     assert "input_slider" in pedal["supported_module_types"]
     midi = next(entry for entry in families if entry["family"] == "midi")
     assert "input_pad" in midi["supported_module_types"]
+    assert midi["readiness_tier"] == "proof"
     breath = next(entry for entry in families if entry["family"] == "breath_controller")
     assert breath["domain"] == "control_surface"
     assert breath["status"] == "proof"
@@ -197,6 +201,8 @@ async def test_platform_integrations_can_filter_by_category_and_status():
 async def test_platform_storage_exposes_safe_configuration():
     storage = await get_platform_storage()
 
-    assert storage["backend"] in {"local", "r2"}
+    assert storage["backend"] == "local"
+    assert storage["available_backends"] == ["local"]
+    assert storage["planned_backends"] == ["r2"]
     assert storage["owner_scoped_downloads"] is True
     assert "notes" in storage

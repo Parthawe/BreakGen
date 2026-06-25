@@ -38,41 +38,41 @@ const FAMILY_META: Record<ProductFamily, { color: string; icon: number[][]; fall
   sensor_pod: { color: "#60a5fa", fallbackDesc: "Sensing devices with custom shells", defaultName: "My Sensor Pod", icon: [[1,1],[0,1,0],[1,1]] },
 };
 
-type FamilyConfidence = "proven" | "alpha" | "proof";
+type FamilyReadiness = ProductFamilyManifest["readiness_tier"];
 
-const FAMILY_CONFIDENCE: Partial<Record<ProductFamily, { tier: FamilyConfidence; label: string; detail: string }>> = {
-  keyboard: {
-    tier: "proven",
-    label: "Safest path",
-    detail: "Deepest layout, validation, electronics, and export evidence today.",
-  },
-  macropad: {
-    tier: "alpha",
-    label: "Alpha path",
-    detail: "Shares the keyboard proof stack, with smaller-grid constraints still maturing.",
-  },
-  streamdeck: {
-    tier: "alpha",
-    label: "Alpha path",
-    detail: "Good panel and control proof; display and labeling evidence is still early.",
-  },
-  midi: {
-    tier: "proof",
-    label: "Proof path",
-    detail: "Mapping and control workflow proof before a full fabrication package.",
-  },
-  gamepad: {
-    tier: "proof",
-    label: "Proof path",
-    detail: "HID layout proof with manufacturing coverage still under active buildout.",
-  },
-};
-
-const FAMILY_CONFIDENCE_ORDER: Record<FamilyConfidence, number> = {
+const FAMILY_READINESS_ORDER: Record<FamilyReadiness, number> = {
   proven: 0,
   alpha: 1,
   proof: 2,
+  planned: 3,
 };
+
+function readinessFor(entry: ProductFamilyManifest): {
+  tier: FamilyReadiness;
+  label: string;
+  detail: string;
+} {
+  const tier = entry.readiness_tier || (entry.status === "enabled" ? "proof" : "planned");
+  return {
+    tier,
+    label: entry.readiness_label || (tier === "planned" ? "Planned path" : `${tier} path`),
+    detail: entry.readiness_detail || "Available for exploration while its artifact coverage matures.",
+  };
+}
+
+function readinessSummary(entries: ProductFamilyManifest[]): string {
+  const counts = entries.reduce<Record<FamilyReadiness, number>>(
+    (acc, entry) => {
+      acc[readinessFor(entry).tier] += 1;
+      return acc;
+    },
+    { proven: 0, alpha: 0, proof: 0, planned: 0 },
+  );
+  return (["proven", "alpha", "proof", "planned"] as const)
+    .filter((tier) => counts[tier] > 0)
+    .map((tier) => `${counts[tier]} ${tier}`)
+    .join(", ");
+}
 
 function Sil({ rows, color, s = 5 }: { rows: number[][]; color: string; s?: number }) {
   return (
@@ -133,12 +133,12 @@ export function TemplateSelector({ onSelect, domains, families }: TemplateSelect
   const familySource: ProductFamilyManifest[] = families?.length
     ? families
     : [
-        { domain: "control_surface", family: "keyboard", display_name: "Keyboard", description: FAMILY_META.keyboard.fallbackDesc, status: "enabled", stages: [], required_inputs: [], supported_capabilities: [], available_templates: [], editor_modules: [], supported_module_types: [] },
-        { domain: "control_surface", family: "macropad", display_name: "Macro Pad", description: FAMILY_META.macropad.fallbackDesc, status: "enabled", stages: [], required_inputs: [], supported_capabilities: [], available_templates: [], editor_modules: [], supported_module_types: [] },
-        { domain: "control_surface", family: "streamdeck", display_name: "Stream Deck", description: FAMILY_META.streamdeck.fallbackDesc, status: "enabled", stages: [], required_inputs: [], supported_capabilities: [], available_templates: [], editor_modules: [], supported_module_types: [] },
-        { domain: "control_surface", family: "midi", display_name: "MIDI Controller", description: FAMILY_META.midi.fallbackDesc, status: "enabled", stages: [], required_inputs: [], supported_capabilities: [], available_templates: [], editor_modules: [], supported_module_types: [] },
-        { domain: "control_surface", family: "gamepad", display_name: "Gamepad", description: FAMILY_META.gamepad.fallbackDesc, status: "enabled", stages: [], required_inputs: [], supported_capabilities: [], available_templates: [], editor_modules: [], supported_module_types: [] },
-        { domain: "handheld", family: "handheld_companion", display_name: "Handheld Companion", description: FAMILY_META.handheld_companion.fallbackDesc, status: "proof", stages: [], required_inputs: [], supported_capabilities: [], available_templates: [], editor_modules: [], supported_module_types: [] },
+        { domain: "control_surface", family: "keyboard", display_name: "Keyboard", description: FAMILY_META.keyboard.fallbackDesc, status: "enabled", readiness_tier: "proven", readiness_label: "Safest path", readiness_detail: "Deepest layout, validation, electronics, and export evidence today.", stages: [], required_inputs: [], supported_capabilities: [], available_templates: [], editor_modules: [], supported_module_types: [] },
+        { domain: "control_surface", family: "macropad", display_name: "Macro Pad", description: FAMILY_META.macropad.fallbackDesc, status: "enabled", readiness_tier: "alpha", readiness_label: "Alpha path", readiness_detail: "Shares the keyboard proof stack, with smaller-grid constraints still maturing.", stages: [], required_inputs: [], supported_capabilities: [], available_templates: [], editor_modules: [], supported_module_types: [] },
+        { domain: "control_surface", family: "streamdeck", display_name: "Stream Deck", description: FAMILY_META.streamdeck.fallbackDesc, status: "enabled", readiness_tier: "alpha", readiness_label: "Alpha path", readiness_detail: "Good panel and control proof; display and labeling evidence is still early.", stages: [], required_inputs: [], supported_capabilities: [], available_templates: [], editor_modules: [], supported_module_types: [] },
+        { domain: "control_surface", family: "midi", display_name: "MIDI Controller", description: FAMILY_META.midi.fallbackDesc, status: "enabled", readiness_tier: "proof", readiness_label: "Proof path", readiness_detail: "Mapping and control workflow proof before a full fabrication package.", stages: [], required_inputs: [], supported_capabilities: [], available_templates: [], editor_modules: [], supported_module_types: [] },
+        { domain: "control_surface", family: "gamepad", display_name: "Gamepad", description: FAMILY_META.gamepad.fallbackDesc, status: "enabled", readiness_tier: "proof", readiness_label: "Proof path", readiness_detail: "HID layout proof with manufacturing coverage still under active buildout.", stages: [], required_inputs: [], supported_capabilities: [], available_templates: [], editor_modules: [], supported_module_types: [] },
+        { domain: "handheld", family: "handheld_companion", display_name: "Handheld Companion", description: FAMILY_META.handheld_companion.fallbackDesc, status: "proof", readiness_tier: "proof", readiness_label: "Proof path", readiness_detail: "Visible as an expansion path while manufacturable proof coverage matures.", stages: [], required_inputs: [], supported_capabilities: [], available_templates: [], editor_modules: [], supported_module_types: [] },
       ];
 
   const activeDomain = selectedDomain ?? enabledDomains[0]?.domain ?? null;
@@ -146,10 +146,14 @@ export function TemplateSelector({ onSelect, domains, families }: TemplateSelect
     () => familySource
       .filter((entry) => entry.domain === activeDomain && entry.status === "enabled")
       .sort((a, b) => {
-        const aTier = FAMILY_CONFIDENCE[a.family]?.tier ?? "proof";
-        const bTier = FAMILY_CONFIDENCE[b.family]?.tier ?? "proof";
-        return FAMILY_CONFIDENCE_ORDER[aTier] - FAMILY_CONFIDENCE_ORDER[bTier];
+        const aTier = readinessFor(a).tier;
+        const bTier = readinessFor(b).tier;
+        return FAMILY_READINESS_ORDER[aTier] - FAMILY_READINESS_ORDER[bTier];
       }),
+    [familySource, activeDomain],
+  );
+  const activeReadinessSummary = useMemo(
+    () => readinessSummary(familySource.filter((entry) => entry.domain === activeDomain && entry.status === "enabled")),
     [familySource, activeDomain],
   );
 
@@ -267,7 +271,7 @@ export function TemplateSelector({ onSelect, domains, families }: TemplateSelect
                   >
                     <span>{meta.icon}</span>
                     <b>{domain.display_name}</b>
-                    <small>1 proven, 2 alpha, 2 proof paths</small>
+                    <small>{domain.domain === activeDomain ? activeReadinessSummary : `${domain.enabled_families.length} live families`}</small>
                   </button>
                 );
               })}
@@ -295,11 +299,7 @@ export function TemplateSelector({ onSelect, domains, families }: TemplateSelect
               {visibleFamilies.map((entry) => {
                 const meta = FAMILY_META[entry.family];
                 const selected = entry.family === selectedFamily;
-                const confidence = FAMILY_CONFIDENCE[entry.family] ?? {
-                  tier: "proof" as const,
-                  label: "Proof path",
-                  detail: "Available for exploration while its artifact coverage matures.",
-                };
+                const confidence = readinessFor(entry);
                 return (
                   <button
                     key={entry.family}

@@ -9,6 +9,7 @@ from typing import Deque
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, field_validator, model_validator
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.config import settings
@@ -106,6 +107,23 @@ def _enforce_rate_limit(request: Request) -> None:
     events.append(now)
 
 
+async def _enforce_persisted_email_rate_limit(db: AsyncSession, email: str) -> None:
+    window_start = datetime.now(timezone.utc) - _RATE_WINDOW
+    result = await db.execute(
+        select(func.count())
+        .select_from(LaunchLeadRow)
+        .where(
+            LaunchLeadRow.email == email,
+            LaunchLeadRow.created_at >= window_start,
+        )
+    )
+    if int(result.scalar_one()) >= settings.launch_lead_rate_limit_per_minute:
+        raise HTTPException(
+            status_code=429,
+            detail="Too many lead submissions; try again later",
+        )
+
+
 @router.post("/leads", response_model=LaunchLeadResponse, status_code=201)
 async def create_launch_lead(
     req: LaunchLeadRequest,
@@ -114,6 +132,7 @@ async def create_launch_lead(
 ) -> LaunchLeadResponse:
     """Capture a consented public-launch lead without requiring an account."""
     _enforce_rate_limit(request)
+    await _enforce_persisted_email_rate_limit(db, req.email)
 
     source = {
         "client_timestamp": req.timestamp,
