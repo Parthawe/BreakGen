@@ -260,6 +260,13 @@ const COMPILER_TRACKS = [
   { label: "Export", value: "review-ready bundle", tone: "#4db7ff" },
 ];
 
+const STUDIO_BENCH_ITEMS = [
+  ["intent", "split macro kit"],
+  ["source", "MX + RP2040 baseline"],
+  ["proof", "panel + firmware map"],
+  ["next", "pilot build"],
+];
+
 const KICKSTARTER_PATH = [
   {
     gate: "Prototype",
@@ -488,6 +495,50 @@ function KickstarterRunway() {
   );
 }
 
+function StudioBench() {
+  return (
+    <section className="studio-bench section-rule mt-10 pt-10">
+      <div className="studio-bench__copy">
+        <div className="eyebrow">Studio bench</div>
+        <h2>It should feel like a place where a device is becoming real.</h2>
+        <p>
+          BreakGen needs warmth without losing precision: a bench for makers, founders, and designers
+          where the creative object, source evidence, and next build step stay in view together.
+        </p>
+      </div>
+
+      <div className="studio-bench__surface" aria-hidden="true">
+        <div className="studio-bench__lamp" />
+        <div className="studio-bench__mat">
+          <div className="studio-bench__device">
+            <span />
+            <span />
+            <span />
+            <span />
+            <span />
+            <span />
+          </div>
+          <div className="studio-bench__board">
+            <i />
+            <i />
+            <i />
+            <i />
+          </div>
+          <div className="studio-bench__caliper" />
+        </div>
+        <div className="studio-bench__receipt">
+          {STUDIO_BENCH_ITEMS.map(([label, value]) => (
+            <div key={label}>
+              <span>{label}</span>
+              <b>{value}</b>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function NavCta() {
   const user = useAuthStore((state) => state.user);
 
@@ -665,6 +716,8 @@ export function Landing() {
             <CompilerConsole />
           </aside>
         </section>
+
+        <StudioBench />
 
         <section className="section-rule mt-10 pt-10">
           <div className="grid gap-8 lg:grid-cols-3">
