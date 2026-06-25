@@ -112,7 +112,7 @@ export function LaunchCapture({ surface }: { surface: "landing" | "demo" }) {
 
   const content = MODES[mode];
   const hasDiscordInvite = Boolean(DISCORD_INVITE_URL);
-  const discordLabel = hasDiscordInvite ? "Join Discord" : "Request Discord invite";
+  const dockDiscordLabel = hasDiscordInvite ? "Discord" : "Discord invite";
   const statusCopy = useMemo(() => {
     if (submitState === "sent") return "You are on the list. We will use this to shape the alpha group.";
     if (submitState === "fallback") return "Your email client is open with the request. Send it to finish the handoff.";
@@ -177,12 +177,12 @@ export function LaunchCapture({ surface }: { surface: "landing" | "demo" }) {
         <div>
           <div className="eyebrow">Private alpha</div>
           <div className="mt-1 text-[14px] font-semibold text-[var(--text-primary)]">
-            Help turn BreakGen into the device compiler makers actually use.
+            Join the alpha build room.
           </div>
         </div>
         <div className="launch-capture-dock__actions">
           <button type="button" className="surface-button h-10 rounded-full px-4 text-[12px] font-semibold" onClick={openDiscord}>
-            {discordLabel}
+            {dockDiscordLabel}
           </button>
           <button type="button" className="surface-button-primary h-10 rounded-full px-4 text-[12px] font-semibold" onClick={() => openWithMode("alpha")}>
             Request access
