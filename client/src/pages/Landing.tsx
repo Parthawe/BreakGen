@@ -247,10 +247,11 @@ const TRUST_STACK = [
   },
 ];
 
-const LIVE_SCOPE = [
-  ["5", "live alpha families"],
-  ["3", "proof templates"],
-  ["1", "reviewer proof command"],
+const BUILD_LENS = [
+  ["shape", "intent + product family"],
+  ["source", "footprints + module truth"],
+  ["prove", "validation + artifact lineage"],
+  ["ship", "pilot kit candidate"],
 ];
 
 const COMPILER_TRACKS = [
@@ -539,6 +540,19 @@ function StudioBench() {
   );
 }
 
+function BuildLens() {
+  return (
+    <div className="build-lens" aria-label="BreakGen build lens">
+      {BUILD_LENS.map(([label, value], index) => (
+        <div key={label} className="build-lens__item" style={{ "--lens-index": index } as CSSProperties}>
+          <span>{label}</span>
+          <b>{value}</b>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function NavCta() {
   const user = useAuthStore((state) => state.user);
 
@@ -687,18 +701,7 @@ export function Landing() {
               geometry, GPIO usage, firmware metadata, validation, exports, and provenance.
             </p>
 
-            <div className="section-rule mt-10 grid gap-5 pt-7 md:grid-cols-3">
-              {LIVE_SCOPE.map(([value, label]) => (
-                <div key={label}>
-                  <div className="text-[42px] font-semibold leading-none tracking-[-0.055em] text-[var(--text-primary)]">
-                    {value}
-                  </div>
-                  <div className="mt-2 text-[13px] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
-                    {label}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <BuildLens />
 
             <div className="mt-10 flex flex-wrap gap-3">
               <NavCta />
