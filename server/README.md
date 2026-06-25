@@ -4,11 +4,9 @@ FastAPI backend for the BreakGen private-alpha product studio.
 
 Current live product scope:
 
-- `keyboard`
-- `macropad`
-- `streamdeck`
-- `midi`
-- `gamepad`
+- `keyboard`: safest path
+- `macropad` and `streamdeck`: alpha paths
+- `midi` and `gamepad`: proof paths
 
 ## Requirements
 
@@ -88,6 +86,8 @@ API docs:
 | `GET` | `/api/product-families` | Product family manifests |
 | `GET` | `/api/hardware-modules` | Hardware module manifests |
 | `GET` | `/api/generation/providers` | Provider manifests |
+| `GET` | `/api/platform/integrations` | Technology, monetization, storage, CAD/EDA, and fabrication manifests |
+| `GET` | `/api/platform/storage` | Artifact storage mode without secrets |
 
 ### Compile and export
 
@@ -124,6 +124,8 @@ API docs:
 | Method | Path | Description |
 | --- | --- | --- |
 | `GET` | `/api/projects/{id}/records` | Unified jobs, artifacts, validation, and export view |
+| `GET` | `/api/projects/{id}/usage` | Owner-scoped usage and billing-intent telemetry |
+| `POST` | `/api/projects/{id}/billing-intent` | Record pricing interest without enabling billing |
 
 ## Architecture
 
@@ -144,6 +146,8 @@ Derived work does **not** create canonical revisions automatically:
 - mechanical compile summaries
 
 Those instead produce durable artifacts and job records tied to the current revision.
+Usage events are additive telemetry rows used for activation and pricing research;
+they do not mutate canonical project state.
 
 ## Environment Variables
 
@@ -152,12 +156,20 @@ Those instead produce durable artifacts and job records tied to the current revi
 | `BREAKGEN_DEBUG` | `true` | Enable debug logging |
 | `BREAKGEN_DATABASE_URL` | local sqlite in `server/` | Database connection string |
 | `BREAKGEN_ARTIFACTS_DIR` | `server/artifacts` | Durable artifact storage |
+| `BREAKGEN_ARTIFACT_STORAGE_BACKEND` | `local` | Artifact storage backend, `local` or `r2` |
+| `BREAKGEN_ARTIFACT_STORAGE_PUBLIC_BASE_URL` | empty | Optional public artifact URL base; leave empty for owner-scoped API downloads |
+| `BREAKGEN_R2_ENDPOINT_URL` | empty | Cloudflare R2/S3-compatible endpoint URL; required when storage backend is `r2` |
+| `BREAKGEN_R2_BUCKET` | empty | R2 bucket name; required when storage backend is `r2` |
+| `BREAKGEN_R2_ACCESS_KEY_ID` | empty | R2 access key from deployment secrets |
+| `BREAKGEN_R2_SECRET_ACCESS_KEY` | empty | R2 secret key from deployment secrets |
 | `BREAKGEN_TEMPLATES_DIR` | `server/templates` | Template directory |
 | `BREAKGEN_JWT_SECRET` | development-only secret | JWT signing secret; required when `BREAKGEN_DEBUG=false` |
 | `BREAKGEN_JWT_EXPIRE_HOURS` | `72` | JWT lifetime in hours |
 | `BREAKGEN_MIN_PASSWORD_LENGTH` | `8` | Minimum signup password length |
 | `BREAKGEN_PUBLIC_SIGNUP_ENABLED` | `false` | Signup switch; keep `false` for invite-only hosted alpha |
 | `BREAKGEN_SIGNUP_INVITE_CODE` | empty | Required when production signup remains enabled |
+| `BREAKGEN_FREE_GENERATION_JOBS_PER_PROJECT` | `20` | Private-alpha generation job limit per project before operator intervention |
+| `BREAKGEN_FREE_EXPORT_BUNDLES_PER_PROJECT` | `10` | Private-alpha export bundle limit per project before operator intervention |
 | `BREAKGEN_GOOGLE_OAUTH_CLIENT_ID` | empty | Google OAuth client ID; exposed only as configured state until OAuth callbacks are implemented |
 | `BREAKGEN_GOOGLE_OAUTH_CLIENT_SECRET` | empty | Google OAuth client secret; must be set with the Google client ID |
 | `BREAKGEN_APPLE_OAUTH_CLIENT_ID` | empty | Apple Services ID for Sign in with Apple; exposed only as configured state until OAuth callbacks are implemented |

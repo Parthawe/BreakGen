@@ -60,6 +60,7 @@ export function ExportPanel({
   const [preview, setPreview] = useState<ExportPreview | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [billingIntentState, setBillingIntentState] = useState<"idle" | "saving" | "saved">("idle");
   const latestValidationForRevision = useMemo(() => {
     if (!project || !records?.latest_validation_report) return null;
     return records.latest_validation_report.revision === project.revision
@@ -143,6 +144,26 @@ export function ExportPanel({
       await onRecordsRefresh?.();
     } catch (e) { setError(e instanceof Error ? e.message : "Export failed"); }
     setDownloading(false);
+  };
+
+  const handleBillingIntent = async () => {
+    if (!project) return;
+    setBillingIntentState("saving");
+    try {
+      await api.records.billingIntent(project.project_id, {
+        trigger: "export_limits",
+        plan: "maker",
+        note: "Interested in higher export limits, artifact history, or private project capacity.",
+        metadata: {
+          family: project.product_family,
+          revision: project.revision,
+        },
+      });
+      await onRecordsRefresh?.();
+      setBillingIntentState("saved");
+    } catch {
+      setBillingIntentState("idle");
+    }
   };
 
   const canExport = validation && validation.status !== "fail";
@@ -243,6 +264,21 @@ export function ExportPanel({
         <button onClick={handleExport} disabled={downloading || !canExport}
           className="surface-button-primary h-11 w-full rounded-xl text-[14px] font-semibold transition-all disabled:opacity-40">
           {downloading ? "Packaging..." : exportLabel}
+        </button>
+      )}
+
+      {showExport && (
+        <button
+          type="button"
+          onClick={handleBillingIntent}
+          disabled={billingIntentState === "saving" || billingIntentState === "saved"}
+          className="surface-button mt-3 h-10 w-full rounded-xl text-[12px] font-semibold transition-all disabled:opacity-60"
+        >
+          {billingIntentState === "saved"
+            ? "Pricing interest recorded"
+            : billingIntentState === "saving"
+              ? "Recording interest..."
+              : "I would pay for higher export limits"}
         </button>
       )}
 

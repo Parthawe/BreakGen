@@ -21,6 +21,7 @@ from server.services.artifact_registry import (
     record_mechanical_shell_compile,
     record_validation_report,
 )
+from server.services.artifact_storage import artifact_storage_metadata
 from server.services.job_registry import create_project_job, update_job_by_external_ref
 
 
@@ -132,9 +133,27 @@ async def test_record_export_bundle_registers_bundle(tmp_path: Path):
             assert row.kind == "export_bundle"
             assert stored.path == str(bundle_path)
             assert stored.details["validation_report_id"] == "vr_registry"
+            assert stored.details["storage_backend"] == "local"
+            assert stored.details["storage_location"] == "local_path"
             assert stored.sha256 is not None and len(stored.sha256) == 64
     finally:
         await engine.dispose()
+
+
+def test_artifact_storage_metadata_redacts_to_storage_key(tmp_path: Path, monkeypatch):
+    artifact_path = tmp_path / "projects" / "p1" / "exports" / "bundle.zip"
+    artifact_path.parent.mkdir(parents=True)
+    artifact_path.write_text("bundle")
+    monkeypatch.setattr("server.services.artifact_storage.settings.artifacts_dir", str(tmp_path))
+    monkeypatch.setattr("server.services.artifact_storage.settings.artifact_storage_backend", "local")
+
+    metadata = artifact_storage_metadata(artifact_path)
+
+    assert metadata == {
+        "storage_backend": "local",
+        "storage_location": "local_path",
+        "storage_key": "projects/p1/exports/bundle.zip",
+    }
 
 
 @pytest.mark.anyio

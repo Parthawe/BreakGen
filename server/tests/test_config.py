@@ -48,6 +48,18 @@ def test_production_rejects_sqlite_database_url():
             )
 
 
+def test_r2_storage_requires_complete_configuration():
+    with pytest.raises(ValidationError, match="BREAKGEN_R2"):
+        Settings(artifact_storage_backend="r2", r2_bucket="breakgen")
+
+
+def test_usage_limits_must_be_positive():
+    with pytest.raises(ValidationError, match="BREAKGEN_FREE_GENERATION"):
+        Settings(free_generation_jobs_per_project=0)
+    with pytest.raises(ValidationError, match="BREAKGEN_FREE_EXPORT"):
+        Settings(free_export_bundles_per_project=0)
+
+
 def test_google_oauth_settings_must_be_complete():
     with pytest.raises(ValidationError, match="GOOGLE_OAUTH"):
         Settings(google_oauth_client_id="google-client")

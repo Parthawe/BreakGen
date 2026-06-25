@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.api.auth import require_user, user_scope_id
+from server.config import settings
 from server.ai.meshy_client import MeshyError
 from server.ai.providers.base import GenerateAssetRequest
 from server.ai.providers.registry import provider_registry
@@ -38,6 +39,7 @@ from server.services.project_state import (
     load_project_state,
     persist_project_metadata,
 )
+from server.services.usage_registry import record_usage_event, usage_total
 
 router = APIRouter(prefix="/api/projects", tags=["generation"])
 
@@ -192,6 +194,20 @@ async def _submit_keycap_generation_request(
 
     if not req.prompt and not req.preset:
         raise HTTPException(status_code=400, detail="Provide prompt or preset")
+    generation_jobs_used = await usage_total(
+        db,
+        event_type="generation_submitted",
+        user_id=owner_user_id,
+        project_id=project_id,
+    )
+    if generation_jobs_used + req.variant_count > settings.free_generation_jobs_per_project:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Free alpha generation limit reached for this project. "
+                "Use fewer variants, record pricing interest, or contact the operator for a higher limit."
+            ),
+        )
 
     positive_prompt, negative_prompt = wrap_prompt(req.prompt, req.preset)
     current_revision = project.revision
@@ -238,6 +254,21 @@ async def _submit_keycap_generation_request(
             },
             output_data={"asset_ids": [asset.asset_id for asset in submission.assets]},
         )
+        record_usage_event(
+            db,
+            event_type="generation_completed",
+            user_id=owner_user_id,
+            project_id=project.project_id,
+            revision=current_revision,
+            provider=submission.provider_id,
+            quantity=len(submission.assets),
+            unit="asset",
+            metadata={
+                "job_id": job.job_id,
+                "asset_type": "keycap",
+                "preset": req.preset,
+            },
+        )
         await persist_project_metadata(
             db,
             row,
@@ -270,6 +301,21 @@ async def _submit_keycap_generation_request(
         job_ids.append(job.job_id)
         task_ids.append(provider_job.external_ref)
 
+    record_usage_event(
+        db,
+        event_type="generation_submitted",
+        user_id=owner_user_id,
+        project_id=project.project_id,
+        revision=current_revision,
+        provider=submission.provider_id,
+        quantity=len(submission.jobs),
+        unit="job",
+        metadata={
+            "asset_type": "keycap",
+            "preset": req.preset,
+            "variant_count": req.variant_count,
+        },
+    )
     await persist_project_metadata(
         db,
         row,
@@ -416,6 +462,22 @@ async def get_generation_status(
                 ),
             },
         )
+        if asset is not None:
+            record_usage_event(
+                db,
+                event_type="generation_completed",
+                user_id=owner_user_id,
+                project_id=project.project_id,
+                revision=project.revision,
+                provider=provider.provider_id,
+                quantity=1,
+                unit="asset",
+                metadata={
+                    "asset_type": "keycap",
+                    "asset_id": asset.asset_id,
+                    "external_ref": task_id,
+                },
+            )
         project_status = await _reconcile_generation_project_status(
             db,
             row,

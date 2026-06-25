@@ -265,18 +265,18 @@ Do not add:
 P0:
 
 - Add hosted API and production database plan.
-- Add artifact storage abstraction.
-- Add usage-event table fed from durable jobs/artifacts.
+- Add artifact storage abstraction. **Implemented for local/R2 configuration and artifact registry metadata; R2 upload transport remains credential-gated.**
+- Add usage-event table fed from durable jobs/artifacts. **Implemented for create, generation, validation, export, artifact download, and billing-intent events.**
 - Add real public sample proof bundle.
 - Add KiCad/CadQuery worker design doc and first job interface.
 
 P1:
 
 - Add Stripe/Lemon Squeezy decision record.
-- Add billing-intent events in product UI.
+- Add billing-intent events in product UI. **Implemented as pricing-interest capture; no billing is enabled.**
 - Add BOM/build-note compiler.
-- Add artifact download APIs.
-- Add quota checks around provider generation and export jobs.
+- Add artifact download APIs. **Implemented through owner-scoped artifact registry routes.**
+- Add quota checks around provider generation and export jobs. **Implemented with private-alpha project limits and clear operator-upgrade paths.**
 
 P2:
 
@@ -296,4 +296,3 @@ Use this stack for the YC-ready hosted alpha:
 - EDA: KiCad CLI worker after one family has a real PCB target.
 - Distribution: GitHub Releases for public proof bundles.
 - Fabrication: JLCPCB quote handoff later, not order placement.
-

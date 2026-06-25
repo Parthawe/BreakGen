@@ -233,6 +233,16 @@ export const api = {
   platform: {
     productDomains: () => request<ProductDomainManifest[]>("/product-domains"),
     productFamilies: () => request<ProductFamilyManifest[]>("/product-families"),
+    storage: () =>
+      request<{
+        backend: string;
+        status: string;
+        local_root: string | null;
+        bucket: string | null;
+        public_base_url_configured: boolean;
+        owner_scoped_downloads: boolean;
+        notes: string;
+      }>("/platform/storage"),
     hardwareModules: (family?: string, domain?: string) => {
       const params = new URLSearchParams();
       if (family) params.set("family", family);
@@ -370,6 +380,16 @@ export const api = {
 
   records: {
     get: (projectId: string) => request<ProjectRecords>(`/projects/${projectId}/records`),
+    usage: (projectId: string) =>
+      request<NonNullable<ProjectRecords["usage"]>>(`/projects/${projectId}/usage`),
+    billingIntent: (
+      projectId: string,
+      req: { trigger: string; plan?: string; note?: string; metadata?: Record<string, unknown> },
+    ) =>
+      request(`/projects/${projectId}/billing-intent`, {
+        method: "POST",
+        body: JSON.stringify(req),
+      }),
     qualityGate: (projectId: string) =>
       request<QualityGateSummary>(`/projects/${projectId}/quality-gate`),
     downloadArtifact: (projectId: string, artifactId: string, fileName: string) =>

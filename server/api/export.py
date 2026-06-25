@@ -9,6 +9,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.api.auth import require_user, user_scope_id
+from server.config import settings
 from server.db.database import get_db
 from server.db.models import UserRow
 from server.export.bundler import build_export_preview, create_export_bundle
@@ -23,6 +24,7 @@ from server.services.project_state import (
     load_project_state,
     persist_project_metadata,
 )
+from server.services.usage_registry import record_usage_event, usage_total
 from server.validation.engine import validate_project
 
 router = APIRouter(prefix="/api/projects", tags=["export"])
@@ -59,6 +61,20 @@ async def run_validation(
         domain=project.product_domain.value,
         family=project.product_family.value,
         source_spec_hash=project_state_fingerprint(project),
+    )
+    record_usage_event(
+        db,
+        event_type="validation_run",
+        user_id=user_scope_id(user),
+        project_id=project.project_id,
+        revision=project.revision,
+        quantity=len(report.checks),
+        unit="check",
+        metadata={
+            "status": report.status.value,
+            "report_id": report.report_id,
+            "family": project.product_family.value,
+        },
     )
     project.exports.validation_report_id = report.report_id
     await persist_project_metadata(
@@ -100,6 +116,20 @@ async def export_project_bundle(
     )
     if not project.layout.elements:
         raise HTTPException(status_code=400, detail="Layout has no placed elements")
+    export_count = await usage_total(
+        db,
+        event_type="export_bundle",
+        user_id=owner_user_id,
+        project_id=project_id,
+    )
+    if export_count >= settings.free_export_bundles_per_project:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Free alpha export limit reached for this project. "
+                "Record pricing interest or contact the operator for a higher limit."
+            ),
+        )
 
     # Run validation — block export on hard failures
     report = validate_project(project)
@@ -135,6 +165,21 @@ async def export_project_bundle(
         domain=project.product_domain.value,
         family=project.product_family.value,
         source_spec_hash=spec_hash,
+    )
+    record_usage_event(
+        db,
+        event_type="export_bundle",
+        user_id=owner_user_id,
+        project_id=project.project_id,
+        revision=project.revision,
+        quantity=1,
+        unit="bundle",
+        metadata={
+            "bundle_id": bundle_id,
+            "readiness": readiness,
+            "validation_status": report.status.value,
+            "family": project.product_family.value,
+        },
     )
 
     # Store export metadata on the project

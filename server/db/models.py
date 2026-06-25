@@ -110,6 +110,26 @@ class ProjectJobRow(Base):
     )
 
 
+class ProjectUsageEventRow(Base):
+    """Durable usage and billing-intent event for activation and pricing analysis."""
+
+    __tablename__ = "project_usage_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    project_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    revision: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    event_type: Mapped[str] = mapped_column(String(64), index=True)
+    provider: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    quantity: Mapped[int] = mapped_column(Integer, default=1)
+    unit: Mapped[str] = mapped_column(String(64), default="event")
+    source: Mapped[str] = mapped_column(String(64), default="server")
+    event_metadata: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True
+    )
+
+
 class LaunchLeadRow(Base):
     """Consented public-launch lead captured from the website."""
 

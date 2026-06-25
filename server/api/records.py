@@ -8,7 +8,7 @@ from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
-from pydantic import ValidationError
+from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.api.auth import require_user, user_scope_id
@@ -19,10 +19,22 @@ from server.services.artifact_registry import get_project_artifact, list_project
 from server.services.job_registry import list_project_jobs
 from server.services.project_state import load_project_state
 from server.services.quality_gate import QualityGateInput, build_quality_gate_summary
+from server.services.usage_registry import (
+    record_usage_event,
+    serialize_usage_event,
+    summarize_usage_events,
+)
 
 router = APIRouter(prefix="/api/projects", tags=["records"])
 
 _SAFE_DOWNLOAD_CHARS = frozenset("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-")
+
+
+class BillingIntentRequest(BaseModel):
+    trigger: str = Field(min_length=1, max_length=64)
+    plan: str | None = Field(default=None, max_length=64)
+    note: str | None = Field(default=None, max_length=500)
+    metadata: dict = Field(default_factory=dict)
 
 
 def _read_json_artifact(path: str | None) -> dict | None:
@@ -136,6 +148,21 @@ async def download_project_artifact(
         raise HTTPException(status_code=404, detail="Artifact file not found")
 
     filename = _download_filename(row)
+    record_usage_event(
+        db,
+        event_type="artifact_download",
+        user_id=user_scope_id(user),
+        project_id=project_id,
+        revision=row.revision,
+        quantity=1,
+        unit="download",
+        metadata={
+            "artifact_id": row.artifact_id,
+            "kind": row.kind,
+            "content_type": row.content_type,
+        },
+    )
+    await db.commit()
     return FileResponse(
         path,
         media_type=row.content_type or "application/octet-stream",
@@ -168,6 +195,11 @@ async def get_project_records(
         "latest_validation": latest_validation,
         "latest_validation_report": _read_json_artifact(latest_validation_row.path) if latest_validation_row else None,
         "latest_export": latest_export,
+        "usage": await summarize_usage_events(
+            db,
+            user_id=user_scope_id(user),
+            project_id=project_id,
+        ),
     }
 
 
@@ -200,3 +232,51 @@ async def get_project_quality_gate(
             latest_validation_report=latest_validation_report,
         )
     )
+
+
+@router.get("/{project_id}/usage")
+async def get_project_usage(
+    project_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: UserRow = Depends(require_user),
+):
+    """Return owner-scoped usage and billing-intent telemetry for this project."""
+    await load_project_state(db, project_id, owner_user_id=user_scope_id(user))
+    return await summarize_usage_events(
+        db,
+        user_id=user_scope_id(user),
+        project_id=project_id,
+    )
+
+
+@router.post("/{project_id}/billing-intent", status_code=201)
+async def create_project_billing_intent(
+    project_id: str,
+    req: BillingIntentRequest,
+    db: AsyncSession = Depends(get_db),
+    user: UserRow = Depends(require_user),
+):
+    """Record pricing interest without enabling billing or plan enforcement."""
+    _, project = await load_project_state(
+        db,
+        project_id,
+        owner_user_id=user_scope_id(user),
+    )
+    row = record_usage_event(
+        db,
+        event_type="billing_intent",
+        user_id=user_scope_id(user),
+        project_id=project_id,
+        revision=project.revision,
+        quantity=1,
+        unit="intent",
+        source="client",
+        metadata={
+            "trigger": req.trigger,
+            "plan": req.plan,
+            "note": req.note,
+            **req.metadata,
+        },
+    )
+    await db.commit()
+    return serialize_usage_event(row)

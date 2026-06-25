@@ -36,6 +36,8 @@ The MVP focuses on one narrow promise:
 - Family-aware mechanical panel outputs and handheld shell proof outputs
 - Validation reports tied to project revisions
 - Durable artifact and job records
+- Artifact storage abstraction with local private-alpha mode and R2 configuration guardrails
+- Usage-event and billing-intent telemetry for activation/pricing research without billing users
 - Export bundles with manifests, build guides, checksums, and validation lineage
 - Private-alpha signup controls, seeded reviewer accounts, and JWT auth
 - Public client-only demo for browsing the product model
@@ -98,9 +100,10 @@ Expected local URLs:
 
 Local defaults are private-alpha development defaults, not deployment defaults. When
 `BREAKGEN_DEBUG=false`, BreakGen rejects the default JWT secret, wildcard
-credentialed CORS, and SQLite database URLs. Production deploys should provide a
-real database, explicit origins, durable artifact storage with backups, and an
-operator-owned secrets path before accepting public traffic.
+credentialed CORS, SQLite database URLs, and incomplete R2 artifact-storage
+configuration. Production deploys should provide a real database, explicit
+origins, durable artifact storage with backups, and an operator-owned secrets
+path before accepting public traffic.
 
 ## Verification
 
@@ -124,6 +127,7 @@ flowchart LR
     E --> F
     F --> G["Export bundle"]
     G --> H["Artifact and job records"]
+    H --> I["Usage and billing-intent events"]
 ```
 
 ## Engineering Principles
@@ -145,7 +149,7 @@ Current gaps that still need product work:
 - Async worker infrastructure for long-running generation and compile jobs
 - Deeper CAD and enclosure outputs beyond panel and shell proof artifacts
 - Fabrication partner presets and physical calibration data
-- Billing, team workflows, and production observability
+- Paid billing, team workflows, and production observability
 - Full self-serve onboarding beyond the private-alpha reviewer path
 
 ## Repository Map

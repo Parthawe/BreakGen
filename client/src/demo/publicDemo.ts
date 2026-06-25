@@ -400,5 +400,16 @@ export function createPublicDemoRecords(): ProjectRecords {
     latest_validation: JSON.parse(JSON.stringify(baseArtifacts.find((artifact) => artifact.kind === "validation_report") ?? null)) as ArtifactRecord | null,
     latest_validation_report: JSON.parse(JSON.stringify(baseValidationReport)) as ValidationReport,
     latest_export: JSON.parse(JSON.stringify(baseArtifacts.find((artifact) => artifact.kind === "export_bundle") ?? null)) as ArtifactRecord | null,
+    usage: {
+      project_id: "public_demo_streamdeck",
+      user_id: null,
+      metering_state: "instrumented_not_billed",
+      totals: [
+        { event_type: "validation_run", quantity: 10, unit: "check", last_seen_at: UPDATED_AT },
+        { event_type: "export_bundle", quantity: 1, unit: "bundle", last_seen_at: UPDATED_AT },
+        { event_type: "artifact_download", quantity: 3, unit: "download", last_seen_at: UPDATED_AT },
+      ],
+      billing_intents: [],
+    },
   };
 }

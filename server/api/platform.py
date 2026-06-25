@@ -11,6 +11,7 @@ from server.services.hardware_sources import (
     list_footprint_source_specs,
     list_hardware_sources,
 )
+from server.services.artifact_storage import artifact_storage_config
 from server.services.platform_catalog import (
     list_technology_integrations,
     list_product_domain_manifests,
@@ -84,3 +85,22 @@ async def get_platform_integrations(
         manifest.model_dump(mode="json")
         for manifest in list_technology_integrations(category=category, status=status)
     ]
+
+
+@router.get("/api/platform/storage")
+async def get_platform_storage():
+    """Return artifact storage mode without exposing storage credentials."""
+    config = artifact_storage_config()
+    return {
+        "backend": config.backend,
+        "status": "active" if config.backend == "local" else "configured",
+        "local_root": config.local_root if config.backend == "local" else None,
+        "bucket": config.r2_bucket if config.backend == "r2" else None,
+        "public_base_url_configured": bool(config.public_base_url),
+        "owner_scoped_downloads": True,
+        "notes": (
+            "Local filesystem artifact storage is suitable for private-alpha development only."
+            if config.backend == "local"
+            else "R2-compatible artifact storage is configured; downloads should still flow through owner-scoped registry APIs."
+        ),
+    }

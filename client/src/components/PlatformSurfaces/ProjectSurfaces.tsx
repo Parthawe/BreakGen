@@ -178,6 +178,7 @@ export function ProjectSurfaces({
   const latestExport = records?.latest_export ?? null;
   const currentRevisionExported = latestExport?.source_revision === project.revision;
   const activeJobs = records?.jobs.filter((job) => !["completed", "succeeded", "failed"].includes(job.status)) ?? [];
+  const usageTotals = records?.usage?.totals ?? [];
   const handleArtifactDownload = async (artifact: ArtifactRecord) => {
     setArtifactDownloadError(null);
     setDownloadingArtifactId(artifact.artifact_id);
@@ -498,6 +499,38 @@ export function ProjectSurfaces({
           ) : (
             <div className="text-[12px] text-[var(--text-tertiary)]">No jobs recorded yet.</div>
           )}
+        </div>
+      </Section>
+
+      <Section title="Usage Signals" eyebrow={records?.usage?.metering_state.replace(/_/g, " ") ?? "not loaded"}>
+        <div className="space-y-2">
+          {usageTotals.length ? (
+            usageTotals.slice(0, 5).map((item) => (
+              <div key={item.event_type} className="glass-subcard rounded-lg px-3 py-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[12px] text-[var(--text-primary)]">
+                    {item.event_type.replace(/_/g, " ")}
+                  </span>
+                  <span className="text-[11px] font-mono text-[var(--text-tertiary)]">
+                    {item.quantity} {item.unit}
+                  </span>
+                </div>
+                <div className="mt-1 text-[11px] text-[var(--text-tertiary)]">
+                  {formatTime(item.last_seen_at)}
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-[12px] leading-[1.6] text-[var(--text-tertiary)]">
+              Create, validate, export, or download artifacts to build usage history. These events are for pricing research only; billing is not enabled.
+            </div>
+          )}
+          {records?.usage?.billing_intents.length ? (
+            <div className="text-[11px] leading-[1.5] text-[var(--text-secondary)]">
+              {records.usage.billing_intents.length} pricing-intent signal
+              {records.usage.billing_intents.length === 1 ? "" : "s"} captured.
+            </div>
+          ) : null}
         </div>
       </Section>
 

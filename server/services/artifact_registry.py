@@ -15,6 +15,7 @@ from server.config import settings
 from server.db.models import ProjectArtifactRow
 from server.models.project import KeyboardProject
 from server.models.validation_schema import ValidationReport
+from server.services.artifact_storage import artifact_storage_metadata
 
 
 def project_artifact_dir(
@@ -107,6 +108,7 @@ def register_artifact(
     created_at: datetime | None = None,
 ) -> ProjectArtifactRow:
     """Register a durable artifact row; commit is managed by the caller."""
+    artifact_details = {**(details or {}), **artifact_storage_metadata(path)}
     row = ProjectArtifactRow(
         artifact_id=artifact_id,
         project_id=project_id,
@@ -115,7 +117,7 @@ def register_artifact(
         path=str(path),
         sha256=sha256,
         content_type=content_type,
-        details=details or {},
+        details=artifact_details,
         created_at=created_at or datetime.now(timezone.utc),
     )
     db.add(row)
@@ -136,6 +138,7 @@ async def upsert_artifact(
     created_at: datetime | None = None,
 ) -> ProjectArtifactRow:
     """Create or replace a durable artifact row with a stable artifact id."""
+    artifact_details = {**(details or {}), **artifact_storage_metadata(path)}
     result = await db.execute(
         select(ProjectArtifactRow).where(ProjectArtifactRow.artifact_id == artifact_id)
     )
@@ -149,7 +152,7 @@ async def upsert_artifact(
             path=str(path),
             sha256=sha256,
             content_type=content_type,
-            details=details or {},
+            details=artifact_details,
             created_at=created_at or datetime.now(timezone.utc),
         )
         db.add(row)
@@ -161,7 +164,7 @@ async def upsert_artifact(
     row.path = str(path)
     row.sha256 = sha256
     row.content_type = content_type
-    row.details = details or {}
+    row.details = artifact_details
     row.created_at = created_at or datetime.now(timezone.utc)
     return row
 

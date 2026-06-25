@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.db.models import ProjectRevisionRow, ProjectRow
 from server.models.project import KeyboardProject, ProjectStatus
+from server.services.usage_registry import record_usage_event
 
 
 async def load_project_state(
@@ -76,6 +77,18 @@ async def create_project_record(
             created_at=project.created_at,
             change_summary=change_summary,
         )
+    )
+    record_usage_event(
+        db,
+        event_type="project_created",
+        user_id=owner_user_id,
+        project_id=project.project_id,
+        revision=project.revision,
+        metadata={
+            "family": project.product_family.value,
+            "domain": project.product_domain.value,
+            "template": project.template,
+        },
     )
 
     await db.commit()

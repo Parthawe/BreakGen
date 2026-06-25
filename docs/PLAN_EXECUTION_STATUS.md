@@ -34,6 +34,9 @@ This file consolidates the scattered BreakGen plans into one execution view. The
 - Public pages for product, community, manufacturing, and campaign runway.
 - Quality gate endpoint and workspace panel for blocked, review-ready, validated, and export-ready states.
 - Owner-scoped artifact download by artifact id from the project History panel.
+- Usage-event table and owner-scoped usage summaries.
+- Billing-intent capture in the export flow without enabling payments.
+- Artifact storage abstraction metadata with local/R2 configuration guardrails.
 
 ## Closed In This Slice
 
@@ -42,18 +45,19 @@ This file consolidates the scattered BreakGen plans into one execution view. The
 - Owner-scoped backend route for export preview.
 - Export panel preview of bundle contents, BOM counts, sourcing gaps, and readiness.
 - Regression tests for preview payloads and bundled BOM artifacts.
+- Usage events for project creation, generation, validation, export, artifact download, and billing intent.
+- `/api/projects/{id}/usage`, `/api/projects/{id}/billing-intent`, and `/api/platform/storage`.
+- Private-alpha quota checks for generation jobs and export bundles.
 
 ## Highest-Priority Open Work
 
-1. Activation analytics events for create, validate, compile, export, artifact preview, and artifact download.
-2. Operator dashboard or admin script for leads, users, jobs, validation failures, and exports.
-3. Supabase/Postgres migration plan with RLS policies, kept behind configuration until credentials exist.
-4. Object-storage adapter for artifact persistence, with owner-scoped signed downloads.
-5. Usage-event table and quota checks around provider generation and export jobs.
-6. Worker boundary for long-running CAD, EDA, export, and provider jobs.
-7. Manufacturing escalation workflow for quote-ready and future prototype-ready states.
-8. Supplier-ready BOM and placement files after KiCad worker support exists.
-9. Physical prototype evidence loop for one focused macro pad or creator command console.
+1. Operator dashboard or admin script for leads, users, jobs, validation failures, exports, and usage signals.
+2. Supabase/Postgres migration plan with RLS policies, kept behind configuration until credentials exist.
+3. R2 upload/download transport behind the artifact storage abstraction, with owner-scoped signed downloads.
+4. Worker boundary for long-running CAD, EDA, export, and provider jobs.
+5. Manufacturing escalation workflow for quote-ready and future prototype-ready states.
+6. Supplier-ready BOM and placement files after KiCad worker support exists.
+7. Physical prototype evidence loop for one focused macro pad or creator command console.
 
 ## Execution Rule
 

@@ -155,6 +155,8 @@ async def test_project_routes_require_auth_and_enforce_owner_scope(tmp_path: Pat
                 ("GET", f"/api/projects/{project_id}/artifacts", None),
                 ("GET", f"/api/projects/{project_id}/artifacts/missing_artifact/download", None),
                 ("GET", f"/api/projects/{project_id}/jobs", None),
+                ("GET", f"/api/projects/{project_id}/usage", None),
+                ("POST", f"/api/projects/{project_id}/billing-intent", {"trigger": "export_limits"}),
                 ("GET", f"/api/projects/{project_id}/quality-gate", None),
                 ("GET", f"/api/projects/{project_id}/firmware/info.json", None),
             ]
@@ -179,6 +181,8 @@ async def test_project_routes_require_auth_and_enforce_owner_scope(tmp_path: Pat
                 ("GET", f"/api/projects/{project_id}/artifacts", None),
                 ("GET", f"/api/projects/{project_id}/artifacts/missing_artifact/download", None),
                 ("GET", f"/api/projects/{project_id}/jobs", None),
+                ("GET", f"/api/projects/{project_id}/usage", None),
+                ("POST", f"/api/projects/{project_id}/billing-intent", {"trigger": "export_limits"}),
                 ("GET", f"/api/projects/{project_id}/quality-gate", None),
                 ("GET", f"/api/projects/{project_id}/firmware/info.json", None),
             ]
@@ -192,6 +196,11 @@ async def test_project_routes_require_auth_and_enforce_owner_scope(tmp_path: Pat
 
             exported = await client.post(f"/api/projects/{project_id}/export", headers=_auth(owner_token))
             assert exported.status_code == 200
+            monkeypatch.setattr("server.api.export.settings.free_export_bundles_per_project", 1)
+            quota_blocked = await client.post(f"/api/projects/{project_id}/export", headers=_auth(owner_token))
+            assert quota_blocked.status_code == 403
+            assert "export limit" in quota_blocked.json()["detail"]
+            monkeypatch.setattr("server.api.export.settings.free_export_bundles_per_project", 10)
 
             preview = await client.get(f"/api/projects/{project_id}/export/preview", headers=_auth(owner_token))
             assert preview.status_code == 200
@@ -205,6 +214,18 @@ async def test_project_routes_require_auth_and_enforce_owner_scope(tmp_path: Pat
             export_artifact = records.json()["latest_export"]
             assert export_artifact["artifact_id"]
             assert export_artifact["path"] is None
+            assert records.json()["usage"]["metering_state"] == "instrumented_not_billed"
+            assert {
+                item["event_type"] for item in records.json()["usage"]["totals"]
+            } >= {"project_created", "export_bundle"}
+
+            billing_intent = await client.post(
+                f"/api/projects/{project_id}/billing-intent",
+                headers=_auth(owner_token),
+                json={"trigger": "export_limits", "plan": "maker"},
+            )
+            assert billing_intent.status_code == 201
+            assert billing_intent.json()["event_type"] == "billing_intent"
 
             unauth_download = await client.get(
                 f"/api/projects/{project_id}/artifacts/{export_artifact['artifact_id']}/download",

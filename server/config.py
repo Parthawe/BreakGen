@@ -20,6 +20,12 @@ class Settings(BaseSettings):
     debug: bool = True
     database_url: str = f"sqlite+aiosqlite:///{SERVER_DIR / 'breakgen.db'}"
     artifacts_dir: str = str(SERVER_DIR / "artifacts")
+    artifact_storage_backend: str = "local"
+    artifact_storage_public_base_url: str = ""
+    r2_endpoint_url: str = ""
+    r2_bucket: str = ""
+    r2_access_key_id: str = ""
+    r2_secret_access_key: str = ""
     templates_dir: str = str(SERVER_DIR / "templates")
     jwt_secret: str = DEV_JWT_SECRET
     jwt_algorithm: str = "HS256"
@@ -37,6 +43,8 @@ class Settings(BaseSettings):
     apple_oauth_private_key: str = ""
     launch_lead_rate_limit_per_minute: int = 12
     launch_lead_note_max_length: int = 1000
+    free_generation_jobs_per_project: int = 20
+    free_export_bundles_per_project: int = 10
 
     # Meshy AI (Phase 3)
     meshy_api_key: str = ""
@@ -101,6 +109,24 @@ class Settings(BaseSettings):
             raise ValueError("BREAKGEN_LAUNCH_LEAD_RATE_LIMIT_PER_MINUTE must be at least 1")
         if self.launch_lead_note_max_length < 1:
             raise ValueError("BREAKGEN_LAUNCH_LEAD_NOTE_MAX_LENGTH must be at least 1")
+        if self.free_generation_jobs_per_project < 1:
+            raise ValueError("BREAKGEN_FREE_GENERATION_JOBS_PER_PROJECT must be at least 1")
+        if self.free_export_bundles_per_project < 1:
+            raise ValueError("BREAKGEN_FREE_EXPORT_BUNDLES_PER_PROJECT must be at least 1")
+        storage_backend = self.artifact_storage_backend.strip().lower()
+        if storage_backend not in {"local", "r2"}:
+            raise ValueError("BREAKGEN_ARTIFACT_STORAGE_BACKEND must be local or r2")
+        if storage_backend == "r2":
+            r2_fields = [
+                self.r2_endpoint_url,
+                self.r2_bucket,
+                self.r2_access_key_id,
+                self.r2_secret_access_key,
+            ]
+            if not all(r2_fields):
+                raise ValueError(
+                    "BREAKGEN_R2_ENDPOINT_URL, BREAKGEN_R2_BUCKET, BREAKGEN_R2_ACCESS_KEY_ID, and BREAKGEN_R2_SECRET_ACCESS_KEY must be set for R2 artifact storage"
+                )
         return self
 
 

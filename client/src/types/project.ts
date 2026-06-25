@@ -387,6 +387,33 @@ export interface ProjectJobRecord {
   completed_at: string | null;
 }
 
+export interface UsageEventRecord {
+  id: number;
+  user_id: number | null;
+  project_id: string | null;
+  revision: number | null;
+  event_type: string;
+  provider: string | null;
+  quantity: number;
+  unit: string;
+  source: string;
+  metadata: Record<string, unknown>;
+  created_at: string | null;
+}
+
+export interface UsageSummary {
+  project_id: string | null;
+  user_id: number | null;
+  totals: Array<{
+    event_type: string;
+    quantity: number;
+    unit: string;
+    last_seen_at: string | null;
+  }>;
+  billing_intents: UsageEventRecord[];
+  metering_state: "instrumented_not_billed" | string;
+}
+
 export interface ProjectRecords {
   project_id: string;
   jobs: ProjectJobRecord[];
@@ -394,6 +421,7 @@ export interface ProjectRecords {
   latest_validation: ArtifactRecord | null;
   latest_validation_report: ValidationReport | null;
   latest_export: ArtifactRecord | null;
+  usage: UsageSummary | null;
 }
 
 export interface ExportPreviewFile {

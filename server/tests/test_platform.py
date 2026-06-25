@@ -10,6 +10,7 @@ from server.api.platform import (
     get_hardware_sources,
     get_hardware_modules,
     get_platform_integrations,
+    get_platform_storage,
     get_product_domains,
     get_product_families,
 )
@@ -190,3 +191,12 @@ async def test_platform_integrations_can_filter_by_category_and_status():
     assert {"stripe_billing", "cloudflare_r2", "kicad_cli", "cadquery"} <= {
         entry["id"] for entry in recommended
     }
+
+
+@pytest.mark.anyio
+async def test_platform_storage_exposes_safe_configuration():
+    storage = await get_platform_storage()
+
+    assert storage["backend"] in {"local", "r2"}
+    assert storage["owner_scoped_downloads"] is True
+    assert "notes" in storage
