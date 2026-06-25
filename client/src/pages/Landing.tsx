@@ -118,8 +118,8 @@ function HeroInstrument() {
   return (
     <div className="front-instrument" aria-label="BreakGen hardware proof instrument">
       <div className="front-instrument__topline">
-        <span>Proof chamber</span>
-        <b>validated</b>
+        <span>BreakGen canvas</span>
+        <b>proof ready</b>
       </div>
 
       <div className="front-device-stage" aria-hidden="true">
@@ -150,8 +150,8 @@ function ProofChain() {
   return (
     <section className="front-proof section-rule">
       <div className="front-section-kicker">
-        <span>Operating system</span>
-        <h2>BreakGen is the missing compiler between taste and hardware consequence.</h2>
+        <span>Continuous loop</span>
+        <h2>From sketch to build files and back, without losing the source of truth.</h2>
       </div>
 
       <div className="front-proof__chain">
@@ -179,11 +179,11 @@ function FamilyRail() {
       <div className="front-rail__copy">
         <div className="front-section-kicker">
           <span>Device families</span>
-          <h2>Start narrow. Expand only where the build physics repeat.</h2>
+          <h2>A product canvas for the workspace objects people actually want.</h2>
         </div>
         <p>
-          The first public story should not pretend to be Amazon on day one.
-          It should feel like a precise marketplace forming around products that can actually be manufactured.
+          Start with programmable control surfaces, then expand only where the parts, enclosures,
+          validation, and supply chain repeat well enough to become real.
         </p>
       </div>
 
@@ -237,11 +237,11 @@ function EvidencePanel() {
 
       <div className="front-evidence__copy">
         <div className="front-section-kicker">
-          <span>Investor proof</span>
-          <h2>The demo has to be inspectable, not just attractive.</h2>
+          <span>Code connected</span>
+          <h2>The attractive surface still has to compile into proof.</h2>
         </div>
         <p>
-          The public page sells the feeling. The repo and app prove the spine:
+          The website can feel soft and visual, but the product still needs hard edges:
           project state, validation gates, generated artifacts, owner scoped downloads, and export provenance.
         </p>
         <div className="front-rule-stack">
@@ -258,7 +258,7 @@ export function Landing() {
   useEffect(() => {
     document.title = PUBLIC_SITE
       ? "BreakGen - Public Launch"
-      : "BreakGen - Programmable Hardware Studio";
+      : "BreakGen - Design Physical Hardware";
     trackEvent("landing_view", { surface: "landing" });
   }, []);
 
@@ -274,11 +274,12 @@ export function Landing() {
         <main className="front-page">
           <section className="front-hero">
             <div className="front-hero__copy">
-              <div className="eyebrow">Programmable hardware studio</div>
-              <h1>Custom devices need a build receipt.</h1>
+              <div className="eyebrow">Programmable hardware canvas</div>
+              <h1>design physical</h1>
               <p>
-                BreakGen turns a maker's intent into revisioned product state, then compiles the parts that make it believable:
-                panel geometry, electronics metadata, validation, exports, and provenance.
+                BreakGen is a canvas for custom workspace devices. Shape the object visually,
+                then keep the engineering proof attached: geometry, electronics, validation,
+                exports, and provenance.
               </p>
 
               <div className="front-hero__actions">
@@ -306,7 +307,7 @@ export function Landing() {
           <section className="front-community">
             <div>
               <span>Launch room</span>
-              <h2>Build the first kit with the people who will actually use it.</h2>
+              <h2>Open the workshop before the marketplace gets big.</h2>
               <p>
                 The near term goal is a focused pilot, a community of early builders, and a public trail of what worked,
                 what failed, and what needs to become manufacturable before a campaign.
