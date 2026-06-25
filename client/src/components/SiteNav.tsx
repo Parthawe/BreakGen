@@ -5,10 +5,10 @@ import { trackEvent } from "../lib/analytics";
 import { useAuthStore } from "../stores/authStore";
 
 const SITE_LINKS = [
-  { to: "/marketplace", label: "Marketplace" },
-  { to: "/how-it-works", label: "How it works" },
-  { to: "/creators", label: "Creators" },
-  { to: "/manufacturing", label: "Manufacturing" },
+  { to: "/marketplace/", label: "Marketplace" },
+  { to: "/how-it-works/", label: "How it works" },
+  { to: "/creators/", label: "Creators" },
+  { to: "/manufacturing/", label: "Manufacturing" },
 ];
 
 function openAlphaCapture(placement: string) {
@@ -21,7 +21,7 @@ export function SiteNav({ eyebrow = "Private alpha for custom programmable hardw
 
   const appCta = PUBLIC_SITE ? (
     <Link
-      to={PUBLIC_DEMO_PATH}
+      to="/demo/"
       onClick={() => trackEvent("site_nav_cta_click", { target: "demo", placement: "nav" })}
       className="surface-button-primary inline-flex h-11 items-center rounded-full px-5 text-[13px] font-semibold"
     >
@@ -75,7 +75,7 @@ export function SiteNav({ eyebrow = "Private alpha for custom programmable hardw
           </NavLink>
         ))}
         <NavLink
-          to={PUBLIC_DEMO_PATH}
+          to="/demo/"
           onClick={() => trackEvent("site_nav_link_click", { target: PUBLIC_DEMO_PATH })}
           className={({ isActive }) => `site-nav__link${isActive ? " is-active" : ""}`}
         >

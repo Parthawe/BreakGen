@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { LaunchCapture } from "../components/LaunchCapture";
 import { SiteNav } from "../components/SiteNav";
 import { trackEvent } from "../lib/analytics";
-import { PUBLIC_DEMO_PATH } from "../lib/runtime";
 
 const PHOTO = {
   makerBench: "https://images.unsplash.com/photo-1756723902363-25de2ac0ffae?auto=format&fit=crop&w=1800&q=82",
@@ -181,7 +180,7 @@ export function MarketplacePage() {
           <button type="button" className="surface-button-primary" onClick={() => openCapture("alpha", "marketplace_hero")}>
             Join marketplace alpha
           </button>
-          <Link to={PUBLIC_DEMO_PATH} className="surface-button" onClick={() => trackEvent("site_page_cta_click", { target: "demo", placement: "marketplace_hero" })}>
+          <Link to="/demo/" className="surface-button" onClick={() => trackEvent("site_page_cta_click", { target: "demo", placement: "marketplace_hero" })}>
             Inspect compiler demo
           </Link>
         </div>
@@ -243,7 +242,7 @@ export function HowItWorksPage() {
         alt="Electronics components and printed circuit boards arranged on a workbench"
       >
         <div className="site-hero-actions">
-          <Link to="/marketplace" className="surface-button-primary">
+          <Link to="/marketplace/" className="surface-button-primary">
             Browse pilot catalog
           </Link>
           <button type="button" className="surface-button" onClick={() => openCapture("research", "how_it_works")}>
@@ -344,7 +343,7 @@ export function ManufacturingPage() {
           <button type="button" className="surface-button-primary" onClick={() => openCapture("alpha", "manufacturing_hero")}>
             Follow pilot builds
           </button>
-          <Link to="/how-it-works" className="surface-button">
+          <Link to="/how-it-works/" className="surface-button">
             See compiler path
           </Link>
         </div>
