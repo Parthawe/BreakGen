@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from urllib.parse import quote
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,12 +15,14 @@ from server.api.auth import require_user, user_scope_id
 from server.db.database import get_db
 from server.db.models import UserRow
 from server.models.validation_schema import ValidationReport
-from server.services.artifact_registry import list_project_artifacts
+from server.services.artifact_registry import get_project_artifact, list_project_artifacts
 from server.services.job_registry import list_project_jobs
 from server.services.project_state import load_project_state
 from server.services.quality_gate import QualityGateInput, build_quality_gate_summary
 
 router = APIRouter(prefix="/api/projects", tags=["records"])
+
+_SAFE_DOWNLOAD_CHARS = frozenset("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-")
 
 
 def _read_json_artifact(path: str | None) -> dict | None:
@@ -82,6 +86,14 @@ def _serialize_job(row) -> dict:
     }
 
 
+def _download_filename(row) -> str:
+    path_name = Path(row.path).name if row.path else ""
+    fallback = f"{row.artifact_id}.bin"
+    raw_name = path_name or fallback
+    cleaned = "".join(char if char in _SAFE_DOWNLOAD_CHARS else "_" for char in raw_name)
+    return cleaned or fallback
+
+
 @router.get("/{project_id}/artifacts")
 async def get_project_artifacts(
     project_id: str,
@@ -104,6 +116,35 @@ async def get_project_jobs(
     await load_project_state(db, project_id, owner_user_id=user_scope_id(user))
     rows = await list_project_jobs(db, project_id)
     return [_serialize_job(row) for row in rows]
+
+
+@router.get("/{project_id}/artifacts/{artifact_id}/download")
+async def download_project_artifact(
+    project_id: str,
+    artifact_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: UserRow = Depends(require_user),
+):
+    """Download a registered artifact after project-owner authorization."""
+    await load_project_state(db, project_id, owner_user_id=user_scope_id(user))
+    row = await get_project_artifact(db, project_id, artifact_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Artifact not found")
+
+    path = Path(row.path)
+    if not path.exists() or not path.is_file():
+        raise HTTPException(status_code=404, detail="Artifact file not found")
+
+    filename = _download_filename(row)
+    return FileResponse(
+        path,
+        media_type=row.content_type or "application/octet-stream",
+        filename=filename,
+        headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}",
+            "X-BreakGen-Artifact-Id": row.artifact_id,
+        },
+    )
 
 
 @router.get("/{project_id}/records")

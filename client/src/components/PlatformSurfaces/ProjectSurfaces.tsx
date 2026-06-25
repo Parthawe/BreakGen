@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { api } from "../../lib/api";
 import type {
   AcceptanceState,
   ArtifactRecord,
@@ -125,6 +127,9 @@ export function ProjectSurfaces({
   qualityGate: QualityGateSummary | null;
   loading: boolean;
 }) {
+  const [downloadingArtifactId, setDownloadingArtifactId] = useState<string | null>(null);
+  const [artifactDownloadError, setArtifactDownloadError] = useState<string | null>(null);
+
   if (!project) {
     return (
       <div className="px-3 pb-3">
@@ -169,6 +174,23 @@ export function ProjectSurfaces({
   const latestExport = records?.latest_export ?? null;
   const currentRevisionExported = latestExport?.source_revision === project.revision;
   const activeJobs = records?.jobs.filter((job) => !["completed", "succeeded", "failed"].includes(job.status)) ?? [];
+  const handleArtifactDownload = async (artifact: ArtifactRecord) => {
+    setArtifactDownloadError(null);
+    setDownloadingArtifactId(artifact.artifact_id);
+    try {
+      await api.records.downloadArtifact(
+        project.project_id,
+        artifact.artifact_id,
+        artifact.file_name ?? `${artifact.artifact_id}.bin`,
+      );
+    } catch (error) {
+      setArtifactDownloadError(
+        error instanceof Error ? error.message : "Artifact download failed.",
+      );
+    } finally {
+      setDownloadingArtifactId(null);
+    }
+  };
   const alphaPath = [
     {
       key: "define",
@@ -534,11 +556,16 @@ export function ProjectSurfaces({
 
       <Section title="History" eyebrow="durable artifacts">
         <div className="space-y-2">
+          {artifactDownloadError && (
+            <div className="glass-danger rounded-lg px-3 py-2 text-[11px] leading-[1.5]">
+              {artifactDownloadError}
+            </div>
+          )}
           {records?.artifacts.length ? (
             records.artifacts.slice(0, 5).map((artifact) => (
               <div key={artifact.artifact_id} className="glass-subcard rounded-lg px-3 py-2">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[12px] text-[var(--text-primary)]">{lineageLabel(artifact)}</span>
+                  <span className="min-w-0 text-[12px] text-[var(--text-primary)]">{lineageLabel(artifact)}</span>
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-mono text-[var(--text-tertiary)]">r{artifact.source_revision}</span>
                     <span
@@ -551,6 +578,14 @@ export function ProjectSurfaces({
                 <div className="mt-1 text-[11px] text-[var(--text-tertiary)]">
                   {(artifact.producer_id ?? artifact.producer_kind ?? "system").replace(/_/g, " ")} • {formatTime(artifact.created_at)}
                 </div>
+                <button
+                  type="button"
+                  onClick={() => void handleArtifactDownload(artifact)}
+                  disabled={downloadingArtifactId === artifact.artifact_id}
+                  className="mt-2 inline-flex min-h-8 items-center rounded-md border border-[var(--border-subtle)] px-2.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-secondary)] transition-colors hover:border-[var(--border-default)] hover:text-[var(--text-primary)] disabled:cursor-wait disabled:opacity-60"
+                >
+                  {downloadingArtifactId === artifact.artifact_id ? "Downloading" : "Download artifact"}
+                </button>
               </div>
             ))
           ) : (

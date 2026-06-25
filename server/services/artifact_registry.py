@@ -461,6 +461,21 @@ async def list_project_artifacts(
     return list(result.scalars().all())
 
 
+async def get_project_artifact(
+    db: AsyncSession,
+    project_id: str,
+    artifact_id: str,
+) -> ProjectArtifactRow | None:
+    """Return a single artifact row scoped to a project."""
+    result = await db.execute(
+        select(ProjectArtifactRow).where(
+            ProjectArtifactRow.project_id == project_id,
+            ProjectArtifactRow.artifact_id == artifact_id,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
 async def find_latest_artifact(
     db: AsyncSession,
     project_id: str,

@@ -152,6 +152,7 @@ async def test_project_routes_require_auth_and_enforce_owner_scope(tmp_path: Pat
                 ("POST", f"/api/projects/{project_id}/export", None),
                 ("GET", f"/api/projects/{project_id}/records", None),
                 ("GET", f"/api/projects/{project_id}/artifacts", None),
+                ("GET", f"/api/projects/{project_id}/artifacts/missing_artifact/download", None),
                 ("GET", f"/api/projects/{project_id}/jobs", None),
                 ("GET", f"/api/projects/{project_id}/quality-gate", None),
                 ("GET", f"/api/projects/{project_id}/firmware/info.json", None),
@@ -174,6 +175,7 @@ async def test_project_routes_require_auth_and_enforce_owner_scope(tmp_path: Pat
                 ("POST", f"/api/projects/{project_id}/export", None),
                 ("GET", f"/api/projects/{project_id}/records", None),
                 ("GET", f"/api/projects/{project_id}/artifacts", None),
+                ("GET", f"/api/projects/{project_id}/artifacts/missing_artifact/download", None),
                 ("GET", f"/api/projects/{project_id}/jobs", None),
                 ("GET", f"/api/projects/{project_id}/quality-gate", None),
                 ("GET", f"/api/projects/{project_id}/firmware/info.json", None),
@@ -188,6 +190,32 @@ async def test_project_routes_require_auth_and_enforce_owner_scope(tmp_path: Pat
 
             exported = await client.post(f"/api/projects/{project_id}/export", headers=_auth(owner_token))
             assert exported.status_code == 200
+
+            records = await client.get(f"/api/projects/{project_id}/records", headers=_auth(owner_token))
+            assert records.status_code == 200
+            export_artifact = records.json()["latest_export"]
+            assert export_artifact["artifact_id"]
+            assert export_artifact["path"] is None
+
+            unauth_download = await client.get(
+                f"/api/projects/{project_id}/artifacts/{export_artifact['artifact_id']}/download",
+            )
+            assert unauth_download.status_code == 401
+
+            cross_user_download = await client.get(
+                f"/api/projects/{project_id}/artifacts/{export_artifact['artifact_id']}/download",
+                headers=_auth(other_token),
+            )
+            assert cross_user_download.status_code == 404
+
+            owner_download = await client.get(
+                f"/api/projects/{project_id}/artifacts/{export_artifact['artifact_id']}/download",
+                headers=_auth(owner_token),
+            )
+            assert owner_download.status_code == 200
+            assert owner_download.headers["x-breakgen-artifact-id"] == export_artifact["artifact_id"]
+            assert "server/" not in owner_download.headers.get("content-disposition", "")
+            assert owner_download.content.startswith(b"PK")
 
             owner_read_after_export = await client.get(
                 f"/api/projects/{project_id}",

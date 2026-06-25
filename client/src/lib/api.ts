@@ -367,5 +367,10 @@ export const api = {
     get: (projectId: string) => request<ProjectRecords>(`/projects/${projectId}/records`),
     qualityGate: (projectId: string) =>
       request<QualityGateSummary>(`/projects/${projectId}/quality-gate`),
+    downloadArtifact: (projectId: string, artifactId: string, fileName: string) =>
+      downloadFile(
+        `/projects/${projectId}/artifacts/${encodeURIComponent(artifactId)}/download`,
+        fileName,
+      ),
   },
 };
