@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ThemeSwitcher } from "../components/ThemeSwitcher";
+import { api, type AuthProvider } from "../lib/api";
 import { useAuthStore } from "../stores/authStore";
 
 const BRAND_POINTS = [
@@ -31,6 +32,8 @@ function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [inviteCode, setInviteCode] = useState("");
+  const [providers, setProviders] = useState<AuthProvider[]>([]);
+  const [providerStatus, setProviderStatus] = useState<"loading" | "ready" | "unavailable">("loading");
   const login = useAuthStore((state) => state.login);
   const signup = useAuthStore((state) => state.signup);
   const loading = useAuthStore((state) => state.loading);
@@ -46,6 +49,27 @@ function AuthForm({ mode }: { mode: "login" | "signup" }) {
     document.title = `${isSignup ? "Sign Up" : "Log In"} — BreakGen`;
   }, [isSignup]);
 
+  useEffect(() => {
+    let active = true;
+    setProviderStatus("loading");
+    api.auth
+      .providers()
+      .then((data) => {
+        if (!active) return;
+        setProviders(data.providers);
+        setProviderStatus("ready");
+      })
+      .catch(() => {
+        if (!active) return;
+        setProviders([]);
+        setProviderStatus("unavailable");
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     clearError();
@@ -60,26 +84,28 @@ function AuthForm({ mode }: { mode: "login" | "signup" }) {
     <div className="app-shell min-h-screen px-5 py-5 md:px-8 md:py-8">
       <div className="mx-auto flex min-h-[calc(100vh-2.5rem)] max-w-[1340px] flex-col gap-6 lg:flex-row">
         <section className="surface-strong relative flex flex-1 overflow-hidden rounded-[34px] p-7 md:p-10">
-          <div className="absolute right-6 top-6 z-20">
-            <ThemeSwitcher />
-          </div>
           <div className="landing-grid absolute inset-0 opacity-70" />
           <div className="landing-orb absolute -left-10 top-0 h-[24rem] w-[24rem]" />
           <div className="landing-orb-secondary absolute bottom-0 right-0 h-[20rem] w-[20rem]" />
           <div className="relative z-10 flex max-w-[560px] flex-col">
-            <Link to="/" className="inline-flex items-center gap-3">
-              <div className="surface-chip flex h-11 w-11 items-center justify-center rounded-2xl">
-                <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
-                  <rect x="1" y="3" width="6" height="4" rx="1" fill="var(--accent)" />
-                  <rect x="9" y="3" width="6" height="4" rx="1" fill="var(--accent)" opacity="0.48" />
-                  <rect x="1" y="9" width="14" height="4" rx="1" fill="var(--accent)" opacity="0.24" />
-                </svg>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <Link to="/" className="inline-flex min-w-0 items-center gap-3">
+                <div className="surface-chip flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl">
+                  <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
+                    <rect x="1" y="3" width="6" height="4" rx="1" fill="var(--accent)" />
+                    <rect x="9" y="3" width="6" height="4" rx="1" fill="var(--accent)" opacity="0.48" />
+                    <rect x="1" y="9" width="14" height="4" rx="1" fill="var(--accent)" opacity="0.24" />
+                  </svg>
+                </div>
+                <div className="min-w-0">
+                  <div className="truncate text-[15px] font-semibold text-[var(--text-primary)]">BreakGen</div>
+                  <div className="eyebrow mt-1 truncate">Control-surface alpha</div>
+                </div>
+              </Link>
+              <div className="shrink-0">
+                <ThemeSwitcher />
               </div>
-              <div>
-                <div className="text-[15px] font-semibold text-[var(--text-primary)]">BreakGen</div>
-                <div className="eyebrow mt-1">Control-surface alpha</div>
-              </div>
-            </Link>
+            </div>
 
             <div className="mt-16 max-w-[480px]">
               <div className="eyebrow">Custom electronic products</div>
@@ -138,6 +164,48 @@ function AuthForm({ mode }: { mode: "login" | "signup" }) {
                 {error}
               </div>
             )}
+
+            <div className="mb-6 grid gap-3">
+              {(providers.length
+                ? providers
+                : [
+                    {
+                      id: "google",
+                      label: "Google",
+                      enabled: false,
+                      configured: false,
+                      status: providerStatus,
+                      reason:
+                        providerStatus === "loading"
+                          ? "Checking provider status with the BreakGen API."
+                          : "Provider status is unavailable from the BreakGen API.",
+                      setup: [],
+                    },
+                    {
+                      id: "apple",
+                      label: "Apple",
+                      enabled: false,
+                      configured: false,
+                      status: providerStatus,
+                      reason:
+                        providerStatus === "loading"
+                          ? "Checking provider status with the BreakGen API."
+                          : "Provider status is unavailable from the BreakGen API.",
+                      setup: [],
+                    },
+                  ]).map((provider) => (
+                <ProviderButton key={provider.id} provider={provider} />
+              ))}
+              {providerStatus === "unavailable" && (
+                <p className="text-[12px] leading-[1.6] text-[var(--text-tertiary)]">
+                  Provider status could not be loaded. Email/password sign-in still uses the authenticated alpha path.
+                </p>
+              )}
+            </div>
+
+            <div className="section-rule mb-6 pt-5 text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-tertiary)]">
+              Alpha password access
+            </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
               {isSignup && (
@@ -219,6 +287,44 @@ function AuthForm({ mode }: { mode: "login" | "signup" }) {
         </section>
       </div>
     </div>
+  );
+}
+
+function ProviderButton({ provider }: { provider: AuthProvider }) {
+  const stateLabel =
+    provider.status === "server_callback_required"
+      ? "Callback pending"
+      : provider.status === "credentials_required"
+        ? "Setup needed"
+        : provider.status === "loading"
+          ? "Checking"
+          : provider.enabled
+            ? "Available"
+            : "Unavailable";
+  const providerMark = provider.id === "google" ? "G" : provider.id === "apple" ? "A" : provider.label.slice(0, 1);
+
+  return (
+    <button
+      type="button"
+      disabled={!provider.enabled}
+      title={provider.reason}
+      className="surface-button grid min-h-12 w-full grid-cols-[2.5rem_minmax(0,1fr)] items-center gap-3 rounded-[16px] px-3 text-left transition-all disabled:cursor-not-allowed disabled:opacity-70 sm:grid-cols-[2.5rem_minmax(0,1fr)_auto]"
+    >
+      <span className="flex h-9 w-9 items-center justify-center rounded-[12px] bg-[var(--surface-strong)] text-[14px] font-semibold text-[var(--text-primary)]">
+        {providerMark}
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate text-[13px] font-semibold text-[var(--text-primary)]">
+          Continue with {provider.label}
+        </span>
+        <span className="block truncate text-[11px] text-[var(--text-tertiary)]">
+          {provider.enabled ? "Ready for this deployment" : stateLabel}
+        </span>
+      </span>
+      <span className="hidden whitespace-nowrap rounded-full border border-[var(--border-subtle)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-tertiary)] sm:inline-flex">
+        {stateLabel}
+      </span>
+    </button>
   );
 }
 

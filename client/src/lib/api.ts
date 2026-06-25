@@ -33,6 +33,21 @@ type ApiErrorCode =
   | "server_error"
   | "unknown_error";
 
+export interface AuthProvider {
+  id: string;
+  label: string;
+  enabled: boolean;
+  configured: boolean;
+  status: string;
+  reason: string;
+  setup: string[];
+}
+
+export interface AuthProvidersResponse {
+  password: AuthProvider;
+  providers: AuthProvider[];
+}
+
 export class ApiError extends Error {
   status: number;
   detail: string;
@@ -165,6 +180,7 @@ async function downloadFile(pathOrUrl: string, fileName: string): Promise<void> 
 
 export const api = {
   auth: {
+    providers: () => request<AuthProvidersResponse>("/auth/providers"),
     signup: (req: { email: string; name: string; password: string; invite_code?: string }) =>
       request<{ token: string; user: { id: number; email: string; name: string } }>(
         "/auth/signup",

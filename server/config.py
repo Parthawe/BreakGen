@@ -29,6 +29,12 @@ class Settings(BaseSettings):
     signup_invite_code: str = ""
     cors_origins: str = "http://localhost:5173"
     cors_allow_credentials: bool = True
+    google_oauth_client_id: str = ""
+    google_oauth_client_secret: str = ""
+    apple_oauth_client_id: str = ""
+    apple_oauth_team_id: str = ""
+    apple_oauth_key_id: str = ""
+    apple_oauth_private_key: str = ""
     launch_lead_rate_limit_per_minute: int = 12
     launch_lead_note_max_length: int = 1000
 
@@ -67,6 +73,24 @@ class Settings(BaseSettings):
         ):
             raise ValueError(
                 "BREAKGEN_CORS_ORIGINS cannot include * with credentials in production"
+            )
+        google_fields = [
+            self.google_oauth_client_id,
+            self.google_oauth_client_secret,
+        ]
+        if any(google_fields) and not all(google_fields):
+            raise ValueError(
+                "BREAKGEN_GOOGLE_OAUTH_CLIENT_ID and BREAKGEN_GOOGLE_OAUTH_CLIENT_SECRET must be set together"
+            )
+        apple_fields = [
+            self.apple_oauth_client_id,
+            self.apple_oauth_team_id,
+            self.apple_oauth_key_id,
+            self.apple_oauth_private_key,
+        ]
+        if any(apple_fields) and not all(apple_fields):
+            raise ValueError(
+                "BREAKGEN_APPLE_OAUTH_CLIENT_ID, BREAKGEN_APPLE_OAUTH_TEAM_ID, BREAKGEN_APPLE_OAUTH_KEY_ID, and BREAKGEN_APPLE_OAUTH_PRIVATE_KEY must be set together"
             )
         if self.launch_lead_rate_limit_per_minute < 1:
             raise ValueError("BREAKGEN_LAUNCH_LEAD_RATE_LIMIT_PER_MINUTE must be at least 1")

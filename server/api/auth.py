@@ -34,6 +34,21 @@ class AuthResponse(BaseModel):
     user: dict
 
 
+class AuthProvider(BaseModel):
+    id: str
+    label: str
+    enabled: bool
+    configured: bool
+    status: str
+    reason: str
+    setup: list[str]
+
+
+class AuthProvidersResponse(BaseModel):
+    password: AuthProvider
+    providers: list[AuthProvider]
+
+
 def _create_token(user_id: int, email: str) -> str:
     payload = {
         "sub": str(user_id),
@@ -76,6 +91,93 @@ async def require_user(request: Request, db: AsyncSession = Depends(get_db)) -> 
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
     return user
+
+
+def _planned_oauth_provider(
+    *,
+    provider_id: str,
+    label: str,
+    configured: bool,
+    credential_steps: list[str],
+) -> AuthProvider:
+    if configured:
+        return AuthProvider(
+            id=provider_id,
+            label=label,
+            enabled=False,
+            configured=True,
+            status="server_callback_required",
+            reason=(
+                "Provider credentials are present, but the server callback, state/nonce "
+                "checks, token exchange, and account-linking flow are not enabled yet."
+            ),
+            setup=[
+                "Add provider redirect URI in the OAuth console.",
+                "Implement server-side authorization-code callback.",
+                "Verify state, nonce, issuer, audience, expiry, and email claims.",
+                "Persist a linked identity record before enabling the client button.",
+            ],
+        )
+
+    return AuthProvider(
+        id=provider_id,
+        label=label,
+        enabled=False,
+        configured=False,
+        status="credentials_required",
+        reason="Provider credentials are not configured for this deployment.",
+        setup=credential_steps,
+    )
+
+
+@router.get("/providers", response_model=AuthProvidersResponse)
+async def auth_providers():
+    """Return the server-owned list of authentication methods for this deployment."""
+    return AuthProvidersResponse(
+        password=AuthProvider(
+            id="password",
+            label="Email and password",
+            enabled=True,
+            configured=True,
+            status="active",
+            reason=(
+                "Email/password login is active. Signup may still be invite-gated "
+                "by the alpha operator."
+            ),
+            setup=[],
+        ),
+        providers=[
+            _planned_oauth_provider(
+                provider_id="google",
+                label="Google",
+                configured=bool(
+                    settings.google_oauth_client_id
+                    and settings.google_oauth_client_secret
+                ),
+                credential_steps=[
+                    "Set BREAKGEN_GOOGLE_OAUTH_CLIENT_ID.",
+                    "Set BREAKGEN_GOOGLE_OAUTH_CLIENT_SECRET.",
+                    "Register the backend redirect URI in Google Cloud Console.",
+                ],
+            ),
+            _planned_oauth_provider(
+                provider_id="apple",
+                label="Apple",
+                configured=bool(
+                    settings.apple_oauth_client_id
+                    and settings.apple_oauth_team_id
+                    and settings.apple_oauth_key_id
+                    and settings.apple_oauth_private_key
+                ),
+                credential_steps=[
+                    "Set BREAKGEN_APPLE_OAUTH_CLIENT_ID to the Apple Services ID.",
+                    "Set BREAKGEN_APPLE_OAUTH_TEAM_ID.",
+                    "Set BREAKGEN_APPLE_OAUTH_KEY_ID.",
+                    "Set BREAKGEN_APPLE_OAUTH_PRIVATE_KEY through deployment secrets.",
+                ],
+            ),
+        ],
+    )
 
 
 @router.post("/signup", response_model=AuthResponse)

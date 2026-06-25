@@ -33,3 +33,15 @@ def test_production_requires_non_default_jwt_secret():
     with pytest.raises(ValidationError, match="BREAKGEN_JWT_SECRET"):
         Settings(debug=False, jwt_secret=DEV_JWT_SECRET)
 
+
+def test_google_oauth_settings_must_be_complete():
+    with pytest.raises(ValidationError, match="GOOGLE_OAUTH"):
+        Settings(google_oauth_client_id="google-client")
+
+
+def test_apple_oauth_settings_must_be_complete():
+    with pytest.raises(ValidationError, match="APPLE_OAUTH"):
+        Settings(
+            apple_oauth_client_id="apple-service-id",
+            apple_oauth_team_id="team-id",
+        )

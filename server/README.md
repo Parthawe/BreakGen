@@ -158,6 +158,12 @@ Those instead produce durable artifacts and job records tied to the current revi
 | `BREAKGEN_MIN_PASSWORD_LENGTH` | `8` | Minimum signup password length |
 | `BREAKGEN_PUBLIC_SIGNUP_ENABLED` | `false` | Signup switch; keep `false` for invite-only hosted alpha |
 | `BREAKGEN_SIGNUP_INVITE_CODE` | empty | Required when production signup remains enabled |
+| `BREAKGEN_GOOGLE_OAUTH_CLIENT_ID` | empty | Google OAuth client ID; exposed only as configured state until OAuth callbacks are implemented |
+| `BREAKGEN_GOOGLE_OAUTH_CLIENT_SECRET` | empty | Google OAuth client secret; must be set with the Google client ID |
+| `BREAKGEN_APPLE_OAUTH_CLIENT_ID` | empty | Apple Services ID for Sign in with Apple; exposed only as configured state until OAuth callbacks are implemented |
+| `BREAKGEN_APPLE_OAUTH_TEAM_ID` | empty | Apple team ID; must be set with all Apple OAuth fields |
+| `BREAKGEN_APPLE_OAUTH_KEY_ID` | empty | Apple private key ID; must be set with all Apple OAuth fields |
+| `BREAKGEN_APPLE_OAUTH_PRIVATE_KEY` | empty | Apple private key from deployment secrets; never commit a real key |
 | `BREAKGEN_MESHY_API_KEY` | empty | Meshy provider key |
 | `BREAKGEN_MESHY_MODEL_DOWNLOAD_MAX_BYTES` | `67108864` | Maximum provider model download size |
 

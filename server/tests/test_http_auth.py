@@ -46,6 +46,56 @@ def _auth(token: str) -> dict[str, str]:
 
 
 @pytest.mark.anyio
+async def test_auth_providers_describe_active_and_planned_methods(monkeypatch):
+    monkeypatch.setattr("server.api.auth.settings.google_oauth_client_id", "")
+    monkeypatch.setattr("server.api.auth.settings.google_oauth_client_secret", "")
+    monkeypatch.setattr("server.api.auth.settings.apple_oauth_client_id", "")
+    monkeypatch.setattr("server.api.auth.settings.apple_oauth_team_id", "")
+    monkeypatch.setattr("server.api.auth.settings.apple_oauth_key_id", "")
+    monkeypatch.setattr("server.api.auth.settings.apple_oauth_private_key", "")
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        response = await client.get("/api/auth/providers")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["password"]["enabled"] is True
+    assert data["password"]["status"] == "active"
+
+    providers = {provider["id"]: provider for provider in data["providers"]}
+    assert providers["google"]["enabled"] is False
+    assert providers["google"]["configured"] is False
+    assert providers["google"]["status"] == "credentials_required"
+    assert providers["apple"]["enabled"] is False
+    assert providers["apple"]["configured"] is False
+    assert providers["apple"]["status"] == "credentials_required"
+
+
+@pytest.mark.anyio
+async def test_auth_providers_do_not_enable_oauth_until_callbacks_exist(monkeypatch):
+    monkeypatch.setattr("server.api.auth.settings.google_oauth_client_id", "google-client")
+    monkeypatch.setattr("server.api.auth.settings.google_oauth_client_secret", "google-secret")
+    monkeypatch.setattr("server.api.auth.settings.apple_oauth_client_id", "apple-service-id")
+    monkeypatch.setattr("server.api.auth.settings.apple_oauth_team_id", "apple-team")
+    monkeypatch.setattr("server.api.auth.settings.apple_oauth_key_id", "apple-key")
+    monkeypatch.setattr("server.api.auth.settings.apple_oauth_private_key", "apple-private-key")
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        response = await client.get("/api/auth/providers")
+
+    assert response.status_code == 200
+    providers = {provider["id"]: provider for provider in response.json()["providers"]}
+    assert providers["google"]["configured"] is True
+    assert providers["google"]["enabled"] is False
+    assert providers["google"]["status"] == "server_callback_required"
+    assert providers["apple"]["configured"] is True
+    assert providers["apple"]["enabled"] is False
+    assert providers["apple"]["status"] == "server_callback_required"
+
+
+@pytest.mark.anyio
 async def test_project_routes_require_auth_and_enforce_owner_scope(tmp_path: Path, monkeypatch):
     engine, session_factory = await _make_session(tmp_path)
     artifacts_dir = tmp_path / "artifacts"
