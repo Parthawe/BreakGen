@@ -152,6 +152,23 @@ Acceptance criteria:
 - Validation distinguishes "candidate", "review ready", and future "prototype ready" states.
 - Claims in the public site match actual generated artifacts.
 
+### Prototype-Backed Kickstarter
+
+Owner goal:
+
+> Turn one physically proven BreakGen output into a narrow campaign, not a broad platform preorder.
+
+Kickstarter is a fit only after BreakGen can show a working prototype, real photos or video, pilot-build learnings, supplier assumptions, and an honest production plan. The first campaign should be one focused kit, most likely a split macro pad or creator command console, because those stay closest to the current compiler, footprint catalog, firmware metadata, and enclosure path.
+
+Readiness gates:
+
+1. One hero device selected.
+2. Working prototype filmed.
+3. Ten pilot units attempted.
+4. Cost model includes PCB, case, switches/modules, packaging, failed units, and shipping buffer.
+5. Pre-launch list and updates prove interest before the campaign goes live.
+6. Risks explain prototype, manufacturing, firmware, supplier, and fulfillment uncertainty.
+
 ### Growth and GTM
 
 Owner goal:

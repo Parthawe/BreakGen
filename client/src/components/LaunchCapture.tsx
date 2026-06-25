@@ -7,6 +7,7 @@ const STORAGE_KEY = "breakgen.launch_capture.v1";
 
 type CaptureMode = "alpha" | "discord" | "research";
 type SubmitState = "idle" | "submitting" | "sent" | "fallback" | "error";
+type OpenLaunchCaptureEvent = CustomEvent<{ mode?: CaptureMode }>;
 
 const MODES: Record<CaptureMode, { label: string; title: string; body: string; intent: string }> = {
   alpha: {
@@ -95,6 +96,18 @@ export function LaunchCapture({ surface }: { surface: "landing" | "demo" }) {
       trackEvent("launch_capture_auto_open", { surface });
     }, surface === "landing" ? 9000 : 14000);
     return () => window.clearTimeout(timer);
+  }, [surface]);
+
+  useEffect(() => {
+    const openFromPage = (event: Event) => {
+      const nextMode = (event as OpenLaunchCaptureEvent).detail?.mode ?? "alpha";
+      setMode(nextMode);
+      setOpen(true);
+      setSubmitState("idle");
+      trackEvent("launch_capture_open", { surface, mode: nextMode, source: "page_event" });
+    };
+    window.addEventListener("breakgen:open-launch-capture", openFromPage);
+    return () => window.removeEventListener("breakgen:open-launch-capture", openFromPage);
   }, [surface]);
 
   const content = MODES[mode];
