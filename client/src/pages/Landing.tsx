@@ -80,15 +80,15 @@ const PROOF_RECEIPT = [
 const MAKER_SIGNALS = [
   {
     label: "Controls are mixed",
-    body: "DIY projects combine switches, OLEDs, encoders, LCDs, sliders, knobs, joysticks, and arcade buttons. BreakGen should model modules directly instead of forcing every device through keyboard-only fields.",
+    body: "DIY projects combine switches, OLEDs, encoders, LCDs, sliders, knobs, joysticks, and arcade buttons. BreakGen models those modules directly instead of forcing every device through keyboard-only fields.",
   },
   {
     label: "Cases are the bottleneck",
-    body: "Shared projects often solve the enclosure around a known board or controller. BreakGen should make mounting, access, screw points, feet, and panel separation first-class constraints.",
+    body: "Shared projects often solve the enclosure around a known board or controller. BreakGen makes mounting, access, screw points, feet, and panel separation first-class constraints.",
   },
   {
     label: "Build notes matter",
-    body: "The useful designs include print orientation, hardware, fasteners, and assembly assumptions. BreakGen exports should include the same practical build evidence alongside geometry.",
+    body: "The useful designs include print orientation, hardware, fasteners, and assembly assumptions. BreakGen exports include the same practical build evidence alongside geometry.",
   },
   {
     label: "Remix is the workflow",
@@ -135,7 +135,7 @@ const COMING_SOON_PRODUCTS = [
     stage: "research lane",
     lane: "Assistive lane",
     build: "large buttons, joystick, mounting plate, HID map",
-    why: "The most important use cases are not always mass-market. This lane should be developed with users and careful ergonomics.",
+    why: "The most important use cases are not always mass-market. This lane develops with users and careful ergonomics.",
     modules: ["arcade buttons", "joystick", "mount points"],
     proof: "user fit session",
     shape: "access",
@@ -365,7 +365,7 @@ function ComingSoonLab() {
       <div className="manufacture-lab__intro">
         <div className="eyebrow">Coming soon</div>
         <h2>
-          A prototype lab for the manufactured devices BreakGen should earn next.
+          A prototype lab for the manufactured devices BreakGen can earn next.
         </h2>
         <p>
           The roadmap stays close to control surfaces and enclosures because they share the
@@ -417,7 +417,7 @@ function ComingSoonLab() {
         <div className="manufacture-lab__filter">
           <span>Manufacturing filter</span>
           <p>
-            Every lane needs named footprints, enclosure assumptions, BOM gaps, and prototype risks before
+            Every lane requires named footprints, enclosure assumptions, BOM gaps, and prototype risks before
             it can become a real kit or campaign promise.
           </p>
         </div>
@@ -433,7 +433,7 @@ function KickstarterRunway() {
         <div className="eyebrow">Kickstarter path</div>
         <h2>Crowdfunding only works here if the prototype story is real.</h2>
         <p>
-          The first campaign should not sell the whole platform. It should sell one focused device,
+          The first campaign does not sell the whole platform. It sells one focused device,
           likely a split macro pad or creator command console, with BreakGen shown as the system
           that produced the files, records, and build guide.
         </p>
@@ -501,9 +501,9 @@ function StudioBench() {
     <section className="studio-bench section-rule mt-10 pt-10">
       <div className="studio-bench__copy">
         <div className="eyebrow">Studio bench</div>
-        <h2>It should feel like a place where a device is becoming real.</h2>
+        <h2>A place where a device becomes real.</h2>
         <p>
-          BreakGen needs warmth without losing precision: a bench for makers, founders, and designers
+          BreakGen adds warmth without losing precision: a bench for makers, founders, and designers
           where the creative object, source evidence, and next build step stay in view together.
         </p>
       </div>

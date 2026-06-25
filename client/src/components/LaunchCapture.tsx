@@ -154,7 +154,6 @@ export function LaunchCapture({ surface }: { surface: "landing" | "demo" }) {
       setSubmitState("sent");
       trackEvent("launch_capture_submit", { surface, mode, role, endpoint: "configured" });
     } catch {
-      markCaptured();
       setSubmitState("fallback");
       trackEvent("launch_capture_error", { surface, mode });
       trackEvent("launch_capture_submit", { surface, mode, role, endpoint: "email_fallback" });

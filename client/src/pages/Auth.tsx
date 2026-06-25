@@ -30,6 +30,7 @@ function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
   const login = useAuthStore((state) => state.login);
   const signup = useAuthStore((state) => state.signup);
   const loading = useAuthStore((state) => state.loading);
@@ -50,7 +51,7 @@ function AuthForm({ mode }: { mode: "login" | "signup" }) {
     clearError();
     const ok =
       mode === "signup"
-        ? await signup(email, name, password)
+        ? await signup(email, name, password, inviteCode)
         : await login(email, password);
     if (ok) navigate("/app");
   };
@@ -147,6 +148,18 @@ function AuthForm({ mode }: { mode: "login" | "signup" }) {
                     onChange={(event) => setName(event.target.value)}
                     required
                     placeholder="Your name"
+                    className="surface-input h-12 w-full rounded-[16px] px-4 text-[14px] focus:outline-none"
+                  />
+                </Field>
+              )}
+
+              {isSignup && (
+                <Field label="Invite code">
+                  <input
+                    type="text"
+                    value={inviteCode}
+                    onChange={(event) => setInviteCode(event.target.value)}
+                    placeholder="From the alpha operator"
                     className="surface-input h-12 w-full rounded-[16px] px-4 text-[14px] focus:outline-none"
                   />
                 </Field>

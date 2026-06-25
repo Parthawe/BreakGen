@@ -32,6 +32,7 @@ from server.services.project_state import (
     invalidate_derived_state,
     load_project_state,
 )
+from server.services.platform_catalog import list_product_family_manifests
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
@@ -72,6 +73,14 @@ def _get_supported_template(template_id: str):
     return next((template for template in SUPPORTED_TEMPLATES if template.template_id == template_id), None)
 
 
+def _enabled_project_families() -> frozenset[ProductFamily]:
+    return frozenset(
+        manifest.family
+        for manifest in list_product_family_manifests()
+        if manifest.status == "enabled"
+    )
+
+
 def _public_project_payload(data: dict) -> dict:
     """Return project state without internal filesystem artifact paths."""
     payload = copy.deepcopy(data)
@@ -107,6 +116,11 @@ async def create_project(
         family = ProductFamily(req.product_family)
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Unknown product family: {req.product_family}")
+    if family not in _enabled_project_families():
+        raise HTTPException(
+            status_code=400,
+            detail=f"Product family '{family.value}' is not enabled for authenticated alpha projects",
+        )
 
     default_domain = domain_for_family(family)
     if req.product_domain is not None:

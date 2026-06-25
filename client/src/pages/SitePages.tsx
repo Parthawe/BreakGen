@@ -172,7 +172,7 @@ export function MarketplacePage() {
       <PageHero
         eyebrow="Marketplace"
         title="Amazon for customizable hardware, with proof before checkout."
-        body="The first BreakGen marketplace should not be a warehouse of random files. It should be a curated catalog where every item can be customized, validated, priced, and moved into a limited pilot run."
+        body="The first BreakGen marketplace is not a warehouse of random files. It is a curated catalog where every item can be customized, validated, priced, and moved into a limited pilot run."
         image={PHOTO.makerBench}
         alt="A maker at a workbench using CAD beside a 3D printer"
       >
@@ -191,8 +191,8 @@ export function MarketplacePage() {
           <div className="eyebrow">Pilot catalog</div>
           <h2>Shop the kind of thing, then shape the exact device.</h2>
           <p>
-            The catalog is organized around real buying intent: a streamer needs a deck,
-            a musician needs a controller, a founder needs a prototype shell, a maker needs a kit.
+            The catalog is organized around real buying intent: streamers want decks,
+            musicians want controllers, founders want prototype shells, makers want kits.
           </p>
         </div>
         <div className="marketplace-grid">
@@ -277,8 +277,8 @@ export function CreatorsPage() {
     <SitePageShell>
       <PageHero
         eyebrow="Creator network"
-        title="The community is not a Discord logo. It is the product discovery engine."
-        body="BreakGen should learn from people who actually build, stream, perform, repair, remix, and ship. The site needs visible doors for those people to enter the company."
+        title="The community is the product discovery engine."
+        body="BreakGen learns from people who actually build, stream, perform, repair, remix, and ship. Creators get clear paths into alpha access, research calls, and template decisions."
         image={PHOTO.soldering}
         alt="People soldering electronics during a workshop"
       >
@@ -335,7 +335,7 @@ export function ManufacturingPage() {
       <PageHero
         eyebrow="Manufacturing"
         title="A custom marketplace only works if the promise survives the bench."
-        body="The manufacturing page should make the company feel honest. We can sell customizable things only when we show how sourcing, fit, pilot economics, and fulfillment become part of the product record."
+        body="BreakGen keeps the manufacturing promise visible. Customizable products become credible when sourcing, fit, pilot economics, and fulfillment live inside the product record."
         image={PHOTO.cadPrinter}
         alt="An engineer working in CAD beside a 3D printer"
       >
@@ -352,7 +352,7 @@ export function ManufacturingPage() {
       <section className="manufacturing-ledger section-rule">
         <div className="manufacturing-ledger__intro">
           <div className="eyebrow">Readiness gates</div>
-          <h2>Every product listing needs a proof ledger before it looks shippable.</h2>
+          <h2>Every product listing gets a proof ledger before it looks shippable.</h2>
         </div>
         <div className="manufacturing-ledger__grid">
           {MANUFACTURING_GATES.map(([title, body], index) => (

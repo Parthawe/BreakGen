@@ -24,7 +24,7 @@ interface AuthStore {
   loading: boolean;
   error: string | null;
 
-  signup: (email: string, name: string, password: string) => Promise<boolean>;
+  signup: (email: string, name: string, password: string, inviteCode?: string) => Promise<boolean>;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   loadSession: () => Promise<void>;
@@ -42,10 +42,16 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   loading: false,
   error: null,
 
-  signup: async (email, name, password) => {
+  signup: async (email, name, password, inviteCode) => {
     set({ loading: true, error: null, sessionNotice: null });
     try {
-      const data = await api.auth.signup({ email, name, password });
+      const trimmedInviteCode = inviteCode?.trim();
+      const data = await api.auth.signup({
+        email,
+        name,
+        password,
+        ...(trimmedInviteCode ? { invite_code: trimmedInviteCode } : {}),
+      });
       localStorage.setItem("breakgen_token", data.token);
       set({
         user: data.user,

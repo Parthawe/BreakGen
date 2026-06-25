@@ -66,6 +66,18 @@ async def test_project_routes_require_auth_and_enforce_owner_scope(tmp_path: Pat
             owner_token = await _signup(client, "owner@example.com")
             other_token = await _signup(client, "other@example.com")
 
+            proof_family = await client.post(
+                "/api/projects/",
+                headers=_auth(owner_token),
+                json={
+                    "name": "Proof Pedal",
+                    "template_id": "pedal_controller_3switch",
+                    "product_family": "pedal_controller",
+                },
+            )
+            assert proof_family.status_code == 400
+            assert "not enabled" in proof_family.json()["detail"]
+
             created = await client.post(
                 "/api/projects/",
                 headers=_auth(owner_token),
