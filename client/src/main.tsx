@@ -6,6 +6,7 @@ import { Landing } from "./pages/Landing";
 import { Login, Signup } from "./pages/Auth";
 import { ProjectList } from "./pages/ProjectList";
 import { PUBLIC_DEMO_PATH, PUBLIC_SITE, ROUTER_BASENAME } from "./lib/runtime";
+import { ThemeProvider, bootstrapTheme } from "./lib/theme";
 import { useAuthStore } from "./stores/authStore";
 import "./index.css";
 
@@ -16,7 +17,17 @@ const LazyPublicDemo = lazy(async () => ({
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const user = useAuthStore((s) => s.user);
   const token = useAuthStore((s) => s.token);
+  const initialized = useAuthStore((s) => s.initialized);
   if (PUBLIC_SITE) return <Navigate to={PUBLIC_DEMO_PATH} replace />;
+  if (token && !initialized) {
+    return (
+      <div className="app-shell flex min-h-screen items-center justify-center">
+        <div className="surface-panel rounded-[24px] px-6 py-5 text-[13px] text-[var(--text-secondary)]">
+          Restoring authenticated workspace…
+        </div>
+      </div>
+    );
+  }
   if (!user && !token) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
@@ -31,7 +42,7 @@ function Root() {
 
   return (
     <BrowserRouter basename={ROUTER_BASENAME}>
-      <Suspense fallback={<div className="min-h-screen bg-[#050507]" />}>
+      <Suspense fallback={<div className="min-h-screen bg-[var(--bg-root)]" />}>
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path={PUBLIC_DEMO_PATH} element={<LazyPublicDemo />} />
@@ -59,8 +70,12 @@ function Root() {
   );
 }
 
+bootstrapTheme();
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <Root />
+    <ThemeProvider>
+      <Root />
+    </ThemeProvider>
   </StrictMode>
 );

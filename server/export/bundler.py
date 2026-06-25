@@ -63,11 +63,11 @@ def _generate_build_guide(
     switch_line = project.switch_profile.part_id or "Not selected / module-specific default"
     electronics = compile_control_surface_electronics(project)
     if project.product_family in {ProductFamily.HANDHELD_COMPANION, ProductFamily.RETRO_HANDHELD}:
-        mechanical_rows = """| `shell/front_shell_panel.dxf` | Front shell reference panel with display/button/speaker cutouts |
-| `shell/back_shell_reference.dxf` | Back shell cavity and service-access reference |
+        mechanical_rows = """| `shell/front_shell_panel.dxf` | Front shell reference panel with display, button, speaker, and microphone cutouts |
+| `shell/back_shell_reference.dxf` | Back shell cavity, battery, and service-access reference |
 | `shell/shell_spec.json` | Deterministic handheld shell proof specification |"""
         mechanical_steps = """2. **Prepare shell parts** — Use `shell_spec.json` as the source of truth for enclosure dimensions and `front_shell_panel.dxf` / `back_shell_reference.dxf` as 2D planning references
-3. **Fit portable modules** — Check display, battery, speaker, and USB-C placements against the shell spec before committing to CAD or fabrication
+3. **Fit portable modules** — Check display, battery, USB-C charging/data access, speaker, and microphone placements against the shell spec before committing to CAD or fabrication
 4. **Solder and integrate electronics** — Install the controller and control modules according to the exported metadata
 5. **Flash proof firmware** — Use `info.json`, `keymap.json`, and `control-map.json` as the current software/hardware contract
 6. **Refine enclosure CAD** — Treat this bundle as a deterministic enclosure baseline, not a finished production shell"""
@@ -124,7 +124,7 @@ def create_export_bundle(
     project: KeyboardProject,
     *,
     validation_report: ValidationReport | None = None,
-    export_readiness: str = "production_ready",
+    export_readiness: str = "prototype_ready",
     output_path: str | Path | None = None,
 ) -> tuple[str, Path]:
     """

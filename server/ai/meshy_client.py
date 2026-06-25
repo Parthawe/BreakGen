@@ -8,9 +8,13 @@ Spec reference: [R1] https://docs.meshy.ai/api/text-to-3d
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import logging
+import socket
 from enum import Enum
+from pathlib import Path
 from typing import Optional
+from urllib.parse import urlparse
 
 import httpx
 
@@ -19,6 +23,16 @@ from server.config import settings
 logger = logging.getLogger(__name__)
 
 MESHY_BASE = settings.meshy_api_url
+ALLOWED_MODEL_DOWNLOAD_SUFFIXES = {".glb", ".gltf", ".obj", ".fbx", ".usdz", ".stl"}
+ALLOWED_MODEL_CONTENT_TYPES = {
+    "application/octet-stream",
+    "binary/octet-stream",
+    "model/gltf-binary",
+    "model/gltf+json",
+    "model/obj",
+    "model/vnd.usdz+zip",
+    "text/plain",
+}
 
 
 class TaskStatus(str, Enum):
@@ -34,11 +48,77 @@ class MeshyError(Exception):
     pass
 
 
+def _is_public_address(host: str) -> bool:
+    """Return whether host resolves only to public, routable addresses."""
+    try:
+        addresses = [ipaddress.ip_address(host)]
+    except ValueError:
+        try:
+            infos = socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)
+        except socket.gaierror as exc:
+            raise MeshyError(f"Cannot resolve model download host: {host}") from exc
+        addresses = []
+        for info in infos:
+            address = info[4][0]
+            try:
+                addresses.append(ipaddress.ip_address(address))
+            except ValueError:
+                raise MeshyError(f"Unexpected model download address: {address}")
+
+    if not addresses:
+        raise MeshyError(f"Cannot resolve model download host: {host}")
+
+    return all(
+        address.is_global
+        and not address.is_loopback
+        and not address.is_link_local
+        and not address.is_multicast
+        and not address.is_private
+        and not address.is_reserved
+        for address in addresses
+    )
+
+
+def validate_model_download_url(model_url: str) -> None:
+    """Validate a provider-supplied model URL before any egress request."""
+    parsed = urlparse(model_url)
+    if parsed.scheme != "https":
+        raise MeshyError("Model downloads must use https URLs")
+    if not parsed.hostname:
+        raise MeshyError("Model download URL is missing a host")
+    if parsed.username or parsed.password:
+        raise MeshyError("Model download URL must not include credentials")
+
+    suffix = Path(parsed.path).suffix.lower()
+    if suffix and suffix not in ALLOWED_MODEL_DOWNLOAD_SUFFIXES:
+        raise MeshyError(f"Unsupported model download suffix: {suffix}")
+
+    if not _is_public_address(parsed.hostname):
+        raise MeshyError("Model download host must resolve to a public address")
+
+
+def validate_model_download_headers(headers: httpx.Headers, *, max_bytes: int) -> None:
+    """Validate response metadata before streaming a generated model."""
+    content_length = headers.get("content-length")
+    if content_length:
+        try:
+            size = int(content_length)
+        except ValueError as exc:
+            raise MeshyError("Invalid model download Content-Length") from exc
+        if size > max_bytes:
+            raise MeshyError(f"Model download exceeds {max_bytes} bytes")
+
+    content_type = (headers.get("content-type") or "").split(";", 1)[0].strip().lower()
+    if content_type and content_type not in ALLOWED_MODEL_CONTENT_TYPES and not content_type.startswith("model/"):
+        raise MeshyError(f"Unsupported model download content type: {content_type}")
+
+
 class MeshyClient:
     """Async client for the Meshy text-to-3D API."""
 
-    def __init__(self, api_key: str | None = None):
+    def __init__(self, api_key: str | None = None, download_transport: httpx.AsyncBaseTransport | None = None):
         self.api_key = api_key or settings.meshy_api_key
+        self.download_transport = download_transport
         if not self.api_key:
             logger.warning("No Meshy API key configured. Generation will fail.")
 
@@ -128,14 +208,32 @@ class MeshyClient:
 
     async def download_model(self, model_url: str, output_path: str) -> str:
         """Download a generated model file (GLB/OBJ) to disk."""
-        async with httpx.AsyncClient(timeout=60) as client:
-            resp = await client.get(model_url)
+        validate_model_download_url(model_url)
 
-        if resp.status_code != 200:
-            raise MeshyError(f"Failed to download model: {resp.status_code}")
+        max_bytes = settings.meshy_model_download_max_bytes
+        output = Path(output_path)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        bytes_written = 0
+        client_kwargs: dict = {"timeout": 60, "follow_redirects": False}
+        if self.download_transport is not None:
+            client_kwargs["transport"] = self.download_transport
 
-        with open(output_path, "wb") as f:
-            f.write(resp.content)
+        try:
+            async with httpx.AsyncClient(**client_kwargs) as client:
+                async with client.stream("GET", model_url) as resp:
+                    if resp.status_code != 200:
+                        raise MeshyError(f"Failed to download model: {resp.status_code}")
+                    validate_model_download_headers(resp.headers, max_bytes=max_bytes)
 
-        logger.info(f"Model downloaded to {output_path} ({len(resp.content)} bytes)")
+                    with open(output, "wb") as f:
+                        async for chunk in resp.aiter_bytes():
+                            bytes_written += len(chunk)
+                            if bytes_written > max_bytes:
+                                raise MeshyError(f"Model download exceeds {max_bytes} bytes")
+                            f.write(chunk)
+        except Exception:
+            output.unlink(missing_ok=True)
+            raise
+
+        logger.info(f"Model downloaded to {output_path} ({bytes_written} bytes)")
         return output_path

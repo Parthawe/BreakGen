@@ -1,0 +1,74 @@
+{
+  "template_id": "breath_controller_basic",
+  "name": "Basic Breath Controller",
+  "layout": {
+    "unit_pitch_mm": 19.05,
+    "elements": [
+      {
+        "id": "breath_pressure",
+        "element_type": "sensor",
+        "label": "Breath",
+        "footprint_id": "pressure_sensor",
+        "x_mm": 20.0,
+        "y_mm": 0.0,
+        "w_mm": 28.0,
+        "h_mm": 16.0,
+        "electrical_ref": "midi_cc_2",
+        "mounting": { "air_path": true }
+      },
+      {
+        "id": "bite_pressure",
+        "element_type": "sensor",
+        "label": "Bite",
+        "footprint_id": "bite_sensor",
+        "x_mm": 56.0,
+        "y_mm": 0.0,
+        "w_mm": 24.0,
+        "h_mm": 14.0,
+        "electrical_ref": "midi_cc_1",
+        "mounting": { "mouthpiece_coupled": true }
+      },
+      {
+        "id": "breath_mic",
+        "element_type": "microphone",
+        "label": "Noise",
+        "footprint_id": "mems_microphone",
+        "x_mm": 88.0,
+        "y_mm": 2.0,
+        "w_mm": 12.0,
+        "h_mm": 12.0,
+        "electrical_ref": "breath_noise_gate"
+      },
+      {
+        "id": "octave_down",
+        "element_type": "button",
+        "label": "Oct-",
+        "footprint_id": "tact_button",
+        "x_mm": 0.0,
+        "y_mm": 34.0,
+        "w_mm": 16.0,
+        "h_mm": 16.0
+      },
+      {
+        "id": "octave_up",
+        "element_type": "button",
+        "label": "Oct+",
+        "footprint_id": "tact_button",
+        "x_mm": 24.0,
+        "y_mm": 34.0,
+        "w_mm": 16.0,
+        "h_mm": 16.0
+      },
+      {
+        "id": "status_display",
+        "element_type": "display",
+        "label": "Status",
+        "footprint_id": "oled_128x64",
+        "x_mm": 52.0,
+        "y_mm": 28.0,
+        "w_mm": 42.0,
+        "h_mm": 20.0
+      }
+    ]
+  }
+}

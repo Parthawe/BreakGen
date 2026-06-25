@@ -31,6 +31,19 @@ def project_artifact_dir(
     return path
 
 
+def delete_project_artifact_tree(
+    project_id: str,
+    *,
+    base_dir: str | Path | None = None,
+) -> None:
+    """Delete all artifact files owned by a project."""
+    root = Path(base_dir or settings.artifacts_dir).resolve()
+    target = (root / "projects" / project_id).resolve()
+    if root not in target.parents:
+        raise ValueError("Refusing to delete artifact path outside artifact root")
+    shutil.rmtree(target, ignore_errors=True)
+
+
 def sha256_for_path(path: str | Path) -> str:
     """Compute SHA-256 for a file path."""
     h = hashlib.sha256()
@@ -48,6 +61,12 @@ def project_state_fingerprint(project: KeyboardProject) -> str:
         separators=(",", ":"),
     ).encode("utf-8")
     return hashlib.sha256(payload).hexdigest()
+
+
+def scoped_artifact_id(project_id: str, artifact_name: str) -> str:
+    """Return a stable artifact id that cannot collide across projects."""
+    project_hash = hashlib.sha1(project_id.encode("utf-8")).hexdigest()[:10]
+    return f"{project_hash}_{artifact_name}"
 
 
 def write_json_artifact(
@@ -214,7 +233,7 @@ def record_export_bundle(
     zip_path: str | Path,
     validation_report_id: str,
     validation_status: str | None = None,
-    acceptance_state: str = "production_ready",
+    acceptance_state: str = "prototype_ready",
     domain: str | None = None,
     family: str | None = None,
     source_spec_hash: str | None = None,
@@ -298,7 +317,7 @@ async def record_mechanical_panel_compile(
     rows = [
         await upsert_artifact(
             db,
-            artifact_id=f"mech_panel_dxf_r{project.revision}",
+            artifact_id=scoped_artifact_id(project.project_id, f"mech_panel_dxf_r{project.revision}"),
             project_id=project.project_id,
             revision=project.revision,
             kind="mechanical_panel_dxf",
@@ -314,7 +333,7 @@ async def record_mechanical_panel_compile(
         ),
         await upsert_artifact(
             db,
-            artifact_id=f"mech_panel_summary_r{project.revision}",
+            artifact_id=scoped_artifact_id(project.project_id, f"mech_panel_summary_r{project.revision}"),
             project_id=project.project_id,
             revision=project.revision,
             kind="mechanical_panel_summary",
@@ -391,7 +410,7 @@ async def record_mechanical_shell_compile(
     rows = [
         await upsert_artifact(
             db,
-            artifact_id=f"mech_front_shell_panel_r{project.revision}",
+            artifact_id=scoped_artifact_id(project.project_id, f"mech_front_shell_panel_r{project.revision}"),
             project_id=project.project_id,
             revision=project.revision,
             kind="mechanical_front_shell_dxf",
@@ -403,7 +422,7 @@ async def record_mechanical_shell_compile(
         ),
         await upsert_artifact(
             db,
-            artifact_id=f"mech_back_shell_reference_r{project.revision}",
+            artifact_id=scoped_artifact_id(project.project_id, f"mech_back_shell_reference_r{project.revision}"),
             project_id=project.project_id,
             revision=project.revision,
             kind="mechanical_back_shell_dxf",
@@ -415,7 +434,7 @@ async def record_mechanical_shell_compile(
         ),
         await upsert_artifact(
             db,
-            artifact_id=f"mech_shell_spec_r{project.revision}",
+            artifact_id=scoped_artifact_id(project.project_id, f"mech_shell_spec_r{project.revision}"),
             project_id=project.project_id,
             revision=project.revision,
             kind="mechanical_shell_spec",

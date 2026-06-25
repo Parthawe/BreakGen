@@ -1,0 +1,29 @@
+{
+  "template_id": "midi_pad_4x4",
+  "name": "4x4 MIDI Pad",
+  "layout": {
+    "unit_pitch_mm": 19.05,
+    "elements": [
+      { "id": "enc_0", "element_type": "encoder", "label": "E1", "footprint_id": "rotary_encoder", "x_mm": 4.72, "y_mm": 0.0, "w_mm": 19.05, "h_mm": 19.05 },
+      { "id": "enc_1", "element_type": "encoder", "label": "E2", "footprint_id": "rotary_encoder", "x_mm": 33.23, "y_mm": 0.0, "w_mm": 19.05, "h_mm": 19.05 },
+      { "id": "enc_2", "element_type": "encoder", "label": "E3", "footprint_id": "rotary_encoder", "x_mm": 61.73, "y_mm": 0.0, "w_mm": 19.05, "h_mm": 19.05 },
+      { "id": "enc_3", "element_type": "encoder", "label": "E4", "footprint_id": "rotary_encoder", "x_mm": 90.22, "y_mm": 0.0, "w_mm": 19.05, "h_mm": 19.05 },
+      { "id": "pad_0_0", "element_type": "pad", "label": "P1", "footprint_id": "rubber_drum_pad", "x_mm": 0.0, "y_mm": 34.0, "w_mm": 24.0, "h_mm": 24.0 },
+      { "id": "pad_0_1", "element_type": "pad", "label": "P2", "footprint_id": "rubber_drum_pad", "x_mm": 30.0, "y_mm": 34.0, "w_mm": 24.0, "h_mm": 24.0 },
+      { "id": "pad_0_2", "element_type": "pad", "label": "P3", "footprint_id": "rubber_drum_pad", "x_mm": 60.0, "y_mm": 34.0, "w_mm": 24.0, "h_mm": 24.0 },
+      { "id": "pad_0_3", "element_type": "pad", "label": "P4", "footprint_id": "rubber_drum_pad", "x_mm": 90.0, "y_mm": 34.0, "w_mm": 24.0, "h_mm": 24.0 },
+      { "id": "pad_1_0", "element_type": "pad", "label": "P5", "footprint_id": "rubber_drum_pad", "x_mm": 0.0, "y_mm": 64.0, "w_mm": 24.0, "h_mm": 24.0 },
+      { "id": "pad_1_1", "element_type": "pad", "label": "P6", "footprint_id": "rubber_drum_pad", "x_mm": 30.0, "y_mm": 64.0, "w_mm": 24.0, "h_mm": 24.0 },
+      { "id": "pad_1_2", "element_type": "pad", "label": "P7", "footprint_id": "rubber_drum_pad", "x_mm": 60.0, "y_mm": 64.0, "w_mm": 24.0, "h_mm": 24.0 },
+      { "id": "pad_1_3", "element_type": "pad", "label": "P8", "footprint_id": "rubber_drum_pad", "x_mm": 90.0, "y_mm": 64.0, "w_mm": 24.0, "h_mm": 24.0 },
+      { "id": "pad_2_0", "element_type": "pad", "label": "P9", "footprint_id": "rubber_drum_pad", "x_mm": 0.0, "y_mm": 94.0, "w_mm": 24.0, "h_mm": 24.0 },
+      { "id": "pad_2_1", "element_type": "pad", "label": "P10", "footprint_id": "rubber_drum_pad", "x_mm": 30.0, "y_mm": 94.0, "w_mm": 24.0, "h_mm": 24.0 },
+      { "id": "pad_2_2", "element_type": "pad", "label": "P11", "footprint_id": "rubber_drum_pad", "x_mm": 60.0, "y_mm": 94.0, "w_mm": 24.0, "h_mm": 24.0 },
+      { "id": "pad_2_3", "element_type": "pad", "label": "P12", "footprint_id": "rubber_drum_pad", "x_mm": 90.0, "y_mm": 94.0, "w_mm": 24.0, "h_mm": 24.0 },
+      { "id": "pad_3_0", "element_type": "pad", "label": "P13", "footprint_id": "rubber_drum_pad", "x_mm": 0.0, "y_mm": 124.0, "w_mm": 24.0, "h_mm": 24.0 },
+      { "id": "pad_3_1", "element_type": "pad", "label": "P14", "footprint_id": "rubber_drum_pad", "x_mm": 30.0, "y_mm": 124.0, "w_mm": 24.0, "h_mm": 24.0 },
+      { "id": "pad_3_2", "element_type": "pad", "label": "P15", "footprint_id": "rubber_drum_pad", "x_mm": 60.0, "y_mm": 124.0, "w_mm": 24.0, "h_mm": 24.0 },
+      { "id": "pad_3_3", "element_type": "pad", "label": "P16", "footprint_id": "rubber_drum_pad", "x_mm": 90.0, "y_mm": 124.0, "w_mm": 24.0, "h_mm": 24.0 }
+    ]
+  }
+}

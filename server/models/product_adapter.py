@@ -99,6 +99,48 @@ def generate_midi_layout(
     return LayoutSpec(unit_pitch_mm=UNIT_MM, elements=elements)
 
 
+def generate_midi_pad_layout(
+    rows: int = 4,
+    cols: int = 4,
+    encoder_count: int = 4,
+) -> LayoutSpec:
+    """Generate a pad-first MIDI controller layout."""
+    elements: list[PlacedElementSpec] = []
+    pad_size = 24.0
+    pad_gap = 6.0
+    pitch = pad_size + pad_gap
+    grid_width = cols * pad_size + (cols - 1) * pad_gap
+
+    encoder_spacing = grid_width / max(encoder_count, 1)
+    for i in range(encoder_count):
+        elements.append(PlacedElementSpec(
+            id=f"enc_{i}",
+            element_type=ElementType.ENCODER,
+            label=f"E{i + 1}",
+            footprint_id="rotary_encoder",
+            x_mm=round(i * encoder_spacing + encoder_spacing / 2 - UNIT_MM / 2, 2),
+            y_mm=0.0,
+            w_mm=UNIT_MM,
+            h_mm=UNIT_MM,
+        ))
+
+    for r in range(rows):
+        for c in range(cols):
+            index = r * cols + c
+            elements.append(PlacedElementSpec(
+                id=f"pad_{r}_{c}",
+                element_type=ElementType.PAD,
+                label=f"P{index + 1}",
+                footprint_id="rubber_drum_pad",
+                x_mm=round(c * pitch, 2),
+                y_mm=round(34.0 + r * pitch, 2),
+                w_mm=pad_size,
+                h_mm=pad_size,
+            ))
+
+    return LayoutSpec(unit_pitch_mm=UNIT_MM, elements=elements)
+
+
 def generate_gamepad_layout() -> LayoutSpec:
     """Generate a compact gamepad button cluster."""
     buttons: list[PlacedElementSpec] = [
@@ -115,6 +157,129 @@ def generate_gamepad_layout() -> LayoutSpec:
         PlacedElementSpec(id="thumb_stick", element_type=ElementType.JOYSTICK, label="Stick", footprint_id="thumb_joystick", x_mm=UNIT_MM * 3.0, y_mm=UNIT_MM * 2.5, w_mm=24.0, h_mm=24.0),
     ]
     return LayoutSpec(unit_pitch_mm=UNIT_MM, elements=buttons)
+
+
+def generate_pedal_controller_layout() -> LayoutSpec:
+    """Generate a compact MIDI foot controller with expression input."""
+    elements: list[PlacedElementSpec] = [
+        PlacedElementSpec(
+            id="footswitch_1",
+            element_type=ElementType.BUTTON,
+            label="FS1",
+            footprint_id="stomp_switch",
+            x_mm=0.0,
+            y_mm=0.0,
+            w_mm=24.0,
+            h_mm=24.0,
+            mounting={"panel_mount": True},
+        ),
+        PlacedElementSpec(
+            id="footswitch_2",
+            element_type=ElementType.BUTTON,
+            label="FS2",
+            footprint_id="stomp_switch",
+            x_mm=40.0,
+            y_mm=0.0,
+            w_mm=24.0,
+            h_mm=24.0,
+            mounting={"panel_mount": True},
+        ),
+        PlacedElementSpec(
+            id="footswitch_3",
+            element_type=ElementType.BUTTON,
+            label="FS3",
+            footprint_id="stomp_switch",
+            x_mm=80.0,
+            y_mm=0.0,
+            w_mm=24.0,
+            h_mm=24.0,
+            mounting={"panel_mount": True},
+        ),
+        PlacedElementSpec(
+            id="expression_1",
+            element_type=ElementType.SLIDER,
+            label="EXP",
+            footprint_id="expression_pedal",
+            x_mm=10.0,
+            y_mm=46.0,
+            w_mm=84.0,
+            h_mm=28.0,
+            mounting={"travel_axis": "x"},
+        ),
+    ]
+    return LayoutSpec(unit_pitch_mm=UNIT_MM, elements=elements)
+
+
+def generate_breath_controller_layout() -> LayoutSpec:
+    """Generate a compact breath-controller instrument proof layout."""
+    elements: list[PlacedElementSpec] = [
+        PlacedElementSpec(
+            id="breath_pressure",
+            element_type=ElementType.SENSOR,
+            label="Breath",
+            footprint_id="pressure_sensor",
+            x_mm=20.0,
+            y_mm=0.0,
+            w_mm=28.0,
+            h_mm=16.0,
+            electrical_ref="midi_cc_2",
+            mounting={"air_path": True},
+        ),
+        PlacedElementSpec(
+            id="bite_pressure",
+            element_type=ElementType.SENSOR,
+            label="Bite",
+            footprint_id="bite_sensor",
+            x_mm=56.0,
+            y_mm=0.0,
+            w_mm=24.0,
+            h_mm=14.0,
+            electrical_ref="midi_cc_1",
+            mounting={"mouthpiece_coupled": True},
+        ),
+        PlacedElementSpec(
+            id="breath_mic",
+            element_type=ElementType.MICROPHONE,
+            label="Noise",
+            footprint_id="mems_microphone",
+            x_mm=88.0,
+            y_mm=2.0,
+            w_mm=12.0,
+            h_mm=12.0,
+            electrical_ref="breath_noise_gate",
+        ),
+        PlacedElementSpec(
+            id="octave_down",
+            element_type=ElementType.BUTTON,
+            label="Oct-",
+            footprint_id="tact_button",
+            x_mm=0.0,
+            y_mm=34.0,
+            w_mm=16.0,
+            h_mm=16.0,
+        ),
+        PlacedElementSpec(
+            id="octave_up",
+            element_type=ElementType.BUTTON,
+            label="Oct+",
+            footprint_id="tact_button",
+            x_mm=24.0,
+            y_mm=34.0,
+            w_mm=16.0,
+            h_mm=16.0,
+        ),
+        PlacedElementSpec(
+            id="status_display",
+            element_type=ElementType.DISPLAY,
+            label="Status",
+            footprint_id="oled_128x64",
+            x_mm=52.0,
+            y_mm=28.0,
+            w_mm=42.0,
+            h_mm=20.0,
+        ),
+    ]
+    return LayoutSpec(unit_pitch_mm=UNIT_MM, elements=elements)
 
 
 def generate_streamdeck_display_layout(
@@ -162,7 +327,7 @@ def generate_streamdeck_display_layout(
 
 
 def generate_handheld_companion_layout() -> LayoutSpec:
-    """Generate a private handheld proof layout with display, power, audio, and controls."""
+    """Generate a compact handheld companion with display, power, audio, mic, and controls."""
     elements: list[PlacedElementSpec] = [
         PlacedElementSpec(id="main_display", element_type=ElementType.DISPLAY, label="Display", footprint_id="oled_128x64", x_mm=44.0, y_mm=10.0, w_mm=72.0, h_mm=48.0),
         PlacedElementSpec(id="dpad_up", element_type=ElementType.BUTTON, label="Up", footprint_id="tact_button", x_mm=12.0, y_mm=72.0, w_mm=16.0, h_mm=16.0),
@@ -174,6 +339,7 @@ def generate_handheld_companion_layout() -> LayoutSpec:
         PlacedElementSpec(id="face_b", element_type=ElementType.BUTTON, label="B", footprint_id="tact_button", x_mm=150.0, y_mm=88.0, w_mm=16.0, h_mm=16.0),
         PlacedElementSpec(id="face_a", element_type=ElementType.BUTTON, label="A", footprint_id="tact_button", x_mm=138.0, y_mm=104.0, w_mm=16.0, h_mm=16.0),
         PlacedElementSpec(id="speaker_main", element_type=ElementType.SPEAKER, label="Speaker", footprint_id="speaker_40mm", x_mm=10.0, y_mm=126.0, w_mm=40.0, h_mm=40.0),
+        PlacedElementSpec(id="voice_mic", element_type=ElementType.MICROPHONE, label="Mic", footprint_id="mems_microphone", x_mm=76.0, y_mm=128.0, w_mm=12.0, h_mm=12.0),
         PlacedElementSpec(id="battery_pack", element_type=ElementType.BATTERY, label="Battery", footprint_id="lipo_1000mah", x_mm=116.0, y_mm=126.0, w_mm=50.0, h_mm=34.0),
         PlacedElementSpec(id="usb_c", element_type=ElementType.USB_PORT, label="USB-C", footprint_id="usb_c_port", x_mm=72.0, y_mm=168.0, w_mm=20.0, h_mm=8.0),
     ]
@@ -189,7 +355,10 @@ def generate_template_json(template_id: str, output_dir: Path) -> dict:
         "streamdeck_2x3": lambda: generate_grid_layout(2, 3, ProductFamily.STREAMDECK),
         "streamdeck_display_3x5": generate_streamdeck_display_layout,
         "midi_25key": lambda: generate_midi_layout(25, 4),
+        "midi_pad_4x4": generate_midi_pad_layout,
         "gamepad_compact": generate_gamepad_layout,
+        "pedal_controller_3switch": generate_pedal_controller_layout,
+        "breath_controller_basic": generate_breath_controller_layout,
         "handheld_companion_compact": generate_handheld_companion_layout,
     }
 

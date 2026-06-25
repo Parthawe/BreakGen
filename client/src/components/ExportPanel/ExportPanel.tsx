@@ -14,6 +14,33 @@ function formatTime(value?: string | null) {
   }
 }
 
+function familyCopy(family: string | undefined) {
+  if (!family) {
+    return {
+      validate: "Run the platform checks and review open issues before exporting.",
+      export: "Run validation checks, then package your fabrication bundle.",
+      scope:
+        "Geometry overlap, family-specific module requirements, module clearance, GPIO feasibility, labeling, switch selection, and assigned asset acceptance.",
+    };
+  }
+
+  if (family === "keyboard" || family === "macropad") {
+    return {
+      validate: "Run switch, spacing, matrix, and fabrication checks before exporting the control surface.",
+      export: "Package the switch plate, firmware metadata, and revision-linked validation records.",
+      scope:
+        "Switch selection, stabilizer fit, spacing, matrix feasibility, GPIO usage, labeling, assigned assets, and export readiness.",
+    };
+  }
+
+  return {
+    validate: "Run control, module, GPIO, and mechanical checks before exporting the controller bundle.",
+    export: "Package the control-panel outputs, mapping metadata, and revision-linked validation records.",
+    scope:
+      "Control spacing, module compatibility, GPIO feasibility, labels, mechanical readiness, asset acceptance, and export readiness.",
+  };
+}
+
 export function ExportPanel({
   mode = "export",
   records = null,
@@ -74,9 +101,9 @@ export function ExportPanel({
       a.click();
       URL.revokeObjectURL(a.href);
       setExportMessage(
-        readiness === "production_ready"
-          ? `Bundle exported with ${validationStatus} validation status and production-ready readiness.`
-          : `Bundle exported for review with ${validationStatus} validation status. Resolve warnings before treating it as production-ready.`
+        readiness === "prototype_ready"
+          ? `Bundle exported with ${validationStatus} validation status and prototype-ready readiness.`
+          : `Bundle exported for review with ${validationStatus} validation status. Resolve warnings before treating it as prototype-ready.`
       );
       await loadProject(project.project_id);
       await onRecordsRefresh?.();
@@ -86,32 +113,40 @@ export function ExportPanel({
 
   const canExport = validation && validation.status !== "fail";
   const showExport = mode === "export";
+  const copy = familyCopy(project?.product_family);
+  const exportLabel = !validation
+    ? "Run validation first"
+    : validation.status === "pass"
+      ? "Download Production Bundle"
+      : validation.status === "warn"
+        ? "Download Review Bundle"
+        : "Fix errors first";
 
   return (
     <div className="p-6 h-full overflow-y-auto">
       <div className="mb-8">
-        <h3 className="text-[16px] font-semibold text-white mb-1.5">
+        <h3 className="mb-1.5 text-[16px] font-semibold text-[var(--text-primary)]">
           {showExport ? "Export Bundle" : "Validation Review"}
         </h3>
-        <p className="text-[13px] text-zinc-500 leading-[1.6]">
+        <p className="text-[13px] leading-[1.6] text-[var(--text-secondary)]">
           {showExport
-            ? "Run validation checks, then package your fabrication bundle."
-            : "Run the platform checks and review open issues before exporting."}
+            ? copy.export
+            : copy.validate}
         </p>
       </div>
 
       {/* Validate */}
       <button onClick={handleValidate} disabled={validating}
-        className="glass-button w-full h-10 text-[13px] font-medium rounded-xl transition-all mb-5 text-zinc-300 hover:text-white disabled:opacity-50">
+        className="surface-button mb-5 h-10 w-full rounded-xl text-[13px] font-semibold transition-all disabled:opacity-50">
         {validating ? "Validating..." : "Run Validation"}
       </button>
 
       {error && (
-        <div className="glass-danger text-[13px] mb-5 px-4 py-3 rounded-xl text-red-300">{error}</div>
+        <div className="glass-danger mb-5 rounded-xl px-4 py-3 text-[13px]">{error}</div>
       )}
 
       {exportMessage && (
-        <div className="glass glass-soft text-[13px] mb-5 px-4 py-3 rounded-xl text-zinc-400">
+        <div className="glass glass-soft mb-5 rounded-xl px-4 py-3 text-[13px] text-[var(--text-secondary)]">
           {exportMessage}
         </div>
       )}
@@ -121,9 +156,9 @@ export function ExportPanel({
         <div className="mb-6">
           <div className="flex items-center gap-2.5 mb-4">
             <div className="w-2.5 h-2.5 rounded-full" style={{ background: STATUS_DOT[validation.status] ?? "#52525b" }} />
-            <span className="text-[13px] font-medium text-white capitalize">{validation.status}</span>
-            <span className="text-[12px] text-zinc-600">{validation.checks.length} checks</span>
-            <span className="text-[11px] text-zinc-700 ml-auto">
+            <span className="text-[13px] font-medium capitalize text-[var(--text-primary)]">{validation.status}</span>
+            <span className="text-[12px] text-[var(--text-secondary)]">{validation.checks.length} checks</span>
+            <span className="ml-auto text-[11px] text-[var(--text-tertiary)]">
               revision r{validation.revision} • {formatTime(validation.created_at)}
             </span>
           </div>
@@ -133,10 +168,10 @@ export function ExportPanel({
               <div key={c.id} className="glass-subcard px-4 py-3 rounded-xl">
                 <div className="flex items-center gap-2 mb-1">
                   <div className="w-1.5 h-1.5 rounded-full" style={{ background: STATUS_DOT[c.status] ?? "#52525b" }} />
-                  <span className="text-[12px] font-mono text-zinc-400">{c.id}</span>
-                  <span className="text-[10px] text-zinc-700 ml-auto">{c.category}</span>
+                  <span className="text-[12px] font-mono text-[var(--text-secondary)]">{c.id}</span>
+                  <span className="ml-auto text-[10px] text-[var(--text-tertiary)]">{c.category}</span>
                 </div>
-                <div className="text-[12px] text-zinc-500 leading-[1.5] pl-3.5">{c.details}</div>
+                <div className="pl-3.5 text-[12px] leading-[1.5] text-[var(--text-secondary)]">{c.details}</div>
               </div>
             ))}
           </div>
@@ -144,48 +179,54 @@ export function ExportPanel({
       )}
 
       {!validation && staleValidation && (
-        <div className="glass glass-soft text-[12px] mb-5 px-4 py-3 rounded-xl text-amber-300 border border-amber-500/15">
+        <div className="glass glass-soft mb-5 rounded-xl border border-amber-500/15 px-4 py-3 text-[12px] text-amber-600 dark:text-amber-300">
           Latest validation is from revision r{staleValidation.revision}. Run validation again for the current project revision r{project?.revision}.
+        </div>
+      )}
+
+      {!validation && !staleValidation && (
+        <div className="surface-panel mb-5 rounded-xl px-4 py-3 text-[12px] leading-[1.6] text-[var(--text-secondary)]">
+          No validation report is attached to this revision yet. Run validation before using export state as a build signal.
         </div>
       )}
 
       {/* Export */}
       {showExport && (
         <button onClick={handleExport} disabled={downloading || !canExport}
-          className="glass-button-primary w-full h-11 text-[14px] font-semibold rounded-xl transition-all disabled:opacity-40">
-          {downloading ? "Packaging..." : !validation ? "Run validation first" : canExport ? "Download Export Bundle" : "Fix errors first"}
+          className="surface-button-primary h-11 w-full rounded-xl text-[14px] font-semibold transition-all disabled:opacity-40">
+          {downloading ? "Packaging..." : exportLabel}
         </button>
       )}
 
       {/* Contents note */}
       <div className="glass glass-soft mt-5 px-4 py-3 rounded-xl">
-        <div className="text-[11px] font-semibold text-zinc-600 uppercase tracking-[0.1em] mb-2">
+        <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
           {showExport ? "Bundle contains" : "Validation scope"}
         </div>
-        <div className="text-[12px] text-zinc-500 leading-[1.7]">
+        <div className="text-[12px] leading-[1.7] text-[var(--text-secondary)]">
           {showExport
             ? "Mechanical DXF/spec artifacts, firmware metadata, validation report, manifest, and build guide. Bundle readiness tracks validation status instead of assuming fabrication readiness."
-            : "Geometry overlap, family-specific module requirements, module clearance, GPIO feasibility, labeling, switch selection, and assigned asset acceptance."}
+            : copy.scope}
         </div>
       </div>
 
       {project?.exports.bundle_id && (
-        <div className="mt-3 text-[11px] text-zinc-500">
+        <div className="mt-3 text-[11px] text-[var(--text-tertiary)]">
           Last export: {project.exports.bundle_id}
-          {project.status === "exported" ? " · production-ready" : " · review bundle"}
+          {project.status === "exported" ? " · prototype-ready" : " · review bundle"}
         </div>
       )}
 
       {records?.latest_export && (
         <div className="glass glass-soft mt-3 px-4 py-3 rounded-xl">
-          <div className="text-[11px] font-semibold text-zinc-600 uppercase tracking-[0.1em] mb-2">
+          <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
             Export history
           </div>
-          <div className="text-[12px] text-zinc-400 leading-[1.7]">
+          <div className="text-[12px] leading-[1.7] text-[var(--text-secondary)]">
             Latest bundle from revision r{records.latest_export.source_revision} via{" "}
             {(records.latest_export.producer_id ?? "export_bundler").replace(/_/g, " ")}.
           </div>
-          <div className="text-[11px] text-zinc-600 mt-1">
+          <div className="mt-1 text-[11px] text-[var(--text-tertiary)]">
             {formatTime(records.latest_export.created_at)} •{" "}
             {(records.latest_export.acceptance_state ?? "candidate").replace(/_/g, " ")}
           </div>

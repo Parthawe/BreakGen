@@ -84,6 +84,24 @@ def test_layout_compatibility_excludes_encoders_from_legacy_keys():
     assert [key.id for key in layout.keys] == ["k1"]
 
 
+def test_layout_compatibility_excludes_pads_from_legacy_keys():
+    layout = LayoutSpec(
+        elements=[
+            {
+                "id": "pad_1",
+                "element_type": "pad",
+                "label": "P1",
+                "x_mm": 0,
+                "y_mm": 0,
+                "w_mm": 24,
+                "h_mm": 24,
+            },
+        ],
+    )
+    assert len(layout.elements) == 1
+    assert layout.keys == []
+
+
 def test_template_key_counts_match():
     """Every template's actual key count must match SUPPORTED_TEMPLATES declaration."""
     for tmpl in SUPPORTED_TEMPLATES:

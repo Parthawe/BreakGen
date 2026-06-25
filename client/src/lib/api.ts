@@ -23,6 +23,53 @@ import type {
 
 const BASE = "/api";
 
+type ApiErrorCode =
+  | "network_error"
+  | "unauthorized"
+  | "revision_conflict"
+  | "not_found"
+  | "validation_error"
+  | "server_error"
+  | "unknown_error";
+
+export class ApiError extends Error {
+  status: number;
+  detail: string;
+  code: ApiErrorCode;
+  body: unknown;
+
+  constructor(
+    status: number,
+    detail: string,
+    code: ApiErrorCode,
+    body: unknown = null,
+  ) {
+    super(detail);
+    this.name = "ApiError";
+    this.status = status;
+    this.detail = detail;
+    this.code = code;
+    this.body = body;
+  }
+}
+
+export function isApiError(value: unknown): value is ApiError {
+  return value instanceof ApiError;
+}
+
+export function extractRevisionConflict(
+  value: string,
+): { expectedRevision: number | null; currentRevision: number | null } {
+  const match = value.match(/expected\s+(\d+),\s+current\s+is\s+(\d+)/i);
+  if (!match) {
+    return { expectedRevision: null, currentRevision: null };
+  }
+  return {
+    expectedRevision: Number.parseInt(match[1], 10),
+    currentRevision: Number.parseInt(match[2], 10),
+  };
+}
+
 function getAuthHeaders(): Record<string, string> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   const token = localStorage.getItem("breakgen_token");
@@ -30,27 +77,111 @@ function getAuthHeaders(): Record<string, string> {
   return headers;
 }
 
+function classifyError(status: number, detail: string): ApiErrorCode {
+  if (status === 0) return "network_error";
+  if (status === 401) return "unauthorized";
+  if (status === 404) return "not_found";
+  if (status === 409 && /revision conflict/i.test(detail)) return "revision_conflict";
+  if (status >= 400 && status < 500) return "validation_error";
+  if (status >= 500) return "server_error";
+  return "unknown_error";
+}
+
+async function parseErrorBody(res: Response): Promise<{ detail: string; body: unknown }> {
+  const contentType = res.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    try {
+      const body = (await res.json()) as Record<string, unknown>;
+      const detail =
+        typeof body.detail === "string"
+          ? body.detail
+          : typeof body.message === "string"
+            ? body.message
+            : JSON.stringify(body);
+      return { detail, body };
+    } catch {
+      return { detail: `API ${res.status}`, body: null };
+    }
+  }
+
+  const detail = (await res.text()) || `API ${res.status}`;
+  return { detail, body: detail };
+}
+
 async function requestResponse(path: string, options?: RequestInit): Promise<Response> {
-  return fetch(`${BASE}${path}`, {
-    ...options,
-    headers: {
-      ...getAuthHeaders(),
-      ...(options?.headers ?? {}),
-    },
-  });
+  try {
+    return await fetch(`${BASE}${path}`, {
+      ...options,
+      headers: {
+        ...getAuthHeaders(),
+        ...(options?.headers ?? {}),
+      },
+    });
+  } catch (error) {
+    throw new ApiError(
+      0,
+      "Cannot reach the BreakGen backend. Start the API server or check the network path.",
+      "network_error",
+      error,
+    );
+  }
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await requestResponse(path, options);
   if (!res.ok) {
-    const detail = await res.text();
-    throw new Error(`API ${res.status}: ${detail}`);
+    const { detail, body } = await parseErrorBody(res);
+    throw new ApiError(res.status, detail, classifyError(res.status, detail), body);
   }
   if (res.status === 204) return undefined as T;
   return res.json();
 }
 
+function normalizeApiPath(pathOrUrl: string): string {
+  if (pathOrUrl.startsWith(BASE)) return pathOrUrl.slice(BASE.length);
+  return pathOrUrl;
+}
+
+async function downloadFile(pathOrUrl: string, fileName: string): Promise<void> {
+  const path = normalizeApiPath(pathOrUrl);
+  const res = await requestResponse(path, { method: "GET" });
+  if (!res.ok) {
+    const { detail, body } = await parseErrorBody(res);
+    throw new ApiError(res.status, detail, classifyError(res.status, detail), body);
+  }
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export const api = {
+  auth: {
+    signup: (req: { email: string; name: string; password: string; invite_code?: string }) =>
+      request<{ token: string; user: { id: number; email: string; name: string } }>(
+        "/auth/signup",
+        {
+          method: "POST",
+          body: JSON.stringify(req),
+        },
+      ),
+    login: (req: { email: string; password: string }) =>
+      request<{ token: string; user: { id: number; email: string; name: string } }>(
+        "/auth/login",
+        {
+          method: "POST",
+          body: JSON.stringify(req),
+        },
+      ),
+    me: () => request<{ id: number; email: string; name: string }>("/auth/me"),
+  },
+
   projects: {
     list: () => request<ProjectSummary[]>("/projects/"),
     get: (id: string) => request<KeyboardProject>(`/projects/${id}`),
@@ -174,6 +305,8 @@ export const api = {
       request<Record<string, unknown>>(`/projects/${projectId}/firmware/via.json`),
     controlMap: (projectId: string) =>
       request<Record<string, unknown>>(`/projects/${projectId}/firmware/control-map.json`),
+    downloadFirmware: (projectId: string, fileName: string) =>
+      downloadFile(`/projects/${projectId}/firmware/${fileName}`, fileName),
   },
 
   // Validation + export
@@ -199,6 +332,10 @@ export const api = {
     plateUrl: (projectId: string) => `${BASE}/projects/${projectId}/export/plate.dxf`,
     mechanicalArtifactUrl: (projectId: string, artifactName: string) =>
       `${BASE}/projects/${projectId}/export/mechanical/${artifactName}`,
+    downloadMechanicalArtifact: (projectId: string, artifactName: string) =>
+      downloadFile(`/projects/${projectId}/export/mechanical/${artifactName}`, artifactName),
+    downloadMechanicalArtifactUrl: (url: string, fileName: string) =>
+      downloadFile(url, fileName),
   },
 
   export: {

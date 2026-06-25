@@ -1,0 +1,53 @@
+{
+  "template_id": "pedal_controller_3switch",
+  "name": "3-Switch Pedal Controller",
+  "layout": {
+    "unit_pitch_mm": 19.05,
+    "elements": [
+      {
+        "id": "footswitch_1",
+        "element_type": "button",
+        "label": "FS1",
+        "footprint_id": "stomp_switch",
+        "x_mm": 0.0,
+        "y_mm": 0.0,
+        "w_mm": 24.0,
+        "h_mm": 24.0,
+        "mounting": { "panel_mount": true }
+      },
+      {
+        "id": "footswitch_2",
+        "element_type": "button",
+        "label": "FS2",
+        "footprint_id": "stomp_switch",
+        "x_mm": 40.0,
+        "y_mm": 0.0,
+        "w_mm": 24.0,
+        "h_mm": 24.0,
+        "mounting": { "panel_mount": true }
+      },
+      {
+        "id": "footswitch_3",
+        "element_type": "button",
+        "label": "FS3",
+        "footprint_id": "stomp_switch",
+        "x_mm": 80.0,
+        "y_mm": 0.0,
+        "w_mm": 24.0,
+        "h_mm": 24.0,
+        "mounting": { "panel_mount": true }
+      },
+      {
+        "id": "expression_1",
+        "element_type": "slider",
+        "label": "EXP",
+        "footprint_id": "expression_pedal",
+        "x_mm": 10.0,
+        "y_mm": 46.0,
+        "w_mm": 84.0,
+        "h_mm": 28.0,
+        "mounting": { "travel_axis": "x" }
+      }
+    ]
+  }
+}

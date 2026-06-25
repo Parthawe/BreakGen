@@ -5,7 +5,9 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from server.api.auth import require_user, user_scope_id
 from server.db.database import get_db
+from server.db.models import UserRow
 from server.eda.control_surface_electronics import (
     apply_project_matrix,
     compile_control_surface_electronics,
@@ -31,12 +33,30 @@ router = APIRouter(prefix="/api/projects", tags=["pcb"])
 async def compile_pcb(
     project_id: str,
     db: AsyncSession = Depends(get_db),
+    user: UserRow = Depends(require_user),
+):
+    return await compile_pcb_for_project(
+        project_id,
+        db,
+        owner_user_id=user_scope_id(user),
+    )
+
+
+async def compile_pcb_for_project(
+    project_id: str,
+    db: AsyncSession,
+    *,
+    owner_user_id: int | None,
 ):
     """
     Compile PCB: matrix assignment + firmware metadata.
     Bumps revision and snapshots the change.
     """
-    row, project = await load_project_state(db, project_id)
+    row, project = await load_project_state(
+        db,
+        project_id,
+        owner_user_id=owner_user_id,
+    )
     if not project.layout.elements:
         raise HTTPException(status_code=400, detail="Layout has no placed elements")
 
@@ -90,9 +110,10 @@ async def compile_pcb(
 async def get_qmk_info(
     project_id: str,
     db: AsyncSession = Depends(get_db),
+    user: UserRow = Depends(require_user),
 ):
     """Get QMK info.json for this project."""
-    project, matrix = await _load_project_with_matrix(project_id, db)
+    project, matrix = await _load_project_with_matrix(project_id, db, user_scope_id(user))
     return generate_qmk_info(project, matrix)
 
 
@@ -100,9 +121,10 @@ async def get_qmk_info(
 async def get_keymap(
     project_id: str,
     db: AsyncSession = Depends(get_db),
+    user: UserRow = Depends(require_user),
 ):
     """Get default QWERTY keymap.json for this project."""
-    project, matrix = await _load_project_with_matrix(project_id, db)
+    project, matrix = await _load_project_with_matrix(project_id, db, user_scope_id(user))
     return generate_keymap(project, matrix)
 
 
@@ -110,9 +132,10 @@ async def get_keymap(
 async def get_via_definition(
     project_id: str,
     db: AsyncSession = Depends(get_db),
+    user: UserRow = Depends(require_user),
 ):
     """Get VIA keyboard definition for this project."""
-    project, matrix = await _load_project_with_matrix(project_id, db)
+    project, matrix = await _load_project_with_matrix(project_id, db, user_scope_id(user))
     return generate_via_definition(project, matrix)
 
 
@@ -120,18 +143,24 @@ async def get_via_definition(
 async def get_control_map(
     project_id: str,
     db: AsyncSession = Depends(get_db),
+    user: UserRow = Depends(require_user),
 ):
     """Get family-native control mapping metadata for this project."""
-    project, matrix = await _load_project_with_matrix(project_id, db)
+    project, matrix = await _load_project_with_matrix(project_id, db, user_scope_id(user))
     return generate_control_map(project, matrix)
 
 
 async def _load_project_with_matrix(
     project_id: str,
     db: AsyncSession,
+    owner_user_id: int | None = None,
 ) -> tuple[KeyboardProject, ...]:
     """Load project and compile matrix (read-only, no persistence)."""
-    _, project = await load_project_state(db, project_id)
+    _, project = await load_project_state(
+        db,
+        project_id,
+        owner_user_id=owner_user_id,
+    )
     if not project.layout.elements:
         raise HTTPException(status_code=400, detail="Layout has no placed elements")
 

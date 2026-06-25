@@ -25,15 +25,15 @@ function hashGradient(s: string): string {
 function stateTone(state: AcceptanceState): string {
   switch (state) {
     case "accepted":
-      return "text-emerald-300 bg-emerald-500/10 border-emerald-500/20";
+      return "text-emerald-600 dark:text-emerald-300 bg-emerald-500/10 border-emerald-500/20";
     case "production_ready":
-      return "text-indigo-300 bg-indigo-500/10 border-indigo-500/20";
+      return "text-indigo-600 dark:text-indigo-300 bg-indigo-500/10 border-indigo-500/20";
     case "rejected":
-      return "text-red-300 bg-red-500/10 border-red-500/20";
+      return "text-red-600 dark:text-red-300 bg-red-500/10 border-red-500/20";
     case "preview_only":
-      return "text-zinc-400 bg-white/[0.04] border-white/[0.08]";
+      return "text-[var(--text-secondary)] bg-[var(--surface-chip)] border-[var(--border-default)]";
     default:
-      return "text-amber-300 bg-amber-500/10 border-amber-500/20";
+      return "text-amber-600 dark:text-amber-300 bg-amber-500/10 border-amber-500/20";
   }
 }
 
@@ -204,10 +204,10 @@ export function KeycapStyler({
         <div className="p-3 space-y-3">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="text-[12px] text-zinc-300 truncate">
+              <div className="truncate text-[12px] text-[var(--text-primary)]">
                 {asset.prompt ?? asset.asset_id}
               </div>
-              <div className="text-[11px] text-zinc-600 mt-1">
+              <div className="mt-1 text-[11px] text-[var(--text-tertiary)]">
                 {(asset.provider ?? asset.source).replace(/_/g, " ")} •{" "}
                 {asset.normalized ? "normalized" : "raw"}
               </div>
@@ -221,12 +221,12 @@ export function KeycapStyler({
 
           <div className="flex items-center gap-2 flex-wrap">
             {isApplied && (
-              <span className="text-[10px] uppercase tracking-[0.08em] text-emerald-400">
+              <span className="text-[10px] uppercase tracking-[0.08em] text-emerald-600 dark:text-emerald-400">
                 Applied
               </span>
             )}
             {asset.watertight && (
-              <span className="text-[10px] uppercase tracking-[0.08em] text-zinc-500">
+              <span className="text-[10px] uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
                 Watertight
               </span>
             )}
@@ -238,14 +238,14 @@ export function KeycapStyler({
                 <button
                   onClick={() => handleAcceptanceUpdate(asset.asset_id, "accepted")}
                   disabled={!!pendingAction}
-                  className="flex-1 h-9 rounded-lg text-[12px] font-medium bg-white text-[#050507] hover:bg-zinc-200 disabled:bg-zinc-800 disabled:text-zinc-600"
+                  className="surface-button-primary h-9 flex-1 rounded-lg text-[12px] font-semibold disabled:opacity-50"
                 >
                   {pendingAction === "accept" ? "Accepting..." : "Accept"}
                 </button>
                 <button
                   onClick={() => handleAcceptanceUpdate(asset.asset_id, "rejected")}
                   disabled={!!pendingAction}
-                  className="glass-chip h-9 px-3 rounded-lg text-[12px] font-medium text-zinc-300 disabled:opacity-50"
+                  className="glass-chip h-9 rounded-lg px-3 text-[12px] font-medium text-[var(--text-primary)] disabled:opacity-50"
                 >
                   {pendingAction === "reject" ? "Rejecting..." : "Reject"}
                 </button>
@@ -255,7 +255,7 @@ export function KeycapStyler({
               <button
                 onClick={() => handleApply(asset.asset_id)}
                 disabled={!!pendingAction}
-                className="w-full h-9 rounded-lg text-[12px] font-medium bg-white text-[#050507] hover:bg-zinc-200 disabled:bg-zinc-800 disabled:text-zinc-600"
+                className="surface-button-primary h-9 w-full rounded-lg text-[12px] font-semibold disabled:opacity-50"
               >
                 {pendingAction === "apply" ? "Applying..." : isApplied ? "Reapply to controls" : "Apply to controls"}
               </button>
@@ -264,7 +264,7 @@ export function KeycapStyler({
               <button
                 onClick={() => handleAcceptanceUpdate(asset.asset_id, "accepted")}
                 disabled={!!pendingAction}
-                className="glass-chip w-full h-9 rounded-lg text-[12px] font-medium text-zinc-300 disabled:opacity-50"
+                className="glass-chip h-9 w-full rounded-lg text-[12px] font-medium text-[var(--text-primary)] disabled:opacity-50"
               >
                 {pendingAction === "accept" ? "Restoring..." : "Restore to library"}
               </button>
@@ -278,8 +278,8 @@ export function KeycapStyler({
   return (
     <div className="p-6 h-full overflow-y-auto">
       <div className="mb-8">
-        <h3 className="text-[16px] font-semibold text-white mb-1.5">Appearance Assets</h3>
-        <p className="text-[13px] text-zinc-500 leading-[1.6]">
+        <h3 className="mb-1.5 text-[16px] font-semibold text-[var(--text-primary)]">Appearance Assets</h3>
+        <p className="text-[13px] leading-[1.6] text-[var(--text-secondary)]">
           Generate cosmetic caps and surface variants, review them, then explicitly
           accept the ones that should become part of the canonical project.
         </p>
@@ -294,12 +294,12 @@ export function KeycapStyler({
           }}
           placeholder="weathered brass with subtle patina..."
           rows={3}
-          className="glass-input w-full rounded-xl px-4 py-3 text-[14px] text-white placeholder:text-zinc-600 focus:outline-none resize-none transition-colors"
+          className="glass-input w-full resize-none rounded-xl px-4 py-3 text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none transition-colors"
         />
       </div>
 
       <div className="mb-6">
-        <div className="text-[11px] font-semibold text-zinc-600 uppercase tracking-[0.1em] mb-3">
+        <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
           Presets
         </div>
         <div className="flex flex-wrap gap-2">
@@ -312,8 +312,8 @@ export function KeycapStyler({
               }}
               className={`px-3 py-1.5 text-[12px] font-medium rounded-full transition-all ${
                 selectedPreset === preset.id
-                  ? "bg-indigo-500/15 text-indigo-300 border-indigo-500/25"
-                  : "glass-chip text-zinc-500 border-white/[0.06] hover:text-zinc-300"
+                  ? "bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border-indigo-500/25"
+                  : "glass-chip text-[var(--text-tertiary)] border-white/[0.06] hover:text-[var(--text-primary)]"
               } border capitalize`}
             >
               {preset.id}
@@ -324,7 +324,7 @@ export function KeycapStyler({
 
       {activeProviders.length > 0 && (
         <div className="mb-6">
-          <div className="text-[11px] font-semibold text-zinc-600 uppercase tracking-[0.1em] mb-3">
+          <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
             Provider
           </div>
           <div className="space-y-2">
@@ -343,20 +343,20 @@ export function KeycapStyler({
                   } ${selectable ? "hover:border-white/[0.08]" : "opacity-50 cursor-not-allowed"}`}
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-[13px] text-zinc-300">{provider.display_name}</span>
+                    <span className="text-[13px] text-[var(--text-primary)]">{provider.display_name}</span>
                     <span
                       className={`text-[10px] uppercase tracking-[0.08em] ${
                         provider.status === "enabled"
-                          ? "text-emerald-400"
+                          ? "text-emerald-600 dark:text-emerald-400"
                           : provider.status === "fallback"
-                            ? "text-amber-400"
-                            : "text-zinc-600"
+                            ? "text-amber-600 dark:text-amber-400"
+                            : "text-[var(--text-tertiary)]"
                       }`}
                     >
                       {provider.status}
                     </span>
                   </div>
-                  <div className="text-[11px] text-zinc-600 mt-1">{provider.description}</div>
+                  <div className="mt-1 text-[11px] text-[var(--text-tertiary)]">{provider.description}</div>
                 </button>
               );
             })}
@@ -367,64 +367,76 @@ export function KeycapStyler({
       <button
         onClick={handleGenerate}
         disabled={generating || (!prompt && !selectedPreset)}
-        className="w-full h-10 text-[13px] font-medium rounded-xl transition-all mb-6 bg-white text-[#050507] hover:bg-zinc-200 disabled:bg-zinc-800 disabled:text-zinc-600"
+        className="surface-button-primary mb-6 h-10 w-full rounded-xl text-[13px] font-semibold transition-all disabled:opacity-50"
       >
         {generating ? "Generating..." : "Generate Preview Assets"}
       </button>
 
       {message && (
-        <div className="glass glass-soft text-[12px] mb-6 px-4 py-3 rounded-xl text-zinc-500">
+        <div className="glass glass-soft mb-6 rounded-xl px-4 py-3 text-[12px] text-[var(--text-secondary)]">
           {message}
         </div>
       )}
 
-      {reviewAssets.length > 0 && (
-        <div className="mb-8">
+      <div className="mb-8">
           <div className="flex items-center justify-between gap-3 mb-4">
-            <div className="text-[11px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
               Review Queue
             </div>
-            <div className="text-[11px] text-zinc-600">
+            <div className="text-[11px] text-[var(--text-tertiary)]">
               Accept before these can be applied canonically.
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            {reviewAssets.map((asset) => renderAssetCard(asset, "review"))}
-          </div>
+          {reviewAssets.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3">
+              {reviewAssets.map((asset) => renderAssetCard(asset, "review"))}
+            </div>
+          ) : (
+            <div className="surface-panel rounded-xl px-4 py-3 text-[12px] leading-[1.6] text-[var(--text-secondary)]">
+              No review assets yet. Generated previews stay outside canonical project state until you explicitly accept them.
+            </div>
+          )}
         </div>
-      )}
 
-      {acceptedAssets.length > 0 && (
-        <div className="mb-8">
+      <div className="mb-8">
           <div className="flex items-center justify-between gap-3 mb-4">
-            <div className="text-[11px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
               Project Library
             </div>
-            <div className="text-[11px] text-zinc-600">
+            <div className="text-[11px] text-[var(--text-tertiary)]">
               Accepted assets available to apply to the canonical layout.
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            {acceptedAssets.map((asset) => renderAssetCard(asset, "library"))}
-          </div>
+          {acceptedAssets.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3">
+              {acceptedAssets.map((asset) => renderAssetCard(asset, "library"))}
+            </div>
+          ) : (
+            <div className="surface-panel rounded-xl px-4 py-3 text-[12px] leading-[1.6] text-[var(--text-secondary)]">
+              No accepted assets in the canonical library yet. Accepted assets create canonical project state; preview assets do not.
+            </div>
+          )}
         </div>
-      )}
 
-      {rejectedAssets.length > 0 && (
-        <div>
+      <div>
           <div className="flex items-center justify-between gap-3 mb-4">
-            <div className="text-[11px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
               Rejected
             </div>
-            <div className="text-[11px] text-zinc-600">
+            <div className="text-[11px] text-[var(--text-tertiary)]">
               Rejected assets stay visible for provenance but stay out of the library.
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            {rejectedAssets.map((asset) => renderAssetCard(asset, "rejected"))}
-          </div>
+          {rejectedAssets.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3">
+              {rejectedAssets.map((asset) => renderAssetCard(asset, "rejected"))}
+            </div>
+          ) : (
+            <div className="surface-panel rounded-xl px-4 py-3 text-[12px] leading-[1.6] text-[var(--text-secondary)]">
+              No rejected assets recorded for this revision.
+            </div>
+          )}
         </div>
-      )}
     </div>
   );
 }

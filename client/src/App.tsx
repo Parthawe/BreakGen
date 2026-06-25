@@ -1,6 +1,7 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { api } from "./lib/api";
+import { ThemeSwitcher } from "./components/ThemeSwitcher";
+import { api, isApiError } from "./lib/api";
 import { countLayoutElements } from "./lib/projectCompat";
 import { useAuthStore } from "./stores/authStore";
 import { useProjectStore } from "./stores/projectStore";
@@ -53,26 +54,120 @@ const LazyScene = lazy(async () => ({
 function ErrorBanner() {
   const error = useProjectStore((state) => state.error);
   const clearError = useProjectStore((state) => state.clearError);
-  if (!error) return null;
+  const revisionConflict = useProjectStore((state) => state.revisionConflict);
+  const reloadLatest = useProjectStore((state) => state.reloadLatest);
+  const dismissRevisionConflict = useProjectStore((state) => state.dismissRevisionConflict);
+  const sessionNotice = useAuthStore((state) => state.sessionNotice);
+  const sessionState = useAuthStore((state) => state.sessionState);
+  const clearSessionNotice = useAuthStore((state) => state.clearSessionNotice);
+  const navigate = useNavigate();
+
+  if (!error && !revisionConflict && !sessionNotice) return null;
+
   return (
-    <div className="glass-danger fixed top-4 right-4 z-50 max-w-sm px-4 py-3 rounded-xl text-[13px] flex items-start gap-3 text-red-300">
-      <span className="flex-1">{error}</span>
-      <button onClick={clearError} className="text-red-400/50 hover:text-red-400 transition-colors">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M4 4l6 6M10 4l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
-      </button>
+    <div className="fixed right-4 top-4 z-50 flex max-w-[420px] flex-col gap-3">
+      {revisionConflict && (
+        <div className="surface-panel rounded-[18px] border-amber-500/20 bg-[rgba(95,66,20,0.14)] px-4 py-3 text-[13px] text-[var(--text-primary)]">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 text-amber-400">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M7 1.5L12 11.5H2L7 1.5Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+                <path d="M7 5V7.75" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                <circle cx="7" cy="10" r="0.75" fill="currentColor" />
+              </svg>
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[12px] font-semibold uppercase tracking-[0.08em] text-amber-400">
+                Revision Conflict
+              </div>
+              <div className="mt-1 text-[13px] leading-[1.55] text-[var(--text-secondary)]">
+                {revisionConflict.message}
+              </div>
+              <div className="mt-2 text-[12px] text-[var(--text-tertiary)]">
+                Expected r{revisionConflict.expectedRevision ?? "?"} · current server revision r
+                {revisionConflict.currentRevision ?? "?"}
+              </div>
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={() => void reloadLatest()}
+                  className="surface-button-primary h-8 rounded-lg px-3 text-[12px] font-semibold"
+                >
+                  Reload Latest Revision
+                </button>
+                <button
+                  onClick={dismissRevisionConflict}
+                  className="surface-button h-8 rounded-lg px-3 text-[12px] font-semibold"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {sessionNotice && (
+        <div className="surface-panel rounded-[18px] border-[var(--border-default)] px-4 py-3 text-[13px]">
+          <div className="flex items-start gap-3">
+            <div className={sessionState === "expired" ? "text-amber-400" : "text-[var(--accent)]"}>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.2" />
+                <path d="M7 4.25V7.25L9 8.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--text-primary)]">
+                {sessionState === "expired" ? "Session Expired" : "Backend Notice"}
+              </div>
+              <div className="mt-1 text-[13px] leading-[1.55] text-[var(--text-secondary)]">
+                {sessionNotice}
+              </div>
+              <div className="mt-3 flex gap-2">
+                {sessionState === "expired" && (
+                  <button
+                    onClick={() => navigate("/login")}
+                    className="surface-button-primary h-8 rounded-lg px-3 text-[12px] font-semibold"
+                  >
+                    Sign In Again
+                  </button>
+                )}
+                <button
+                  onClick={clearSessionNotice}
+                  className="surface-button h-8 rounded-lg px-3 text-[12px] font-semibold"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="glass-danger flex items-start gap-3 rounded-[18px] px-4 py-3 text-[13px]">
+          <span className="flex-1">{error}</span>
+          <button onClick={clearError} className="transition-colors hover:opacity-70">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M4 4l6 6M10 4l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
 
 function PanelSkeleton({ label }: { label: string }) {
   return (
-    <div className="glass glass-strong w-full h-full flex items-center justify-center text-[12px] text-zinc-500">
+    <div className="surface-strong flex h-full w-full items-center justify-center text-[12px] text-[var(--text-tertiary)]">
       {label}
     </div>
   );
 }
 
-function stageComplete(stageId: string, project: KeyboardProject | null): boolean {
+function stageComplete(
+  stageId: string,
+  project: KeyboardProject | null,
+  records: ProjectRecords | null,
+): boolean {
   if (!project) return false;
   const elementCount = countLayoutElements(project.layout);
   const acceptedAssetCount = project.keycap_assets.filter(
@@ -81,8 +176,16 @@ function stageComplete(stageId: string, project: KeyboardProject | null): boolea
       asset.acceptance_state === "production_ready",
   ).length;
   const electronicsSummary =
-    (project.derived?.electronics as { pins_needed?: number } | undefined) ?? null;
+    (project.derived?.electronics as { pins_needed?: number; revision?: number } | undefined) ?? null;
   const requiresSwitchProfile = ["keyboard", "macropad", "streamdeck", "midi"].includes(project.product_family);
+  const latestValidation =
+    records?.latest_validation_report?.revision === project.revision
+      ? records.latest_validation_report
+      : null;
+  const latestExport =
+    records?.latest_export?.source_revision === project.revision
+      ? records.latest_export
+      : null;
   switch (stageId) {
     case "define":
       return elementCount > 0 && (!requiresSwitchProfile || !!project.switch_profile.part_id);
@@ -91,11 +194,15 @@ function stageComplete(stageId: string, project: KeyboardProject | null): boolea
     case "appearance":
       return acceptedAssetCount > 0;
     case "electronics":
-      return !!electronicsSummary || project.pcb.matrix_rows !== null;
+      return (
+        (electronicsSummary?.revision ?? null) === project.revision ||
+        !!electronicsSummary ||
+        project.pcb.matrix_rows !== null
+      );
     case "validate":
-      return project.status === "validated" || project.status === "exported";
+      return latestValidation !== null;
     case "export":
-      return project.status === "exported";
+      return latestExport !== null;
     default:
       return false;
   }
@@ -110,7 +217,7 @@ function statusTone(status: string): string {
     case "generating":
       return "text-amber-400 bg-amber-500/10 border-amber-500/20";
     default:
-      return "text-zinc-400 bg-white/[0.03] border-white/[0.06]";
+      return "text-[var(--text-secondary)] bg-[var(--surface-chip)] border-[var(--border-default)]";
   }
 }
 
@@ -129,6 +236,8 @@ function App() {
   const loading = useProjectStore((state) => state.loading);
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
+  const sessionState = useAuthStore((state) => state.sessionState);
+  const handleUnauthorized = useAuthStore((state) => state.handleUnauthorized);
   const navigate = useNavigate();
 
   const hasProject = !!project;
@@ -155,12 +264,15 @@ function App() {
     try {
       const payload = await api.records.get(id);
       setRecords(payload);
-    } catch {
+    } catch (error) {
+      if (isApiError(error) && error.status === 401) {
+        handleUnauthorized("Your session expired while refreshing project records. Sign in again to continue.");
+      }
       setRecords(null);
     } finally {
       setRecordsLoading(false);
     }
-  }, [project?.project_id]);
+  }, [handleUnauthorized, project?.project_id]);
 
   useEffect(() => {
     api.platform.productDomains().then(setDomainManifests).catch(() => {});
@@ -219,7 +331,7 @@ function App() {
   const renderStage = () => {
     if (!hasProject && activeStage.id !== "define") {
       return (
-        <div className="flex-1 flex items-center justify-center text-[13px] text-zinc-600">
+        <div className="flex flex-1 items-center justify-center text-[13px] text-[var(--text-tertiary)]">
           Start a project in the Define stage first.
         </div>
       );
@@ -244,8 +356,8 @@ function App() {
     switch (activeStage.id) {
       case "define":
         return (
-          <div className="flex h-full">
-            <div className="w-[360px] shrink-0 overflow-y-auto glass-divider border-r flex flex-col">
+          <div className="workspace-stage-split workspace-stage-split--define flex h-full">
+            <div className="workspace-tools-panel w-[360px] shrink-0 overflow-y-auto glass-divider border-r flex flex-col">
               {activeStage.modules.includes("switch_explorer") ? (
                 <Suspense fallback={<PanelSkeleton label="Loading hardware catalog…" />}>
                   <LazySwitchExplorer />
@@ -253,16 +365,16 @@ function App() {
               ) : (
                 <div className="p-6 flex-1">
                   <div className="mb-8">
-                    <h3 className="text-[16px] font-semibold text-white mb-1.5">Define the hardware baseline</h3>
-                    <p className="text-[13px] text-zinc-500 leading-[1.6]">
+                    <h3 className="mb-1.5 text-[16px] font-semibold text-[var(--text-primary)]">Define the hardware baseline</h3>
+                    <p className="text-[13px] leading-[1.6] text-[var(--text-secondary)]">
                       This family uses module-driven controls instead of a keyboard switch catalog. Continue to the layout stage to place and tune the control set.
                     </p>
                   </div>
                   <div className="glass glass-soft rounded-2xl p-4">
-                    <div className="text-[11px] uppercase tracking-[0.1em] text-zinc-600 mb-3">Modules</div>
+                    <div className="mb-3 text-[11px] uppercase tracking-[0.1em] text-[var(--text-tertiary)]">Modules</div>
                     <div className="flex flex-wrap gap-2">
                       {(activeFamilyManifest?.supported_module_types ?? []).map((moduleType) => (
-                        <span key={moduleType} className="glass-chip px-2.5 py-1 rounded-full text-[11px] text-zinc-400">
+                        <span key={moduleType} className="glass-chip rounded-full px-2.5 py-1 text-[11px] text-[var(--text-secondary)]">
                           {moduleType.replaceAll("_", " ")}
                         </span>
                       ))}
@@ -273,24 +385,24 @@ function App() {
               <div className="p-5 mt-auto">
                 <button
                   onClick={() => setCurrentStageId("layout")}
-                  className="w-full h-10 text-[13px] font-medium rounded-xl bg-white text-black hover:bg-zinc-200 transition-colors"
+                  className="surface-button-primary h-10 w-full rounded-xl text-[13px] font-semibold transition-colors"
                 >
                   Continue to Layout
                 </button>
               </div>
             </div>
-            <div className="flex-1">{renderScene()}</div>
+            <div className="workspace-preview-panel flex-1">{renderScene()}</div>
           </div>
         );
       case "layout":
         return (
-          <div className="flex h-full">
-            <div className="flex-1 p-4 overflow-hidden">
+          <div className="workspace-stage-split workspace-stage-split--layout flex h-full">
+            <div className="workspace-editor-panel flex-1 p-4 overflow-hidden">
               <Suspense fallback={<PanelSkeleton label="Loading layout editor…" />}>
                 <LazyLayoutEditor />
               </Suspense>
             </div>
-            <div className="w-[44%] shrink-0 glass-divider border-l flex flex-col">
+            <div className="workspace-preview-panel w-[44%] shrink-0 glass-divider border-l flex flex-col">
               <div className={isHandheldProofFamily ? "flex-1 min-h-0" : "flex-1"}>
                 {renderScene()}
               </div>
@@ -306,31 +418,31 @@ function App() {
         );
       case "appearance":
         return (
-          <div className="flex h-full">
-            <div className="w-[360px] shrink-0 overflow-y-auto glass-divider border-r">
+          <div className="workspace-stage-split workspace-stage-split--appearance flex h-full">
+            <div className="workspace-tools-panel w-[360px] shrink-0 overflow-y-auto glass-divider border-r">
               <Suspense fallback={<PanelSkeleton label="Loading appearance tools…" />}>
                 <LazyKeycapStyler onRecordsRefresh={refreshRecords} />
               </Suspense>
             </div>
-            <div className="flex-1">{renderScene()}</div>
+            <div className="workspace-preview-panel flex-1">{renderScene()}</div>
           </div>
         );
       case "electronics":
         return (
-          <div className="flex h-full">
-            <div className="w-[360px] shrink-0 overflow-y-auto glass-divider border-r">
+          <div className="workspace-stage-split workspace-stage-split--electronics flex h-full">
+            <div className="workspace-tools-panel w-[360px] shrink-0 overflow-y-auto glass-divider border-r">
               <Suspense fallback={<PanelSkeleton label="Loading electronics compiler…" />}>
                 <LazyPCBPanel />
               </Suspense>
             </div>
-            <div className="flex-1">{renderScene()}</div>
+            <div className="workspace-preview-panel flex-1">{renderScene()}</div>
           </div>
         );
       case "validate":
       case "export":
         return (
-          <div className="flex h-full">
-            <div className="w-[400px] shrink-0 overflow-y-auto glass-divider border-r">
+          <div className="workspace-stage-split workspace-stage-split--export flex h-full">
+            <div className="workspace-tools-panel w-[400px] shrink-0 overflow-y-auto glass-divider border-r">
               <Suspense fallback={<PanelSkeleton label="Loading export pipeline…" />}>
                 <LazyExportPanel
                   mode={activeStage.id === "validate" ? "validate" : "export"}
@@ -339,7 +451,7 @@ function App() {
                 />
               </Suspense>
             </div>
-            <div className="flex-1">{renderScene()}</div>
+            <div className="workspace-preview-panel flex-1">{renderScene()}</div>
           </div>
         );
       default:
@@ -347,60 +459,56 @@ function App() {
     }
   };
 
+  const renderStageButton = (stage: WorkspaceStageManifest, index: number, compact = false) => {
+    const active = currentStageId === stage.id;
+    const disabled = stage.requires_project && !hasProject;
+    const complete = stageComplete(stage.id, project, records);
+    return (
+      <button
+        key={stage.id}
+        onClick={() => !disabled && setCurrentStageId(stage.id as StageId)}
+        disabled={disabled}
+        className={`workspace-stage-button ${compact ? "workspace-stage-button--compact" : ""} ${
+          active ? "workspace-stage-button--active" : ""
+        } ${complete ? "workspace-stage-button--complete" : ""}`}
+      >
+        <div className="workspace-stage-button__index">
+          {complete ? (
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          ) : index + 1}
+        </div>
+        <div className="min-w-0">
+          <div className="workspace-stage-button__label">{stage.label}</div>
+          {!compact && <div className="workspace-stage-button__description">{stage.description}</div>}
+        </div>
+      </button>
+    );
+  };
+
   return (
-    <div className="app-shell flex h-screen w-screen">
+    <div className="app-shell workspace-shell flex h-screen w-screen">
       <ErrorBanner />
 
-      <aside className="glass glass-strong w-[304px] flex flex-col shrink-0 rounded-r-[28px]">
-        <div className="glass-toolbar glass-divider h-14 flex items-center gap-2.5 px-5 border-b">
+      <aside className="workspace-sidebar surface-strong flex w-[304px] shrink-0 flex-col rounded-r-[28px]">
+        <div className="surface-toolbar glass-divider flex h-14 items-center gap-2.5 border-b px-5">
           <button onClick={() => navigate("/app")} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
-            <div className="glass-chip w-7 h-7 rounded-md flex items-center justify-center">
+            <div className="surface-chip flex h-7 w-7 items-center justify-center rounded-md">
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                <rect x="1" y="3" width="6" height="4" rx="1" fill="#818cf8" />
-                <rect x="9" y="3" width="6" height="4" rx="1" fill="#818cf8" opacity="0.5" />
-                <rect x="1" y="9" width="14" height="4" rx="1" fill="#818cf8" opacity="0.25" />
+                <rect x="1" y="3" width="6" height="4" rx="1" fill="var(--accent)" />
+                <rect x="9" y="3" width="6" height="4" rx="1" fill="var(--accent)" opacity="0.5" />
+                <rect x="1" y="9" width="14" height="4" rx="1" fill="var(--accent)" opacity="0.25" />
               </svg>
             </div>
-            <span className="text-[14px] font-semibold text-white">BreakGen</span>
+            <span className="text-[14px] font-semibold text-[var(--text-primary)]">BreakGen</span>
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto">
           <nav className="px-3 pt-4 space-y-0.5">
             <div className="px-2 pb-3">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-600">Workspace</span>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text-tertiary)]">Workspace</span>
             </div>
-            {stages.map((stage, index) => {
-              const active = currentStageId === stage.id;
-              const disabled = stage.requires_project && !hasProject;
-              const complete = stageComplete(stage.id, project);
-              return (
-                <button
-                  key={stage.id}
-                  onClick={() => !disabled && setCurrentStageId(stage.id as StageId)}
-                  disabled={disabled}
-                  className={`w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 transition-all duration-150 ${
-                    active ? "glass glass-soft" : "glass-button hover:bg-white/[0.03]"
-                  } ${disabled ? "opacity-30 cursor-not-allowed" : "cursor-pointer"}`}
-                >
-                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-semibold shrink-0 border ${
-                    complete
-                      ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/25"
-                      : active
-                        ? "bg-indigo-500/15 text-indigo-400 border-indigo-500/25"
-                        : "glass-chip text-zinc-500 border-white/[0.08]"
-                  }`}>
-                    {complete ? (
-                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                    ) : index + 1}
-                  </div>
-                  <div className="min-w-0">
-                    <div className={`text-[13px] font-medium leading-tight ${active ? "text-white" : "text-zinc-400"}`}>{stage.label}</div>
-                    <div className="text-[11px] text-zinc-600 leading-tight mt-0.5 truncate">{stage.description}</div>
-                  </div>
-                </button>
-              );
-            })}
+            {stages.map((stage, index) => renderStageButton(stage, index))}
           </nav>
 
           <ProjectSurfaces
@@ -413,48 +521,67 @@ function App() {
         </div>
 
         {user && (
-          <div className="glass-toolbar glass-divider px-4 py-3 border-t flex items-center gap-2.5">
+          <div className="surface-toolbar glass-divider flex items-center gap-2.5 border-t px-4 py-3">
             <div className="w-7 h-7 rounded-full bg-indigo-500/15 flex items-center justify-center text-[11px] font-semibold text-indigo-400 shrink-0">
               {user.name.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-[12px] font-medium text-zinc-300 truncate">{user.name}</div>
+              <div className="truncate text-[12px] font-medium text-[var(--text-primary)]">{user.name}</div>
+              <div className="text-[10px] uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
+                {sessionState === "offline" ? "backend offline" : "private alpha"}
+              </div>
             </div>
             <button onClick={() => { logout(); navigate("/"); }}
-              className="text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors">
+              className="text-[10px] text-[var(--text-tertiary)] transition-colors hover:text-[var(--text-primary)]">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 1h3v12H9M6 7h6M10 5l2 2-2 2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </button>
           </div>
         )}
       </aside>
 
-      <main className="flex-1 flex flex-col overflow-hidden relative z-10">
-        <div className="glass-toolbar glass-divider h-12 flex items-center gap-3 px-5 shrink-0 border-b">
-          <span className="text-[13px] font-medium text-zinc-400">{activeStage.label}</span>
-          <span className="text-zinc-700">/</span>
-          <span className="text-[13px] text-zinc-600 truncate">{activeStage.description}</span>
+      <main className="workspace-main flex-1 flex flex-col overflow-hidden relative z-10">
+        <div className="workspace-mainbar surface-toolbar glass-divider flex h-12 shrink-0 items-center gap-3 border-b px-5">
+          <button onClick={() => navigate("/app")} className="workspace-mobile-brand">
+            <div className="surface-chip flex h-8 w-8 items-center justify-center rounded-lg">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <rect x="1" y="3" width="6" height="4" rx="1" fill="var(--accent)" />
+                <rect x="9" y="3" width="6" height="4" rx="1" fill="var(--accent)" opacity="0.5" />
+                <rect x="1" y="9" width="14" height="4" rx="1" fill="var(--accent)" opacity="0.25" />
+              </svg>
+            </div>
+            <span>BreakGen</span>
+          </button>
+          <span className="workspace-stage-label text-[13px] font-medium text-[var(--text-secondary)]">{activeStage.label}</span>
+          <span className="workspace-stage-divider text-[var(--text-muted)]">/</span>
+          <span className="workspace-stage-description truncate text-[13px] text-[var(--text-tertiary)]">{activeStage.description}</span>
           <div className="ml-auto flex items-center gap-2">
+            <ThemeSwitcher />
             {project && (
-              <>
-                <span className="text-[11px] uppercase tracking-[0.08em] text-zinc-600">{project.product_family}</span>
-                <span className="text-[11px] font-mono text-zinc-600">r{project.revision}</span>
+              <div className="workspace-project-meta flex items-center gap-2">
+                <span className="text-[11px] uppercase tracking-[0.08em] text-[var(--text-tertiary)]">{project.product_family}</span>
+                <span className="text-[11px] font-mono text-[var(--text-tertiary)]">r{project.revision}</span>
                 <span className={`glass-badge px-2.5 py-1 rounded-full border text-[10px] uppercase tracking-[0.08em] ${statusTone(project.status)}`}>
                   {project.status}
                 </span>
-              </>
+              </div>
             )}
             {dirty && (
               <button
-                onClick={() => save()}
+                onClick={() => void save()}
                 disabled={loading}
-                className="glass-button-primary h-8 px-3 text-[12px] font-medium rounded-lg disabled:opacity-50 transition-colors"
+                className="surface-button-primary h-8 rounded-lg px-3 text-[12px] font-semibold transition-colors disabled:opacity-50"
               >
                 {loading ? "Saving…" : "Save"}
               </button>
             )}
           </div>
         </div>
-        {renderStage()}
+        <div className="workspace-mobile-stage-nav">
+          {stages.map((stage, index) => renderStageButton(stage, index, true))}
+        </div>
+        <div className="workspace-stage-body">
+          {renderStage()}
+        </div>
       </main>
     </div>
   );

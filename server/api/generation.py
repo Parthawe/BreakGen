@@ -8,11 +8,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from server.api.auth import require_user, user_scope_id
 from server.ai.meshy_client import MeshyError
 from server.ai.providers.base import GenerateAssetRequest
 from server.ai.providers.registry import provider_registry
 from server.ai.prompt_wrapper import get_available_presets, wrap_prompt
 from server.db.database import get_db
+from server.db.models import UserRow
 from server.models.project import (
     AcceptanceState,
     ElementType,
@@ -133,9 +135,14 @@ async def _reconcile_generation_project_status(
     db: AsyncSession,
     row,
     project_id: str,
+    owner_user_id: int | None = None,
 ) -> str | None:
     """Recompute project status from current generation jobs and assets."""
-    _, project = await load_project_state(db, project_id)
+    _, project = await load_project_state(
+        db,
+        project_id,
+        owner_user_id=owner_user_id,
+    )
     generation_jobs = [
         job for job in await list_project_jobs(db, project_id)
         if job.job_type == "keycap_generation"
@@ -175,8 +182,13 @@ async def _submit_keycap_generation_request(
     project_id: str,
     req: GenerateKeycapsRequest,
     db: AsyncSession,
+    owner_user_id: int | None = None,
 ):
-    row, project = await load_project_state(db, project_id)
+    row, project = await load_project_state(
+        db,
+        project_id,
+        owner_user_id=owner_user_id,
+    )
 
     if not req.prompt and not req.preset:
         raise HTTPException(status_code=400, detail="Provide prompt or preset")
@@ -285,9 +297,15 @@ async def generate_keycaps(
     project_id: str,
     req: GenerateKeycapsRequest,
     db: AsyncSession = Depends(get_db),
+    user: UserRow = Depends(require_user),
 ):
     """Submit a provider-backed keycap generation request."""
-    return await _submit_keycap_generation_request(project_id, req, db)
+    return await _submit_keycap_generation_request(
+        project_id,
+        req,
+        db,
+        owner_user_id=user_scope_id(user),
+    )
 
 
 @router.post("/{project_id}/generation/jobs")
@@ -295,6 +313,7 @@ async def create_generation_job(
     project_id: str,
     req: GenerationJobRequest,
     db: AsyncSession = Depends(get_db),
+    user: UserRow = Depends(require_user),
 ):
     """Submit a provider-backed generation job through the platform contract."""
     if req.asset_type != "keycap":
@@ -302,7 +321,12 @@ async def create_generation_job(
             status_code=400,
             detail=f"Unsupported asset type '{req.asset_type}'",
         )
-    return await _submit_keycap_generation_request(project_id, req, db)
+    return await _submit_keycap_generation_request(
+        project_id,
+        req,
+        db,
+        owner_user_id=user_scope_id(user),
+    )
 
 
 @router.get("/{project_id}/generation-status/{task_id}")
@@ -310,15 +334,26 @@ async def get_generation_status(
     project_id: str,
     task_id: str,
     db: AsyncSession = Depends(get_db),
+    user: UserRow = Depends(require_user),
 ):
     """Check status of a provider-backed generation task."""
-    row, project = await load_project_state(db, project_id)
+    owner_user_id = user_scope_id(user)
+    row, project = await load_project_state(
+        db,
+        project_id,
+        owner_user_id=owner_user_id,
+    )
     job = await get_project_job_by_external_ref(db, project_id, task_id)
     if job is None:
         raise HTTPException(status_code=404, detail=f"Generation task '{task_id}' not found")
 
     if is_terminal_job_status(job.status):
-        project_status = await _reconcile_generation_project_status(db, row, project_id)
+        project_status = await _reconcile_generation_project_status(
+            db,
+            row,
+            project_id,
+            owner_user_id=owner_user_id,
+        )
         payload = {
             "status": job.status.upper(),
             "progress": job.output_data.get("progress", 100 if job.status == "completed" else 0),
@@ -381,7 +416,12 @@ async def get_generation_status(
                 ),
             },
         )
-        project_status = await _reconcile_generation_project_status(db, row, project_id)
+        project_status = await _reconcile_generation_project_status(
+            db,
+            row,
+            project_id,
+            owner_user_id=owner_user_id,
+        )
         await db.commit()
         payload = {
             "status": status,
@@ -403,12 +443,14 @@ async def apply_keycap(
     project_id: str,
     req: ApplyKeycapRequest,
     db: AsyncSession = Depends(get_db),
+    user: UserRow = Depends(require_user),
 ):
     """Assign a keycap asset to keys in the project. Bumps revision."""
     row, project = await load_project_state(
         db,
         project_id,
         expected_revision=req.expected_revision,
+        owner_user_id=user_scope_id(user),
     )
     asset = _find_keycap_asset(project, req.asset_id)
     if asset.acceptance_state not in _CANONICAL_ASSET_STATES:
@@ -460,6 +502,7 @@ async def update_keycap_asset_acceptance(
     asset_id: str,
     req: UpdateKeycapAssetRequest,
     db: AsyncSession = Depends(get_db),
+    user: UserRow = Depends(require_user),
 ):
     """Update asset acceptance state with revision-safe semantics."""
     if req.acceptance_state not in _MANUAL_ASSET_STATES:
@@ -475,6 +518,7 @@ async def update_keycap_asset_acceptance(
         db,
         project_id,
         expected_revision=req.expected_revision,
+        owner_user_id=user_scope_id(user),
     )
     asset = _find_keycap_asset(project, asset_id)
     if asset.acceptance_state == req.acceptance_state:

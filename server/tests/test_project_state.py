@@ -137,6 +137,38 @@ async def test_load_project_state_rejects_missing_and_stale_revision(tmp_path: P
 
 
 @pytest.mark.anyio
+async def test_project_state_enforces_owner_scope(tmp_path: Path):
+    engine, session_factory = await _make_session(tmp_path)
+    try:
+        async with session_factory() as db:
+            project = KeyboardProject(project_id="bg_test_owner_scope")
+            await create_project_record(
+                db,
+                project,
+                change_summary="Project created",
+                owner_user_id=10,
+            )
+
+            row, loaded = await load_project_state(
+                db,
+                project.project_id,
+                owner_user_id=10,
+            )
+            assert row.user_id == 10
+            assert loaded.project_id == project.project_id
+
+            with pytest.raises(HTTPException) as wrong_owner_exc:
+                await load_project_state(
+                    db,
+                    project.project_id,
+                    owner_user_id=11,
+                )
+            assert wrong_owner_exc.value.status_code == 404
+    finally:
+        await engine.dispose()
+
+
+@pytest.mark.anyio
 async def test_persist_project_metadata_updates_row_without_new_revision(tmp_path: Path):
     engine, session_factory = await _make_session(tmp_path)
     try:

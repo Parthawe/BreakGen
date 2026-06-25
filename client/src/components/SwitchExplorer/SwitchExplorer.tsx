@@ -11,18 +11,49 @@ const TYPE_COLORS: Record<string, string> = {
 
 export function SwitchExplorer() {
   const [switches, setSwitches] = useState<SupportedSwitch[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const currentPartId = useProjectStore((s) => s.project?.switch_profile.part_id);
+  const family = useProjectStore((s) => s.project?.product_family ?? "keyboard");
   const setSwitch = useProjectStore((s) => s.setSwitch);
 
-  useEffect(() => { api.switches.list().then(setSwitches); }, []);
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    api.switches
+      .list()
+      .then(setSwitches)
+      .catch((loadError) => {
+        setError(loadError instanceof Error ? loadError.message : "Failed to load switches.");
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  const description =
+    family === "keyboard" || family === "macropad"
+      ? "Choose the switch baseline. This affects feel, sound, and the PCB footprint."
+      : "Choose the switch baseline for the key-bearing controls in this family. Non-key modules stay family-specific.";
 
   return (
     <div className="p-6 flex-1">
       <div className="mb-8">
-        <h3 className="text-[16px] font-semibold text-white mb-1.5">How should it feel?</h3>
-        <p className="text-[13px] text-zinc-500 leading-[1.6]">Choose a switch. This determines key feel, sound, and PCB footprint.</p>
+        <h3 className="mb-1.5 text-[16px] font-semibold text-[var(--text-primary)]">How should it feel?</h3>
+        <p className="text-[13px] leading-[1.6] text-[var(--text-secondary)]">{description}</p>
       </div>
 
+      {loading ? (
+        <div className="surface-panel rounded-xl px-4 py-3 text-[12px] text-[var(--text-secondary)]">
+          Loading switch catalog…
+        </div>
+      ) : error ? (
+        <div className="surface-panel rounded-xl px-4 py-3 text-[12px] text-[var(--text-secondary)]">
+          {error}
+        </div>
+      ) : switches.length === 0 ? (
+        <div className="surface-panel rounded-xl px-4 py-3 text-[12px] text-[var(--text-secondary)]">
+          No switch catalog entries are available for this workspace.
+        </div>
+      ) : (
       <div className="space-y-2.5">
         {switches.map((sw) => {
           const selected = currentPartId === sw.part_id;
@@ -33,8 +64,8 @@ export function SwitchExplorer() {
                 selected ? "glass border-indigo-500/25" : "glass glass-soft hover:border-white/[0.12]"} border`}>
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <span className="text-[14px] font-medium text-white">{sw.name}</span>
-                  <span className="text-[12px] text-zinc-600 ml-2">{sw.manufacturer}</span>
+                  <span className="text-[14px] font-medium text-[var(--text-primary)]">{sw.name}</span>
+                  <span className="ml-2 text-[12px] text-[var(--text-tertiary)]">{sw.manufacturer}</span>
                 </div>
                 <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full capitalize"
                   style={{ color: tc, background: tc + "12" }}>
@@ -45,8 +76,8 @@ export function SwitchExplorer() {
               {/* Force bar */}
               <div className="mb-3">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[11px] text-zinc-600">Actuation force</span>
-                  <span className="text-[12px] font-mono text-zinc-400">{sw.actuation_force_g}g</span>
+                  <span className="text-[11px] text-[var(--text-tertiary)]">Actuation force</span>
+                  <span className="text-[12px] font-mono text-[var(--text-secondary)]">{sw.actuation_force_g}g</span>
                 </div>
                 <div className="glass-subcard h-1.5 rounded-full">
                   <div className="h-full rounded-full transition-all duration-500"
@@ -55,15 +86,16 @@ export function SwitchExplorer() {
               </div>
 
               <div className="flex items-center gap-3">
-                <span className="text-[12px] text-zinc-600">{sw.total_travel_mm}mm travel</span>
+                <span className="text-[12px] text-[var(--text-tertiary)]">{sw.total_travel_mm}mm travel</span>
                 {sw.tags.slice(0, 3).map((tag) => (
-                  <span key={tag} className="glass-chip text-[10px] text-zinc-600 px-2 py-0.5 rounded-full">{tag}</span>
+                  <span key={tag} className="glass-chip rounded-full px-2 py-0.5 text-[10px] text-[var(--text-tertiary)]">{tag}</span>
                 ))}
               </div>
             </button>
           );
         })}
       </div>
+      )}
     </div>
   );
 }

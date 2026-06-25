@@ -1,5 +1,6 @@
 """Project CRUD endpoints."""
 
+import copy
 import json
 import uuid
 from datetime import datetime, timezone
@@ -12,8 +13,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.config import settings
+from server.api.auth import require_user, user_scope_id
 from server.db.database import get_db
-from server.db.models import ProjectRevisionRow, ProjectRow
+from server.db.models import ProjectArtifactRow, ProjectJobRow, ProjectRevisionRow, ProjectRow, UserRow
 from server.models.project import (
     KeyboardProject,
     LayoutSpec,
@@ -23,6 +25,7 @@ from server.models.project import (
     domain_for_family,
 )
 from server.models.supported_configs import SUPPORTED_SWITCHES, SUPPORTED_TEMPLATES
+from server.services.artifact_registry import delete_project_artifact_tree
 from server.services.project_state import (
     commit_project_mutation,
     create_project_record,
@@ -69,8 +72,32 @@ def _get_supported_template(template_id: str):
     return next((template for template in SUPPORTED_TEMPLATES if template.template_id == template_id), None)
 
 
+def _public_project_payload(data: dict) -> dict:
+    """Return project state without internal filesystem artifact paths."""
+    payload = copy.deepcopy(data)
+    exports = payload.get("exports")
+    if isinstance(exports, dict):
+        exports["bundle_path"] = None
+
+    pcb = payload.get("pcb")
+    if isinstance(pcb, dict):
+        pcb["gerber_path"] = None
+        pcb["kicad_project_path"] = None
+
+    for asset in payload.get("keycap_assets", []) or []:
+        if isinstance(asset, dict):
+            asset["mesh_path"] = None
+            asset["preview_mesh_path"] = None
+
+    return payload
+
+
 @router.post("/", status_code=201)
-async def create_project(req: CreateProjectRequest, db: AsyncSession = Depends(get_db)):
+async def create_project(
+    req: CreateProjectRequest,
+    db: AsyncSession = Depends(get_db),
+    user: UserRow = Depends(require_user),
+):
     """Create a new keyboard project, optionally from a template."""
     project_id = _generate_id()
     now = datetime.now(timezone.utc)
@@ -128,15 +155,21 @@ async def create_project(req: CreateProjectRequest, db: AsyncSession = Depends(g
         db,
         project,
         change_summary="Project created",
+        owner_user_id=user_scope_id(user),
     )
 
 
 @router.get("/")
-async def list_projects(db: AsyncSession = Depends(get_db)):
-    """List all projects (summary only)."""
-    result = await db.execute(
-        select(ProjectRow).order_by(ProjectRow.updated_at.desc())
-    )
+async def list_projects(
+    db: AsyncSession = Depends(get_db),
+    user: UserRow = Depends(require_user),
+):
+    """List authenticated user's projects (summary only)."""
+    stmt = select(ProjectRow).order_by(ProjectRow.updated_at.desc())
+    owner_user_id = user_scope_id(user)
+    if owner_user_id is not None:
+        stmt = stmt.where(ProjectRow.user_id == owner_user_id)
+    result = await db.execute(stmt)
     rows = result.scalars().all()
     return [
         {
@@ -159,15 +192,18 @@ async def list_projects(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/{project_id}")
-async def get_project(project_id: str, db: AsyncSession = Depends(get_db)):
+async def get_project(
+    project_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: UserRow = Depends(require_user),
+):
     """Get full project data."""
-    result = await db.execute(
-        select(ProjectRow).where(ProjectRow.project_id == project_id)
+    row, _ = await load_project_state(
+        db,
+        project_id,
+        owner_user_id=user_scope_id(user),
     )
-    row = result.scalar_one_or_none()
-    if not row:
-        raise HTTPException(status_code=404, detail="Project not found")
-    return row.data
+    return _public_project_payload(row.data)
 
 
 @router.patch("/{project_id}")
@@ -175,12 +211,14 @@ async def update_project(
     project_id: str,
     req: UpdateProjectRequest,
     db: AsyncSession = Depends(get_db),
+    user: UserRow = Depends(require_user),
 ):
     """Update project fields. Increments revision."""
     row, project = await load_project_state(
         db,
         project_id,
         expected_revision=req.expected_revision,
+        owner_user_id=user_scope_id(user),
     )
     changes: list[str] = []
 
@@ -206,37 +244,38 @@ async def update_project(
         changes.append("style")
 
     if not changes:
-        return project.model_dump(mode="json")
+        return _public_project_payload(project.model_dump(mode="json"))
 
     # Invalidate validation on material changes
     if any(c in changes for c in ["layout", "switch"]):
         invalidate_derived_state(project)
-    return await commit_project_mutation(
+    payload = await commit_project_mutation(
         db,
         row,
         project,
         change_summary=f"Updated: {', '.join(changes)}",
     )
+    return _public_project_payload(payload)
 
 
 @router.delete("/{project_id}", status_code=204)
-async def delete_project(project_id: str, db: AsyncSession = Depends(get_db)):
-    """Delete a project and all its revisions."""
-    result = await db.execute(
-        select(ProjectRow).where(ProjectRow.project_id == project_id)
+async def delete_project(
+    project_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: UserRow = Depends(require_user),
+):
+    """Delete a project and all its durable registry rows."""
+    row, _ = await load_project_state(
+        db,
+        project_id,
+        owner_user_id=user_scope_id(user),
     )
-    row = result.scalar_one_or_none()
-    if not row:
-        raise HTTPException(status_code=404, detail="Project not found")
 
-    # Delete all revision snapshots for this project
-    rev_result = await db.execute(
-        select(ProjectRevisionRow).where(
-            ProjectRevisionRow.project_id == project_id
-        )
-    )
-    for rev_row in rev_result.scalars().all():
-        await db.delete(rev_row)
+    for model in (ProjectRevisionRow, ProjectArtifactRow, ProjectJobRow):
+        result = await db.execute(select(model).where(model.project_id == project_id))
+        for related_row in result.scalars().all():
+            await db.delete(related_row)
 
+    delete_project_artifact_tree(project_id)
     await db.delete(row)
     await db.commit()

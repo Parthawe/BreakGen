@@ -20,6 +20,7 @@ MIN_CLEARANCE_MM = {
     ElementType.KEY_SWITCH: 0.0,
     ElementType.BUTTON: 1.5,
     ElementType.ENCODER: 4.0,
+    ElementType.PAD: 3.0,
     ElementType.SLIDER: 3.0,
     ElementType.JOYSTICK: 6.0,
     ElementType.DISPLAY: 5.0,
@@ -35,6 +36,7 @@ INTERACTIVE_TYPES = {
     ElementType.KEY_SWITCH,
     ElementType.BUTTON,
     ElementType.ENCODER,
+    ElementType.PAD,
     ElementType.SLIDER,
     ElementType.JOYSTICK,
     ElementType.DISPLAY,
@@ -74,6 +76,65 @@ def validate_project(project: KeyboardProject) -> ValidationReport:
 
 
 def _check_family_required_modules(project: KeyboardProject) -> ValidationCheck:
+    if project.product_family == ProductFamily.BREATH_CONTROLLER:
+        sensor_count = sum(
+            1 for element in project.layout.elements if element.element_type == ElementType.SENSOR
+        )
+        button_count = sum(
+            1 for element in project.layout.elements if element.element_type == ElementType.BUTTON
+        )
+        present = {element.element_type for element in project.layout.elements}
+        missing: list[str] = []
+        if sensor_count < 2:
+            missing.append("breath and bite sensors")
+        if ElementType.MICROPHONE not in present:
+            missing.append("microphone")
+        if button_count < 2:
+            missing.append("two octave buttons")
+        if missing:
+            return ValidationCheck(
+                id="family_required_modules",
+                category="module_compatibility",
+                status=CheckStatus.FAIL,
+                details=(
+                    "Breath controller layouts must include the core instrument modules: "
+                    f"{', '.join(missing)} missing."
+                ),
+            )
+        return ValidationCheck(
+            id="family_required_modules",
+            category="module_compatibility",
+            status=CheckStatus.PASS,
+            details="Breath controller layout includes breath/bite sensors, microphone, and octave controls.",
+        )
+
+    if project.product_family == ProductFamily.PEDAL_CONTROLLER:
+        present = {element.element_type for element in project.layout.elements}
+        button_count = sum(
+            1 for element in project.layout.elements if element.element_type == ElementType.BUTTON
+        )
+        missing: list[str] = []
+        if button_count < 2:
+            missing.append("at least two footswitch buttons")
+        if ElementType.SLIDER not in present:
+            missing.append("expression input")
+        if missing:
+            return ValidationCheck(
+                id="family_required_modules",
+                category="module_compatibility",
+                status=CheckStatus.FAIL,
+                details=(
+                    "Pedal controller layouts must include a usable performance-control baseline: "
+                    f"{', '.join(missing)} missing."
+                ),
+            )
+        return ValidationCheck(
+            id="family_required_modules",
+            category="module_compatibility",
+            status=CheckStatus.PASS,
+            details="Pedal controller layout includes footswitch buttons and expression input.",
+        )
+
     if project.product_family != ProductFamily.HANDHELD_COMPANION:
         return ValidationCheck(
             id="family_required_modules",
@@ -83,13 +144,19 @@ def _check_family_required_modules(project: KeyboardProject) -> ValidationCheck:
         )
 
     present = {element.element_type for element in project.layout.elements}
+    button_count = sum(
+        1 for element in project.layout.elements if element.element_type == ElementType.BUTTON
+    )
     required = {
         ElementType.DISPLAY: "display",
         ElementType.BATTERY: "battery",
         ElementType.SPEAKER: "speaker",
-        ElementType.USB_PORT: "USB access port",
+        ElementType.MICROPHONE: "microphone",
+        ElementType.USB_PORT: "USB-C charging/data access port",
     }
     missing = [label for element_type, label in required.items() if element_type not in present]
+    if button_count < 4:
+        missing.append("at least four navigation/action buttons")
     if missing:
         return ValidationCheck(
             id="family_required_modules",
@@ -104,7 +171,7 @@ def _check_family_required_modules(project: KeyboardProject) -> ValidationCheck:
         id="family_required_modules",
         category="module_compatibility",
         status=CheckStatus.PASS,
-        details="Handheld companion layout includes display, battery, speaker, and USB service access.",
+        details="Handheld companion layout includes display, buttons, battery, speaker, microphone, and USB-C charging/data access.",
     )
 
 

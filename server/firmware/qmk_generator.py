@@ -102,6 +102,14 @@ def _control_map_entry(project: KeyboardProject, element, index_by_type: dict[El
                 "cc": 16 + index,
                 "mode": "relative",
             }
+        elif element.element_type == ElementType.PAD:
+            payload["mapping"] = {
+                "kind": "midi_note",
+                "channel": 10,
+                "note": 36 + index,
+                "velocity_curve": "linear",
+                "trigger": "pad",
+            }
         elif element.element_type == ElementType.DISPLAY:
             payload["mapping"] = {
                 "kind": "status_display",
@@ -133,6 +141,62 @@ def _control_map_entry(project: KeyboardProject, element, index_by_type: dict[El
             }
         return payload
 
+    if project.product_family == ProductFamily.PEDAL_CONTROLLER:
+        if element.element_type == ElementType.BUTTON:
+            payload["mapping"] = {
+                "kind": "midi_program_change",
+                "channel": 1,
+                "program": index,
+                "momentary": True,
+            }
+        elif element.element_type == ElementType.SLIDER:
+            payload["mapping"] = {
+                "kind": "midi_cc",
+                "channel": 1,
+                "cc": 11,
+                "mode": "absolute",
+                "role": "expression",
+            }
+        else:
+            payload["mapping"] = {
+                "kind": "generic_control",
+                "slot": index,
+            }
+        return payload
+
+    if project.product_family == ProductFamily.BREATH_CONTROLLER:
+        if element.element_type == ElementType.SENSOR:
+            cc = 2 if index == 0 else 1
+            payload["mapping"] = {
+                "kind": "midi_cc",
+                "channel": 1,
+                "cc": cc,
+                "mode": "absolute",
+                "role": "breath" if index == 0 else "bite",
+            }
+        elif element.element_type == ElementType.MICROPHONE:
+            payload["mapping"] = {
+                "kind": "breath_articulation",
+                "source": "microphone",
+                "gate": "noise_floor",
+            }
+        elif element.element_type == ElementType.BUTTON:
+            payload["mapping"] = {
+                "kind": "octave_shift",
+                "direction": "down" if "-" in element.label else "up",
+            }
+        elif element.element_type == ElementType.DISPLAY:
+            payload["mapping"] = {
+                "kind": "status_display",
+                "page": index,
+            }
+        else:
+            payload["mapping"] = {
+                "kind": "generic_control",
+                "slot": index,
+            }
+        return payload
+
     if project.product_family == ProductFamily.HANDHELD_COMPANION:
         if element.element_type == ElementType.BUTTON:
             payload["mapping"] = {
@@ -148,6 +212,12 @@ def _control_map_entry(project: KeyboardProject, element, index_by_type: dict[El
             payload["mapping"] = {
                 "kind": "audio_output",
                 "channel": "mono",
+            }
+        elif element.element_type == ElementType.MICROPHONE:
+            payload["mapping"] = {
+                "kind": "voice_input",
+                "source": "mems_microphone",
+                "role": "voice_note_or_command",
             }
         elif element.element_type == ElementType.BATTERY:
             payload["mapping"] = {

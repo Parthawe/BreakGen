@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from typing import Optional
-
 import bcrypt as _bcrypt
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -18,15 +16,12 @@ from server.db.models import UserRow
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
-JWT_SECRET = "breakgen-dev-secret-change-in-production"
-JWT_ALGORITHM = "HS256"
-JWT_EXPIRE_HOURS = 72
-
 
 class SignupRequest(BaseModel):
     email: str
     name: str
     password: str
+    invite_code: str | None = None
 
 
 class LoginRequest(BaseModel):
@@ -43,16 +38,22 @@ def _create_token(user_id: int, email: str) -> str:
     payload = {
         "sub": str(user_id),
         "email": email,
-        "exp": datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRE_HOURS),
+        "exp": datetime.now(timezone.utc) + timedelta(hours=settings.jwt_expire_hours),
     }
-    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
 def _verify_token(token: str) -> dict | None:
     try:
-        return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        return jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
     except jwt.PyJWTError:
         return None
+
+
+def user_scope_id(user: object | None) -> int | None:
+    """Return an authenticated user id when FastAPI resolved the dependency."""
+    user_id = getattr(user, "id", None)
+    return user_id if isinstance(user_id, int) else None
 
 
 async def get_current_user(request: Request, db: AsyncSession = Depends(get_db)) -> UserRow | None:
@@ -80,17 +81,27 @@ async def require_user(request: Request, db: AsyncSession = Depends(get_db)) -> 
 @router.post("/signup", response_model=AuthResponse)
 async def signup(req: SignupRequest, db: AsyncSession = Depends(get_db)):
     """Create a new account."""
+    if not settings.public_signup_enabled:
+        raise HTTPException(status_code=403, detail="Signup is disabled")
+
+    if settings.signup_invite_code and req.invite_code != settings.signup_invite_code:
+        raise HTTPException(status_code=403, detail="Invalid invite code")
+
+    email = req.email.strip().lower()
     # Check if email already exists
-    result = await db.execute(select(UserRow).where(UserRow.email == req.email))
+    result = await db.execute(select(UserRow).where(UserRow.email == email))
     if result.scalar_one_or_none():
         raise HTTPException(status_code=409, detail="Email already registered")
 
-    if len(req.password) < 6:
-        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    if len(req.password) < settings.min_password_length:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Password must be at least {settings.min_password_length} characters",
+        )
 
     user = UserRow(
-        email=req.email,
-        name=req.name,
+        email=email,
+        name=req.name.strip(),
         password_hash=_bcrypt.hashpw(req.password.encode(), _bcrypt.gensalt()).decode(),
     )
     db.add(user)
@@ -107,7 +118,8 @@ async def signup(req: SignupRequest, db: AsyncSession = Depends(get_db)):
 @router.post("/login", response_model=AuthResponse)
 async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
     """Log in with email and password."""
-    result = await db.execute(select(UserRow).where(UserRow.email == req.email))
+    email = req.email.strip().lower()
+    result = await db.execute(select(UserRow).where(UserRow.email == email))
     user = result.scalar_one_or_none()
 
     if not user or not _bcrypt.checkpw(req.password.encode(), user.password_hash.encode()):

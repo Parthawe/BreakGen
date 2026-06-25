@@ -1,156 +1,402 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { ThemeSwitcher } from "../components/ThemeSwitcher";
+import { isApiError } from "../lib/api";
 import { api } from "../lib/api";
 import { useAuthStore } from "../stores/authStore";
 import type { ProjectSummary } from "../types/project";
 
-const FAMILY_META: Record<string, { color: string; label: string; icon: number[][] }> = {
-  keyboard: { color: "#818cf8", label: "Keyboard", icon: [[1,1,1,1,1,1,1,1,1,1],[1.5,1,1,1,1,1,1,1,1.5],[2.25,1,1,1,1,1,1,2.75]] },
-  macropad: { color: "#4ade80", label: "Macro Pad", icon: [[1,1,1],[1,1,1],[1,1,1]] },
-  streamdeck: { color: "#fbbf24", label: "Stream Deck", icon: [[1,1,1,1,1],[1,1,1,1,1]] },
-  midi: { color: "#f472b6", label: "MIDI", icon: [[0,1,0,1,0],[1,1,1,1,1,1]] },
-  gamepad: { color: "#38bdf8", label: "Gamepad", icon: [[0,1,0,1,0],[1,1,1,1,1],[0,1,0,1,0]] },
+const FAMILY_META: Record<
+  string,
+  { color: string; label: string; icon: number[][] }
+> = {
+  keyboard: {
+    color: "#818cf8",
+    label: "Keyboard",
+    icon: [
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      [1.5, 1, 1, 1, 1, 1, 1, 1, 1.5],
+      [2.25, 1, 1, 1, 1, 1, 1, 2.75],
+    ],
+  },
+  macropad: {
+    color: "#4ade80",
+    label: "Macro Pad",
+    icon: [
+      [1, 1, 1],
+      [1, 1, 1],
+      [1, 1, 1],
+    ],
+  },
+  streamdeck: {
+    color: "#fbbf24",
+    label: "Stream Deck",
+    icon: [
+      [1, 1, 1, 1, 1],
+      [1, 1, 1, 1, 1],
+    ],
+  },
+  midi: {
+    color: "#f472b6",
+    label: "MIDI",
+    icon: [
+      [0, 1, 0, 1, 0],
+      [1, 1, 1, 1, 1, 1],
+    ],
+  },
+  gamepad: {
+    color: "#38bdf8",
+    label: "Gamepad",
+    icon: [
+      [0, 1, 0, 1, 0],
+      [1, 1, 1, 1, 1],
+      [0, 1, 0, 1, 0],
+    ],
+  },
+  pedal_controller: {
+    color: "#f97316",
+    label: "Pedal",
+    icon: [
+      [1, 1, 1],
+      [2, 2],
+    ],
+  },
+  breath_controller: {
+    color: "#14b8a6",
+    label: "Breath",
+    icon: [
+      [1, 3, 1],
+      [0, 1, 0],
+    ],
+  },
+  handheld_companion: {
+    color: "#22c55e",
+    label: "Handheld",
+    icon: [
+      [1, 1, 1, 1],
+      [1, 0, 0, 1],
+      [1, 1, 1, 1],
+    ],
+  },
 };
 
-function MiniSil({ rows, color }: { rows: number[][]; color: string }) {
+function MiniSilhouette({
+  rows,
+  color,
+}: {
+  rows: number[][];
+  color: string;
+}) {
   return (
-    <div className="flex flex-col items-center" style={{ gap: "1.5px" }}>
-      {rows.map((r, i) => (
-        <div key={i} className="flex" style={{ gap: "1.5px" }}>
-          {r.map((w, j) => w > 0 ? (
-            <div key={j} style={{ width: `${w * 4 - 1.5}px`, height: "2.5px", background: color, borderRadius: "0.5px", opacity: 0.5 }} />
-          ) : <div key={j} style={{ width: "2.5px" }} />)}
+    <div className="flex flex-col items-center" style={{ gap: "2px" }}>
+      {rows.map((row, rowIndex) => (
+        <div key={rowIndex} className="flex" style={{ gap: "2px" }}>
+          {row.map((width, cellIndex) =>
+            width > 0 ? (
+              <div
+                key={cellIndex}
+                className="rounded-[2px]"
+                style={{
+                  width: `${width * 5 - 2}px`,
+                  height: "3px",
+                  background: color,
+                  opacity: 0.72,
+                }}
+              />
+            ) : (
+              <div key={cellIndex} style={{ width: "3px" }} />
+            ),
+          )}
         </div>
       ))}
     </div>
   );
 }
 
+function projectStatusTone(status: string) {
+  switch (status) {
+    case "exported":
+      return {
+        color: "var(--accent)",
+        background: "var(--accent-muted)",
+      };
+    case "validated":
+      return {
+        color: "var(--success)",
+        background: "rgba(31, 157, 90, 0.12)",
+      };
+    default:
+      return {
+        color: "var(--text-tertiary)",
+        background: "var(--surface-chip)",
+      };
+  }
+}
+
 export function ProjectList() {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const user = useAuthStore((s) => s.user);
-  const logout = useAuthStore((s) => s.logout);
+  const [error, setError] = useState<string | null>(null);
+  const user = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
+  const handleUnauthorized = useAuthStore((state) => state.handleUnauthorized);
   const navigate = useNavigate();
+
+  const loadProjects = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await api.projects.list();
+      setProjects(data);
+    } catch (loadError) {
+      if (isApiError(loadError) && loadError.status === 401) {
+        handleUnauthorized("Your session expired while loading the project index. Sign in again to continue.");
+      }
+      setError(
+        loadError instanceof Error
+          ? loadError.message
+          : "Unable to load the project index.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     document.title = "Projects — BreakGen";
-    api.projects.list().then(setProjects).catch(() => {}).finally(() => setLoading(false));
+    void loadProjects();
   }, []);
 
-  const handleDelete = async (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    await api.projects.delete(id);
-    setProjects((p) => p.filter((x) => x.project_id !== id));
+  const handleDelete = async (event: React.MouseEvent, id: string) => {
+    event.stopPropagation();
+    try {
+      await api.projects.delete(id);
+      setProjects((current) => current.filter((item) => item.project_id !== id));
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "Unable to delete this project.",
+      );
+    }
   };
 
   return (
-    <div className="app-shell min-h-screen">
-      {/* Nav */}
-      <nav className="glass-toolbar glass-divider border-b">
-        <div className="max-w-5xl mx-auto flex items-center justify-between h-14 px-6">
-          <div className="flex items-center gap-2.5">
-            <div className="glass-chip w-8 h-8 rounded-lg flex items-center justify-center">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <rect x="1" y="3" width="6" height="4" rx="1" fill="#818cf8" />
-                <rect x="9" y="3" width="6" height="4" rx="1" fill="#818cf8" opacity="0.5" />
-                <rect x="1" y="9" width="14" height="4" rx="1" fill="#818cf8" opacity="0.25" />
-              </svg>
-            </div>
-            <span className="text-[15px] font-semibold text-white">BreakGen</span>
-          </div>
+    <div className="app-shell min-h-screen px-5 py-5 md:px-8 md:py-8">
+      <div className="mx-auto max-w-[1380px]">
+        <nav className="surface-toolbar mb-6 flex items-center justify-between rounded-[24px] px-5 py-4">
           <div className="flex items-center gap-3">
-            {user && <span className="text-[13px] text-zinc-500">{user.name}</span>}
-            <button onClick={() => { logout(); navigate("/"); }}
-              className="glass-chip h-8 px-3 text-[12px] font-medium text-zinc-400 rounded-lg hover:text-white transition-all">
+            <button
+              onClick={() => navigate("/")}
+              className="surface-chip flex h-10 w-10 items-center justify-center rounded-2xl"
+            >
+              <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
+                <rect x="1" y="3" width="6" height="4" rx="1" fill="var(--accent)" />
+                <rect x="9" y="3" width="6" height="4" rx="1" fill="var(--accent)" opacity="0.48" />
+                <rect x="1" y="9" width="14" height="4" rx="1" fill="var(--accent)" opacity="0.24" />
+              </svg>
+            </button>
+            <div>
+              <div className="text-[15px] font-semibold text-[var(--text-primary)]">BreakGen</div>
+              <div className="text-[12px] text-[var(--text-tertiary)]">
+                Control-surface project index
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <ThemeSwitcher />
+            {user && (
+              <div className="hidden text-right md:block">
+                <div className="text-[13px] font-medium text-[var(--text-primary)]">{user.name}</div>
+                <div className="text-[11px] uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
+                  authenticated alpha
+                </div>
+              </div>
+            )}
+            <button
+              onClick={() => {
+                logout();
+                navigate("/");
+              }}
+              className="surface-button rounded-full px-4 py-2 text-[12px] font-semibold transition-colors"
+            >
               Log out
             </button>
           </div>
-        </div>
-      </nav>
+        </nav>
 
-      {/* Content */}
-      <div className="max-w-5xl mx-auto px-6 pt-10 pb-20">
-        <div className="flex items-end justify-between mb-10">
-          <div>
-            <h1 className="text-[28px] font-bold text-white mb-1">Your Projects</h1>
-            <p className="text-[14px] text-zinc-500">Design, compile, and export custom hardware.</p>
-          </div>
-          <button onClick={() => navigate("/app/new")}
-            className="glass-button-primary h-10 px-5 text-[13px] font-medium rounded-xl transition-colors flex items-center gap-2">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-            New Project
-          </button>
-        </div>
+        <header className="mb-8 grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+          <section className="surface-strong rounded-[30px] p-7 md:p-8">
+            <div className="eyebrow">Project desk</div>
+            <h1 className="mt-4 text-[36px] font-semibold leading-[0.96] tracking-[-0.05em] text-[var(--text-primary)] md:text-[48px]">
+              Build a sharper alpha by keeping every product revision legible.
+            </h1>
+            <p className="mt-5 max-w-[720px] text-[15px] leading-[1.8] text-[var(--text-secondary)]">
+              Projects are indexed by family, revision state, and control count. The goal is not to
+              store files. The goal is to keep each device readable as a working product system.
+            </p>
+            <div className="section-rule mt-8 grid gap-4 pt-6 md:grid-cols-3">
+              {[
+                ["families", "5 live alpha families"],
+                ["history", "revisioned project state"],
+                ["outputs", "validation, mechanical, export"],
+              ].map(([label, copy]) => (
+                <div key={label}>
+                  <div className="eyebrow">{label}</div>
+                  <div className="mt-2 text-[14px] font-medium text-[var(--text-primary)]">{copy}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <aside className="surface-panel rounded-[30px] p-6">
+            <div className="eyebrow">Next action</div>
+            <h2 className="mt-4 text-[24px] font-semibold tracking-[-0.04em] text-[var(--text-primary)]">
+              Start a new device family.
+            </h2>
+            <p className="mt-3 text-[14px] leading-[1.75] text-[var(--text-secondary)]">
+              Choose a family, lock the baseline, then move through layout, appearance,
+              electronics, validation, and export from one shell.
+            </p>
+            <button
+              onClick={() => navigate("/app/new")}
+              className="surface-button-primary mt-6 inline-flex h-11 items-center justify-center rounded-[16px] px-5 text-[13px] font-semibold"
+            >
+              New Project
+            </button>
+          </aside>
+        </header>
 
         {loading ? (
           <div className="flex items-center justify-center py-24">
-            <div className="w-6 h-6 border-2 rounded-full animate-spin border-zinc-700 border-t-indigo-500" />
+            <div
+              className="h-7 w-7 animate-spin rounded-full border-2 border-[var(--border-default)]"
+              style={{ borderTopColor: "var(--accent)" }}
+            />
           </div>
+        ) : error ? (
+          <section className="surface-panel rounded-[30px] p-12 text-center">
+            <h3 className="text-[22px] font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
+              Project index unavailable
+            </h3>
+            <p className="mx-auto mt-3 max-w-[480px] text-[15px] leading-[1.75] text-[var(--text-secondary)]">
+              {error}
+            </p>
+            <div className="mt-7 flex items-center justify-center gap-3">
+              <button
+                onClick={() => void loadProjects()}
+                className="surface-button-primary h-11 rounded-[16px] px-6 text-[14px] font-semibold"
+              >
+                Retry
+              </button>
+              <button
+                onClick={() => navigate("/app/new")}
+                className="surface-button h-11 rounded-[16px] px-6 text-[14px] font-semibold"
+              >
+                Start New Project
+              </button>
+            </div>
+          </section>
         ) : projects.length === 0 ? (
-          <div className="glass glass-strong rounded-2xl p-16 text-center">
-            <div className="glass-chip w-16 h-16 rounded-2xl mx-auto mb-5 flex items-center justify-center">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#818cf8" strokeWidth="1.5" strokeLinecap="round">
-                <rect x="2" y="6" width="20" height="12" rx="2" /><path d="M6 10h1M9 10h1M12 10h1M15 10h1M18 10h1M7 14h10" />
+          <section className="surface-panel rounded-[30px] p-12 text-center">
+            <div className="surface-chip mx-auto flex h-16 w-16 items-center justify-center rounded-[22px]">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round">
+                <rect x="2" y="6" width="20" height="12" rx="2" />
+                <path d="M6 10h1M9 10h1M12 10h1M15 10h1M18 10h1M7 14h10" />
               </svg>
             </div>
-            <h3 className="text-[18px] font-semibold text-white mb-2">No projects yet</h3>
-            <p className="text-[14px] text-zinc-500 mb-8 max-w-sm mx-auto">
-              Create your first design — pick a product family, choose a template, and start building.
+            <h3 className="mt-5 text-[22px] font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
+              No projects yet
+            </h3>
+            <p className="mx-auto mt-3 max-w-[420px] text-[15px] leading-[1.75] text-[var(--text-secondary)]">
+              The project list is empty because there is no active product record yet. Start with a
+              family, pick a constrained template, and let the platform carry the rest.
             </p>
-            <button onClick={() => navigate("/app/new")}
-              className="glass-button-primary h-11 px-7 text-[14px] font-medium rounded-xl transition-colors">
+            <button
+              onClick={() => navigate("/app/new")}
+              className="surface-button-primary mt-7 h-11 rounded-[16px] px-6 text-[14px] font-semibold"
+            >
               Create Your First Project
             </button>
-          </div>
+          </section>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {projects.map((p) => {
-              const fm = FAMILY_META[p.product_family] ?? { color: "#71717a", label: p.product_family };
-              return (
-                <button key={p.project_id} onClick={() => navigate(`/app/project/${p.project_id}`)}
-                  className="glass glass-soft text-left rounded-2xl p-6 transition-all duration-200 group hover:border-white/[0.12] hover:-translate-y-0.5">
-                  <div className="flex items-start gap-4 mb-3">
-                    {/* Mini silhouette */}
-                    <div className="w-12 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5" style={{ background: fm.color + "0a" }}>
-                      <MiniSil rows={fm.icon} color={fm.color} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-[16px] font-semibold text-white mb-1 group-hover:text-indigo-300 transition-colors truncate">{p.name}</h3>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-medium" style={{ color: fm.color }}>{fm.label}</span>
-                        <span className="text-zinc-700">&middot;</span>
-                        <span className="text-[11px] font-mono text-zinc-600">{p.key_count} controls</span>
-                      </div>
-                    </div>
-                  </div>
+          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {projects.map((project) => {
+              const meta = FAMILY_META[project.product_family] ?? {
+                color: "var(--accent)",
+                label: project.product_family,
+                icon: [[1, 1, 1]],
+              };
+              const status = projectStatusTone(project.status);
 
-                  {/* Meta row */}
-                  <div className="flex items-center justify-between mt-3">
-                    <div className="flex items-center gap-3">
-                      <span className="text-[11px] font-mono text-zinc-600">r{p.revision}</span>
-                      <span className="text-[11px] text-zinc-600">
-                        {p.updated_at ? new Date(p.updated_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""}
-                      </span>
+              return (
+                <button
+                  key={project.project_id}
+                  onClick={() => navigate(`/app/project/${project.project_id}`)}
+                  className="surface-panel group rounded-[26px] p-5 text-left transition-transform duration-200 hover:-translate-y-0.5"
+                >
+                  <div className="flex items-start gap-4">
+                    <div
+                      className="surface-subcard flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px]"
+                      style={{ background: `${meta.color}14` }}
+                    >
+                      <MiniSilhouette rows={meta.icon} color={meta.color} />
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="glass-badge text-[10px] font-medium capitalize px-2 py-0.5 rounded-full"
-                        style={{ color: p.status === "exported" ? "#818cf8" : p.status === "validated" ? "#22c55e" : "#52525b",
-                          background: p.status === "exported" ? "#818cf815" : p.status === "validated" ? "#22c55e15" : "#52525b10" }}>
-                        {p.status}
-                      </span>
-                      <button onClick={(e) => handleDelete(e, p.project_id)}
-                        className="text-[10px] px-2 py-0.5 rounded text-red-400/60 hover:text-red-400 hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-all">
-                        Delete
-                      </button>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <h3 className="truncate text-[17px] font-semibold tracking-[-0.02em] text-[var(--text-primary)]">
+                            {project.name}
+                          </h3>
+                          <div className="mt-1 flex items-center gap-2 text-[11px] uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
+                            <span style={{ color: meta.color }}>{meta.label}</span>
+                            <span>•</span>
+                            <span>{project.key_count} controls</span>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={(event) => handleDelete(event, project.project_id)}
+                          className="rounded-full px-2 py-1 text-[11px] text-[var(--text-tertiary)] opacity-0 transition-all hover:bg-[var(--error-surface)] hover:text-[var(--error)] group-hover:opacity-100"
+                        >
+                          Delete
+                        </button>
+                      </div>
+
+                      <div className="section-rule mt-5 grid grid-cols-3 gap-3 pt-4 text-[11px]">
+                        <div>
+                          <div className="text-[var(--text-tertiary)]">Revision</div>
+                          <div className="mt-1 font-mono text-[var(--text-primary)]">r{project.revision}</div>
+                        </div>
+                        <div>
+                          <div className="text-[var(--text-tertiary)]">Updated</div>
+                          <div className="mt-1 text-[var(--text-primary)]">
+                            {project.updated_at
+                              ? new Date(project.updated_at).toLocaleDateString("en-US", {
+                                  month: "short",
+                                  day: "numeric",
+                                })
+                              : "—"}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-[var(--text-tertiary)]">Status</div>
+                          <div
+                            className="mt-1 inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em]"
+                            style={status}
+                          >
+                            {project.status}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </button>
               );
             })}
-          </div>
+          </section>
         )}
       </div>
     </div>

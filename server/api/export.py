@@ -8,7 +8,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from server.api.auth import require_user, user_scope_id
 from server.db.database import get_db
+from server.db.models import UserRow
 from server.export.bundler import create_export_bundle
 from server.models.project import ProjectStatus
 from server.models.validation_schema import CheckStatus
@@ -27,16 +29,21 @@ router = APIRouter(prefix="/api/projects", tags=["export"])
 
 
 def _export_readiness(report_status: CheckStatus) -> str:
-    return "production_ready" if report_status == CheckStatus.PASS else "candidate"
+    return "prototype_ready" if report_status == CheckStatus.PASS else "candidate"
 
 
 @router.post("/{project_id}/validate")
 async def run_validation(
     project_id: str,
     db: AsyncSession = Depends(get_db),
+    user: UserRow = Depends(require_user),
 ):
     """Run validation checks and persist the result on the project."""
-    row, project = await load_project_state(db, project_id)
+    row, project = await load_project_state(
+        db,
+        project_id,
+        owner_user_id=user_scope_id(user),
+    )
     report = validate_project(project)
 
     # Update project status based on validation
@@ -64,13 +71,18 @@ async def run_validation(
     return report.model_dump(mode="json")
 
 
-@router.post("/{project_id}/export")
-async def export_bundle(
+async def export_project_bundle(
     project_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession,
+    *,
+    owner_user_id: int | None,
 ):
-    """Generate and download the export bundle as a ZIP (plate DXF, firmware, validation)."""
-    row, project = await load_project_state(db, project_id)
+    """Generate and download the export bundle as a ZIP (panel DXF/specs, firmware metadata, validation)."""
+    row, project = await load_project_state(
+        db,
+        project_id,
+        owner_user_id=owner_user_id,
+    )
     if not project.layout.elements:
         raise HTTPException(status_code=400, detail="Layout has no placed elements")
 
@@ -118,7 +130,7 @@ async def export_bundle(
     project.exports.exported_at = now
     project.status = (
         ProjectStatus.EXPORTED
-        if readiness == "production_ready"
+        if readiness == "prototype_ready"
         else ProjectStatus.VALIDATED
     )
     await persist_project_metadata(
@@ -139,4 +151,18 @@ async def export_bundle(
             "X-Validation-Status": report.status.value,
             "X-Export-Readiness": readiness,
         },
+    )
+
+
+@router.post("/{project_id}/export")
+async def export_bundle(
+    project_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: UserRow = Depends(require_user),
+):
+    """Generate and download the export bundle as a ZIP."""
+    return await export_project_bundle(
+        project_id,
+        db,
+        owner_user_id=user_scope_id(user),
     )

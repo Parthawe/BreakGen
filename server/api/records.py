@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from server.api.auth import require_user, user_scope_id
 from server.db.database import get_db
+from server.db.models import UserRow
 from server.services.artifact_registry import list_project_artifacts
 from server.services.job_registry import list_project_jobs
 from server.services.project_state import load_project_state
@@ -40,7 +43,8 @@ def _serialize_artifact(row) -> dict:
         "producer_id": row.details.get("producer_id"),
         "lineage": row.details.get("lineage", {}),
         "acceptance_state": row.details.get("acceptance_state"),
-        "path": row.path,
+        "file_name": Path(row.path).name if row.path else None,
+        "path": None,
         "sha256": row.sha256,
         "content_type": row.content_type,
         "details": row.details,
@@ -69,9 +73,10 @@ def _serialize_job(row) -> dict:
 async def get_project_artifacts(
     project_id: str,
     db: AsyncSession = Depends(get_db),
+    user: UserRow = Depends(require_user),
 ):
     """List durable artifacts registered for a project."""
-    await load_project_state(db, project_id)
+    await load_project_state(db, project_id, owner_user_id=user_scope_id(user))
     rows = await list_project_artifacts(db, project_id)
     return [_serialize_artifact(row) for row in rows]
 
@@ -80,9 +85,10 @@ async def get_project_artifacts(
 async def get_project_jobs(
     project_id: str,
     db: AsyncSession = Depends(get_db),
+    user: UserRow = Depends(require_user),
 ):
     """List persistent jobs for a project."""
-    await load_project_state(db, project_id)
+    await load_project_state(db, project_id, owner_user_id=user_scope_id(user))
     rows = await list_project_jobs(db, project_id)
     return [_serialize_job(row) for row in rows]
 
@@ -91,18 +97,21 @@ async def get_project_jobs(
 async def get_project_records(
     project_id: str,
     db: AsyncSession = Depends(get_db),
+    user: UserRow = Depends(require_user),
 ):
     """Return jobs and artifacts in one provenance-oriented payload."""
-    await load_project_state(db, project_id)
-    artifacts = [_serialize_artifact(row) for row in await list_project_artifacts(db, project_id)]
+    await load_project_state(db, project_id, owner_user_id=user_scope_id(user))
+    artifact_rows = await list_project_artifacts(db, project_id)
+    artifacts = [_serialize_artifact(row) for row in artifact_rows]
     jobs = [_serialize_job(row) for row in await list_project_jobs(db, project_id)]
     latest_validation = next((item for item in artifacts if item["kind"] == "validation_report"), None)
+    latest_validation_row = next((row for row in artifact_rows if row.kind == "validation_report"), None)
     latest_export = next((item for item in artifacts if item["kind"] == "export_bundle"), None)
     return {
         "project_id": project_id,
         "jobs": jobs,
         "artifacts": artifacts,
         "latest_validation": latest_validation,
-        "latest_validation_report": _read_json_artifact(latest_validation["path"]) if latest_validation else None,
+        "latest_validation_report": _read_json_artifact(latest_validation_row.path) if latest_validation_row else None,
         "latest_export": latest_export,
     }

@@ -1,0 +1,189 @@
+"""HTTP-level authorization regression tests."""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
+
+import httpx
+import pytest
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
+from server.db.database import get_db
+from server.db.models import Base
+from server.main import app
+
+
+@pytest.fixture
+def anyio_backend() -> str:
+    return "asyncio"
+
+
+async def _make_session(tmp_path: Path):
+    db_path = tmp_path / "http-auth.db"
+    engine = create_async_engine(f"sqlite+aiosqlite:///{db_path}")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    return engine, session_factory
+
+
+async def _signup(client: httpx.AsyncClient, email: str) -> str:
+    response = await client.post(
+        "/api/auth/signup",
+        json={
+            "email": email,
+            "name": email.split("@")[0],
+            "password": "strong-password",
+        },
+    )
+    assert response.status_code == 200
+    return response.json()["token"]
+
+
+def _auth(token: str) -> dict[str, str]:
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.mark.anyio
+async def test_project_routes_require_auth_and_enforce_owner_scope(tmp_path: Path, monkeypatch):
+    engine, session_factory = await _make_session(tmp_path)
+    artifacts_dir = tmp_path / "artifacts"
+    monkeypatch.setattr("server.services.artifact_registry.settings.artifacts_dir", str(artifacts_dir))
+    monkeypatch.setattr("server.export.bundler.settings.artifacts_dir", str(artifacts_dir))
+    monkeypatch.setattr("server.api.auth.settings.public_signup_enabled", True)
+    monkeypatch.setattr("server.api.auth.settings.signup_invite_code", "")
+
+    async def override_get_db():
+        async with session_factory() as session:
+            yield session
+
+    app.dependency_overrides[get_db] = override_get_db
+    transport = httpx.ASGITransport(app=app)
+
+    try:
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+            owner_token = await _signup(client, "owner@example.com")
+            other_token = await _signup(client, "other@example.com")
+
+            created = await client.post(
+                "/api/projects/",
+                headers=_auth(owner_token),
+                json={
+                    "name": "Owner Stream Deck",
+                    "template_id": "streamdeck_3x5",
+                    "product_family": "streamdeck",
+                },
+            )
+            assert created.status_code == 201
+            project_id = created.json()["project_id"]
+
+            unauthenticated: list[tuple[str, str, dict[str, Any] | None]] = [
+                ("GET", "/api/projects/", None),
+                ("POST", "/api/projects/", {"name": "No Auth"}),
+                ("GET", f"/api/projects/{project_id}", None),
+                ("PATCH", f"/api/projects/{project_id}", {"name": "No Auth"}),
+                ("DELETE", f"/api/projects/{project_id}", None),
+                ("POST", f"/api/projects/{project_id}/compile/pcb", None),
+                ("POST", f"/api/projects/{project_id}/compile/mechanical", None),
+                ("POST", f"/api/projects/{project_id}/validate", None),
+                ("POST", f"/api/projects/{project_id}/export", None),
+                ("GET", f"/api/projects/{project_id}/records", None),
+                ("GET", f"/api/projects/{project_id}/artifacts", None),
+                ("GET", f"/api/projects/{project_id}/jobs", None),
+                ("GET", f"/api/projects/{project_id}/firmware/info.json", None),
+            ]
+            for method, path, body in unauthenticated:
+                response = await client.request(method, path, json=body)
+                assert response.status_code == 401, f"{method} {path}"
+
+            other_projects = await client.get("/api/projects/", headers=_auth(other_token))
+            assert other_projects.status_code == 200
+            assert other_projects.json() == []
+
+            cross_user: list[tuple[str, str, dict[str, Any] | None]] = [
+                ("GET", f"/api/projects/{project_id}", None),
+                ("PATCH", f"/api/projects/{project_id}", {"name": "Wrong owner", "expected_revision": 1}),
+                ("DELETE", f"/api/projects/{project_id}", None),
+                ("POST", f"/api/projects/{project_id}/compile/pcb", None),
+                ("POST", f"/api/projects/{project_id}/compile/mechanical", None),
+                ("POST", f"/api/projects/{project_id}/validate", None),
+                ("POST", f"/api/projects/{project_id}/export", None),
+                ("GET", f"/api/projects/{project_id}/records", None),
+                ("GET", f"/api/projects/{project_id}/artifacts", None),
+                ("GET", f"/api/projects/{project_id}/jobs", None),
+                ("GET", f"/api/projects/{project_id}/firmware/info.json", None),
+            ]
+            for method, path, body in cross_user:
+                response = await client.request(method, path, headers=_auth(other_token), json=body)
+                assert response.status_code == 404, f"{method} {path}: {response.text}"
+
+            owner_read = await client.get(f"/api/projects/{project_id}", headers=_auth(owner_token))
+            assert owner_read.status_code == 200
+            assert owner_read.json()["name"] == "Owner Stream Deck"
+
+            exported = await client.post(f"/api/projects/{project_id}/export", headers=_auth(owner_token))
+            assert exported.status_code == 200
+
+            owner_read_after_export = await client.get(
+                f"/api/projects/{project_id}",
+                headers=_auth(owner_token),
+            )
+            assert owner_read_after_export.status_code == 200
+            exports = owner_read_after_export.json()["exports"]
+            assert exports["bundle_id"]
+            assert exports["bundle_path"] is None
+
+            project_artifact_dir = artifacts_dir / "projects" / project_id
+            assert project_artifact_dir.exists()
+
+            deleted = await client.delete(f"/api/projects/{project_id}", headers=_auth(owner_token))
+            assert deleted.status_code == 204
+            assert not project_artifact_dir.exists()
+
+            owner_projects_after_delete = await client.get("/api/projects/", headers=_auth(owner_token))
+            assert owner_projects_after_delete.status_code == 200
+            assert owner_projects_after_delete.json() == []
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        await engine.dispose()
+
+
+@pytest.mark.anyio
+async def test_signup_can_be_disabled_or_invite_gated(tmp_path: Path, monkeypatch):
+    engine, session_factory = await _make_session(tmp_path)
+
+    async def override_get_db():
+        async with session_factory() as session:
+            yield session
+
+    app.dependency_overrides[get_db] = override_get_db
+    transport = httpx.ASGITransport(app=app)
+    signup_payload = {
+        "email": "reviewer@example.com",
+        "name": "Reviewer",
+        "password": "strong-password",
+    }
+
+    try:
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+            monkeypatch.setattr("server.api.auth.settings.public_signup_enabled", False)
+            disabled = await client.post("/api/auth/signup", json=signup_payload)
+            assert disabled.status_code == 403
+            assert disabled.json()["detail"] == "Signup is disabled"
+
+            monkeypatch.setattr("server.api.auth.settings.public_signup_enabled", True)
+            monkeypatch.setattr("server.api.auth.settings.signup_invite_code", "alpha-code")
+            missing_invite = await client.post("/api/auth/signup", json=signup_payload)
+            assert missing_invite.status_code == 403
+            assert missing_invite.json()["detail"] == "Invalid invite code"
+
+            invited = await client.post(
+                "/api/auth/signup",
+                json={**signup_payload, "invite_code": "alpha-code"},
+            )
+            assert invited.status_code == 200
+            assert invited.json()["user"]["email"] == "reviewer@example.com"
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        await engine.dispose()

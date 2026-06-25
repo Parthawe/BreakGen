@@ -136,6 +136,14 @@ SUPPORTED_TEMPLATES: list[LayoutTemplate] = [
         product_family=ProductFamily.MIDI,
         file="templates/midi_25key.json",
     ),
+    LayoutTemplate(
+        template_id="midi_pad_4x4",
+        name="4x4 MIDI Pad",
+        description="16-pad MIDI controller with 4 encoders for drums, clips, and sample triggering.",
+        key_count=20,
+        product_family=ProductFamily.MIDI,
+        file="templates/midi_pad_4x4.json",
+    ),
     # Gamepads / controller surfaces
     LayoutTemplate(
         template_id="gamepad_compact",
@@ -145,12 +153,29 @@ SUPPORTED_TEMPLATES: list[LayoutTemplate] = [
         product_family=ProductFamily.GAMEPAD,
         file="templates/gamepad_compact.json",
     ),
-    # Planned handheld proof templates
+    # Instruments / performance controllers
+    LayoutTemplate(
+        template_id="pedal_controller_3switch",
+        name="3-Switch Pedal Controller",
+        description="Three footswitches and one expression input for MIDI transport, patch, or effect control.",
+        key_count=4,
+        product_family=ProductFamily.PEDAL_CONTROLLER,
+        file="templates/pedal_controller_3switch.json",
+    ),
+    LayoutTemplate(
+        template_id="breath_controller_basic",
+        name="Basic Breath Controller",
+        description="Breath and bite sensors with microphone input, octave buttons, and status display for expressive MIDI control.",
+        key_count=6,
+        product_family=ProductFamily.BREATH_CONTROLLER,
+        file="templates/breath_controller_basic.json",
+    ),
+    # Handheld proof templates
     LayoutTemplate(
         template_id="handheld_companion_compact",
         name="Compact Handheld Companion",
-        description="Private proof template with display, buttons, battery, speaker, and USB-C access.",
-        key_count=12,
+        description="Compact handheld proof with display, buttons, battery, USB-C charging/data access, speaker, and microphone.",
+        key_count=13,
         product_family=ProductFamily.HANDHELD_COMPANION,
         file="templates/handheld_companion_compact.json",
     ),

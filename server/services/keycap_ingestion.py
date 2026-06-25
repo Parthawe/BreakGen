@@ -7,6 +7,7 @@ from typing import Protocol
 from urllib.parse import urlparse
 
 from server.geometry.mesh_processor import normalize_mesh
+from server.ai.meshy_client import ALLOWED_MODEL_DOWNLOAD_SUFFIXES
 from server.models.project import (
     AcceptanceState,
     KeycapAsset,
@@ -85,7 +86,11 @@ def _pick_model_url(result: dict) -> str:
 def _suffix_for_url(model_url: str) -> str:
     parsed = urlparse(model_url)
     suffix = Path(parsed.path).suffix.lower()
-    return suffix or ".glb"
+    if not suffix:
+        return ".glb"
+    if suffix not in ALLOWED_MODEL_DOWNLOAD_SUFFIXES:
+        raise KeycapIngestionError(f"Unsupported generated model suffix: {suffix}")
+    return suffix
 
 
 async def ingest_completed_keycap_generation(

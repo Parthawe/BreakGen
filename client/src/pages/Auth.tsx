@@ -1,135 +1,227 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { ThemeSwitcher } from "../components/ThemeSwitcher";
 import { useAuthStore } from "../stores/authStore";
 
-export function Login() { return <AuthForm mode="login" />; }
-export function Signup() { return <AuthForm mode="signup" />; }
+const BRAND_POINTS = [
+  {
+    title: "One product record",
+    copy: "Layout, assets, electronics, validation, and exports remain attached to the same revisioned project state.",
+  },
+  {
+    title: "Five alpha families",
+    copy: "Keyboard, macropad, streamdeck, MIDI, and gamepad share one control-surface platform instead of separate tools.",
+  },
+  {
+    title: "Visible trust layer",
+    copy: "Jobs, artifacts, and acceptance state stay inspectable instead of disappearing behind the interface.",
+  },
+];
+
+export function Login() {
+  return <AuthForm mode="login" />;
+}
+
+export function Signup() {
+  return <AuthForm mode="signup" />;
+}
 
 function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
-  const login = useAuthStore((s) => s.login);
-  const signup = useAuthStore((s) => s.signup);
-  const loading = useAuthStore((s) => s.loading);
-  const error = useAuthStore((s) => s.error);
-  const clearError = useAuthStore((s) => s.clearError);
+  const login = useAuthStore((state) => state.login);
+  const signup = useAuthStore((state) => state.signup);
+  const loading = useAuthStore((state) => state.loading);
+  const error = useAuthStore((state) => state.error);
+  const sessionNotice = useAuthStore((state) => state.sessionNotice);
+  const clearError = useAuthStore((state) => state.clearError);
+  const clearSessionNotice = useAuthStore((state) => state.clearSessionNotice);
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const isSignup = mode === "signup";
+
+  useEffect(() => {
+    document.title = `${isSignup ? "Sign Up" : "Log In"} — BreakGen`;
+  }, [isSignup]);
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     clearError();
-    const ok = mode === "signup" ? await signup(email, name, password) : await login(email, password);
+    const ok =
+      mode === "signup"
+        ? await signup(email, name, password)
+        : await login(email, password);
     if (ok) navigate("/app");
   };
 
-  const isSignup = mode === "signup";
-  useEffect(() => { document.title = `${isSignup ? "Sign Up" : "Log In"} — BreakGen`; }, [isSignup]);
-
   return (
-    <div className="app-shell min-h-screen flex">
-      {/* Left panel */}
-      <div className="hidden lg:flex flex-1 items-center justify-center relative overflow-hidden bg-[#0a0a0f]"
-        style={{ borderRight: "1px solid rgba(255,255,255,0.04)" }}>
-        <div className="absolute inset-0 opacity-[0.03]"
-          style={{ backgroundImage: "linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
-        <div className="absolute left-[8%] top-[14%] h-[22rem] w-[22rem] rounded-full opacity-[0.14] blur-3xl"
-          style={{ background: "radial-gradient(circle, rgba(139,124,255,0.9) 0%, rgba(139,124,255,0.1) 52%, transparent 74%)" }} />
-        <div className="absolute bottom-[10%] right-[6%] h-[18rem] w-[18rem] rounded-full opacity-[0.12] blur-3xl"
-          style={{ background: "radial-gradient(circle, rgba(122,219,255,0.72) 0%, rgba(122,219,255,0.08) 52%, transparent 72%)" }} />
-
-        <div className="relative max-w-[520px] px-16">
-          <div className="mb-6 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#a39bff]">
-            Creative 3D environment
+    <div className="app-shell min-h-screen px-5 py-5 md:px-8 md:py-8">
+      <div className="mx-auto flex min-h-[calc(100vh-2.5rem)] max-w-[1340px] flex-col gap-6 lg:flex-row">
+        <section className="surface-strong relative flex flex-1 overflow-hidden rounded-[34px] p-7 md:p-10">
+          <div className="absolute right-6 top-6 z-20">
+            <ThemeSwitcher />
           </div>
-          <h2 className="text-[42px] font-semibold leading-[0.96] tracking-[-0.05em] text-white mb-5">
-            Sign in to keep building the object, not the toolchain.
-          </h2>
-          <p className="text-[15px] leading-[1.9] text-zinc-500 max-w-[420px]">
-            BreakGen keeps layout, 3D assets, electronics, validation, and export history inside one project record for programmable hardware.
-          </p>
-
-          <div className="mt-10 grid gap-4">
-            {[
-              { title: "One environment", copy: "Creative direction, 2D layout, 3D preview, and manufacturing outputs stay connected." },
-              { title: "Five live families", copy: "Keyboards, macro pads, stream decks, MIDI controllers, and gamepads now share one platform backbone." },
-              { title: "Real outputs", copy: "Validation, plate geometry, firmware metadata, and export bundles are part of the product lifecycle." },
-            ].map((item) => (
-              <div key={item.title} className="glass glass-soft rounded-[22px] px-5 py-4">
-                <div className="text-[13px] font-medium text-white mb-1.5">{item.title}</div>
-                <div className="text-[13px] leading-[1.75] text-zinc-500">{item.copy}</div>
+          <div className="landing-grid absolute inset-0 opacity-70" />
+          <div className="landing-orb absolute -left-10 top-0 h-[24rem] w-[24rem]" />
+          <div className="landing-orb-secondary absolute bottom-0 right-0 h-[20rem] w-[20rem]" />
+          <div className="relative z-10 flex max-w-[560px] flex-col">
+            <Link to="/" className="inline-flex items-center gap-3">
+              <div className="surface-chip flex h-11 w-11 items-center justify-center rounded-2xl">
+                <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
+                  <rect x="1" y="3" width="6" height="4" rx="1" fill="var(--accent)" />
+                  <rect x="9" y="3" width="6" height="4" rx="1" fill="var(--accent)" opacity="0.48" />
+                  <rect x="1" y="9" width="14" height="4" rx="1" fill="var(--accent)" opacity="0.24" />
+                </svg>
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Right panel — form */}
-      <div className="flex-1 flex items-center justify-center px-8">
-        <div className="w-full max-w-[380px]">
-          <Link to="/" className="inline-flex items-center gap-2.5 mb-12">
-            <div className="glass-chip w-9 h-9 rounded-lg flex items-center justify-center">
-              <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
-                <rect x="1" y="3" width="6" height="4" rx="1" fill="#818cf8" />
-                <rect x="9" y="3" width="6" height="4" rx="1" fill="#818cf8" opacity="0.5" />
-                <rect x="1" y="9" width="14" height="4" rx="1" fill="#818cf8" opacity="0.25" />
-              </svg>
-            </div>
-            <span className="text-[16px] font-semibold text-white">BreakGen</span>
-          </Link>
-
-          <h1 className="text-[26px] font-bold text-white mb-2">
-            {isSignup ? "Create your account" : "Welcome back"}
-          </h1>
-          <p className="text-[14px] text-zinc-500 mb-10">
-            {isSignup ? "Start designing hardware in minutes." : "Sign in to continue building."}
-          </p>
-
-          {error && (
-            <div className="glass-danger text-[13px] mb-6 px-4 py-3 rounded-xl text-red-300">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {isSignup && (
-              <Field label="Name">
-                <input type="text" value={name} onChange={(e) => setName(e.target.value)} required placeholder="Your name"
-                  className="glass-input w-full h-11 rounded-xl px-4 text-[14px] text-white placeholder:text-zinc-600 focus:outline-none transition-colors" />
-              </Field>
-            )}
-            <Field label="Email">
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="you@example.com"
-                className="glass-input w-full h-11 rounded-xl px-4 text-[14px] text-white placeholder:text-zinc-600 focus:outline-none transition-colors" />
-            </Field>
-            <Field label="Password">
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6}
-                placeholder={isSignup ? "6+ characters" : "Enter password"}
-                className="glass-input w-full h-11 rounded-xl px-4 text-[14px] text-white placeholder:text-zinc-600 focus:outline-none transition-colors" />
-            </Field>
-            <button type="submit" disabled={loading}
-              className="glass-button-primary w-full h-11 text-[14px] font-medium rounded-xl transition-all disabled:opacity-40">
-              {loading ? "..." : isSignup ? "Create Account" : "Sign In"}
-            </button>
-          </form>
-
-          <p className="text-center mt-8 text-[14px] text-zinc-500">
-            {isSignup ? "Already have an account? " : "Don't have an account? "}
-            <Link to={isSignup ? "/login" : "/signup"} className="text-white font-medium hover:text-indigo-400 transition-colors">
-              {isSignup ? "Sign in" : "Sign up"}
+              <div>
+                <div className="text-[15px] font-semibold text-[var(--text-primary)]">BreakGen</div>
+                <div className="eyebrow mt-1">Control-surface alpha</div>
+              </div>
             </Link>
-          </p>
-        </div>
+
+            <div className="mt-16 max-w-[480px]">
+              <div className="eyebrow">Custom electronic products</div>
+              <h1 className="mt-5 text-[44px] font-semibold leading-[0.94] tracking-[-0.06em] text-[var(--text-primary)] md:text-[58px]">
+                Build the object and the proof around it in one system.
+              </h1>
+              <p className="mt-6 max-w-[430px] text-[15px] leading-[1.85] text-[var(--text-secondary)]">
+                BreakGen is a revisioned creative environment for programmable hardware.
+                The layout, visible parts, electronics, validation, and export history stay
+                attached to one product record.
+              </p>
+            </div>
+
+            <div className="mt-12 grid gap-3 md:grid-cols-3">
+              {BRAND_POINTS.map((item) => (
+                <article key={item.title} className="surface-subcard rounded-[22px] p-4">
+                  <h2 className="text-[13px] font-semibold text-[var(--text-primary)]">
+                    {item.title}
+                  </h2>
+                  <p className="mt-2 text-[12px] leading-[1.7] text-[var(--text-secondary)]">
+                    {item.copy}
+                  </p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="surface-panel flex w-full max-w-[460px] shrink-0 rounded-[34px] p-7 md:p-9">
+          <div className="my-auto w-full">
+            <div className="mb-9">
+              <div className="eyebrow">{isSignup ? "Create account" : "Welcome back"}</div>
+              <h2 className="mt-4 text-[30px] font-semibold tracking-[-0.04em] text-[var(--text-primary)]">
+                {isSignup ? "Start a new product record." : "Sign in to continue building."}
+              </h2>
+              <p className="mt-3 text-[14px] leading-[1.7] text-[var(--text-secondary)]">
+                {isSignup
+                  ? "Create a workspace for layouts, assets, validation, and export-ready hardware state."
+                  : "Return to the authenticated alpha and pick up the current revision where you left it."}
+              </p>
+            </div>
+
+            {sessionNotice && (
+              <div className="surface-panel mb-4 rounded-[18px] px-4 py-3 text-[13px] text-[var(--text-secondary)]">
+                <div className="flex items-start justify-between gap-3">
+                  <span>{sessionNotice}</span>
+                  <button onClick={clearSessionNotice} className="text-[var(--text-tertiary)] transition-colors hover:text-[var(--text-primary)]">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M4 4l6 6M10 4l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {error && (
+              <div className="glass-danger mb-6 rounded-[18px] px-4 py-3 text-[13px]">
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {isSignup && (
+                <Field label="Name">
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    required
+                    placeholder="Your name"
+                    className="surface-input h-12 w-full rounded-[16px] px-4 text-[14px] focus:outline-none"
+                  />
+                </Field>
+              )}
+
+              <Field label="Email">
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  required
+                  placeholder="you@example.com"
+                  className="surface-input h-12 w-full rounded-[16px] px-4 text-[14px] focus:outline-none"
+                />
+              </Field>
+
+              <Field label="Password">
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
+                  minLength={8}
+                  placeholder={isSignup ? "8+ characters" : "Enter password"}
+                  className="surface-input h-12 w-full rounded-[16px] px-4 text-[14px] focus:outline-none"
+                />
+              </Field>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="surface-button-primary h-12 w-full rounded-[16px] text-[14px] font-semibold transition-all disabled:opacity-50"
+              >
+                {loading ? "Working…" : isSignup ? "Create Account" : "Sign In"}
+              </button>
+            </form>
+
+            <div className="section-rule mt-8 pt-5 text-[13px] text-[var(--text-secondary)]">
+              <div className="mb-3 text-[12px] leading-[1.6] text-[var(--text-tertiary)]">
+                Invite-only alpha. Reviewer accounts are provisioned through the private alpha operator path, not an open public signup funnel.
+              </div>
+              {isSignup ? (
+                <>
+                  Already have an account?{" "}
+                  <Link
+                    to="/login"
+                    className="font-semibold text-[var(--text-primary)] transition-colors hover:text-[var(--accent)]"
+                  >
+                    Sign in
+                  </Link>
+                </>
+              ) : (
+                "Need access? Ask the alpha operator for a provisioned reviewer account."
+              )}
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div>
-      <label className="text-[12px] font-medium text-zinc-400 block mb-2">{label}</label>
+    <label className="block">
+      <span className="mb-2 block text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
+        {label}
+      </span>
       {children}
-    </div>
+    </label>
   );
 }

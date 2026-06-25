@@ -32,6 +32,7 @@ ENCODER_SHAFT_HOLE_MM = 7.2
 BUTTON_APERTURE_INSET_MM = 3.5
 BUTTON_SLOT_INSET_X_MM = 6.0
 BUTTON_SLOT_INSET_Y_MM = 4.0
+PAD_RECESS_INSET_MM = 2.0
 DISPLAY_BEZEL_MARGIN_MM = 2.0
 JOYSTICK_SHAFT_HOLE_MM = 16.0
 JOYSTICK_MOUNT_HOLE_DIAMETER_MM = 2.4
@@ -39,6 +40,8 @@ JOYSTICK_MOUNT_HOLE_INSET_MM = 4.5
 SLIDER_SLOT_INSET_MM = 4.0
 USB_PORT_SLOT_MARGIN_MM = 1.0
 SPEAKER_GRILLE_HOLE_MM = 3.0
+MICROPHONE_PORT_HOLE_MM = 2.2
+SENSOR_PORT_HOLE_MM = 3.0
 
 # Cherry stabilizer wire positions (center-to-center from key center)
 # Measured from Cherry spec and community-verified dimensions
@@ -218,6 +221,19 @@ def _add_display_cutout(msp, element: PlacedElementSpec, kerf: float):
     )
 
 
+def _add_pad_cutout(msp, element: PlacedElementSpec, kerf: float):
+    cx, cy = _element_center_mm(element)
+    _add_rect_cutout(
+        msp,
+        cx,
+        cy,
+        max(element.w_mm - PAD_RECESS_INSET_MM * 2, 10.0),
+        max(element.h_mm - PAD_RECESS_INSET_MM * 2, 10.0),
+        rotation_deg=element.rotation_deg,
+        kerf=kerf,
+    )
+
+
 def _add_slider_cutout(msp, element: PlacedElementSpec, kerf: float):
     cx, cy = _element_center_mm(element)
     horizontal = element.w_mm >= element.h_mm
@@ -242,6 +258,26 @@ def _add_usb_port_cutout(msp, element: PlacedElementSpec, kerf: float):
         max(element.h_mm - USB_PORT_SLOT_MARGIN_MM * 2, 3.5),
         rotation_deg=element.rotation_deg,
         kerf=kerf,
+    )
+
+
+def _add_sensor_port_cutout(msp, element: PlacedElementSpec, kerf: float):
+    cx, cy = _element_center_mm(element)
+    _add_circle_cutout(
+        msp,
+        cx,
+        cy,
+        max(SENSOR_PORT_HOLE_MM + kerf, 2.4),
+    )
+
+
+def _add_microphone_port_cutout(msp, element: PlacedElementSpec, kerf: float):
+    cx, cy = _element_center_mm(element)
+    _add_circle_cutout(
+        msp,
+        cx,
+        cy,
+        max(MICROPHONE_PORT_HOLE_MM + kerf, 1.8),
     )
 
 
@@ -291,11 +327,14 @@ def summarize_plate_geometry(layout: LayoutSpec, config: PlateConfig | None = No
     elements = _authoritative_elements(layout)
     key_switches = [element for element in elements if element.element_type == ElementType.KEY_SWITCH]
     buttons = [element for element in elements if element.element_type == ElementType.BUTTON]
+    pads = [element for element in elements if element.element_type == ElementType.PAD]
     encoders = [element for element in elements if element.element_type == ElementType.ENCODER]
     displays = [element for element in elements if element.element_type == ElementType.DISPLAY]
     joysticks = [element for element in elements if element.element_type == ElementType.JOYSTICK]
     sliders = [element for element in elements if element.element_type == ElementType.SLIDER]
     speakers = [element for element in elements if element.element_type == ElementType.SPEAKER]
+    microphones = [element for element in elements if element.element_type == ElementType.MICROPHONE]
+    sensors = [element for element in elements if element.element_type == ElementType.SENSOR]
     usb_ports = [element for element in elements if element.element_type == ElementType.USB_PORT]
     stabilizer_cutouts = 0
     if config.include_stabilizers:
@@ -316,11 +355,14 @@ def summarize_plate_geometry(layout: LayoutSpec, config: PlateConfig | None = No
             "key_switch": len(key_switches),
             "stabilizer": stabilizer_cutouts,
             "button": len(buttons),
+            "pad": len(pads),
             "encoder": len(encoders),
             "display": len(displays),
             "joystick": len(joysticks),
             "slider": len(sliders),
             "speaker": len(speakers),
+            "microphone": len(microphones),
+            "sensor": len(sensors),
             "usb_port": len(usb_ports),
         },
         "mounting_hole_count": mounting_holes,
@@ -386,6 +428,8 @@ def generate_plate_dxf(
             _add_circle_cutout(msp, cx, cy, ENCODER_SHAFT_HOLE_MM + kerf)
         elif element.element_type == ElementType.BUTTON:
             _add_button_cutout(msp, element, kerf)
+        elif element.element_type == ElementType.PAD:
+            _add_pad_cutout(msp, element, kerf)
         elif element.element_type == ElementType.DISPLAY:
             _add_display_cutout(msp, element, kerf)
         elif element.element_type == ElementType.JOYSTICK:
@@ -396,6 +440,10 @@ def generate_plate_dxf(
             _add_usb_port_cutout(msp, element, kerf)
         elif element.element_type == ElementType.SPEAKER:
             _add_speaker_grille_cutout(msp, element, kerf)
+        elif element.element_type == ElementType.MICROPHONE:
+            _add_microphone_port_cutout(msp, element, kerf)
+        elif element.element_type == ElementType.SENSOR:
+            _add_sensor_port_cutout(msp, element, kerf)
 
     # --- Board outline ---
     if not elements and not layout.keys:

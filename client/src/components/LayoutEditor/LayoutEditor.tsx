@@ -4,7 +4,8 @@ import { useProjectStore } from "../../stores/projectStore";
 import type { PlacedElementSpec } from "../../types/project";
 import { KeyProperties } from "./KeyProperties";
 
-const UNIT_PX = 62;
+const DESKTOP_UNIT_PX = 62;
+const MOBILE_UNIT_PX = 44;
 const PADDING = 28;
 const KEY_GAP = 3;
 const SNAP_INCREMENT = 0.25;
@@ -15,9 +16,12 @@ const ELEMENT_TONES: Record<string, { fill: string; stroke: string; accent: stri
   key_switch: { fill: "rgba(255,255,255,0.035)", stroke: "rgba(255,255,255,0.06)", accent: "rgba(255,255,255,0.45)" },
   button: { fill: "rgba(74, 222, 128, 0.08)", stroke: "rgba(74, 222, 128, 0.22)", accent: "rgba(134, 239, 172, 0.95)" },
   encoder: { fill: "rgba(251, 191, 36, 0.08)", stroke: "rgba(251, 191, 36, 0.24)", accent: "rgba(253, 224, 71, 0.95)" },
+  pad: { fill: "rgba(248, 113, 113, 0.09)", stroke: "rgba(248, 113, 113, 0.25)", accent: "rgba(252, 165, 165, 0.95)" },
   display: { fill: "rgba(56, 189, 248, 0.08)", stroke: "rgba(56, 189, 248, 0.24)", accent: "rgba(125, 211, 252, 0.95)" },
   joystick: { fill: "rgba(236, 72, 153, 0.08)", stroke: "rgba(236, 72, 153, 0.24)", accent: "rgba(249, 168, 212, 0.95)" },
   speaker: { fill: "rgba(244, 114, 182, 0.08)", stroke: "rgba(244, 114, 182, 0.24)", accent: "rgba(251, 207, 232, 0.95)" },
+  microphone: { fill: "rgba(20, 184, 166, 0.08)", stroke: "rgba(20, 184, 166, 0.24)", accent: "rgba(94, 234, 212, 0.95)" },
+  sensor: { fill: "rgba(45, 212, 191, 0.08)", stroke: "rgba(45, 212, 191, 0.24)", accent: "rgba(153, 246, 228, 0.95)" },
   battery: { fill: "rgba(250, 204, 21, 0.08)", stroke: "rgba(250, 204, 21, 0.24)", accent: "rgba(254, 240, 138, 0.95)" },
   usb_port: { fill: "rgba(96, 165, 250, 0.08)", stroke: "rgba(96, 165, 250, 0.24)", accent: "rgba(191, 219, 254, 0.95)" },
 };
@@ -36,6 +40,7 @@ function elementU(element: PlacedElementSpec, unitPitchMm: number) {
 }
 
 export function LayoutEditor() {
+  const [compactViewport, setCompactViewport] = useState(false);
   const project = useProjectStore((s) => s.project);
   const selectedElementIds = useProjectStore((s) => s.selectedElementIds);
   const selectElement = useProjectStore((s) => s.selectElement);
@@ -48,6 +53,15 @@ export function LayoutEditor() {
   const pushUndo = useProjectStore((s) => s.pushUndo);
   const undoStack = useProjectStore((s) => s.undoStack);
   const redoStack = useProjectStore((s) => s.redoStack);
+  const unitPx = compactViewport ? MOBILE_UNIT_PX : DESKTOP_UNIT_PX;
+
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 640px)");
+    const update = () => setCompactViewport(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
 
   const unitPitchMm = project?.layout.unit_pitch_mm ?? DEFAULT_UNIT_MM;
   const elements = useMemo(
@@ -96,10 +110,10 @@ export function LayoutEditor() {
     const u = elementU(element, unitPitchMm);
     return Math.max(max, u.y_u + u.h_u);
   }, 0);
-  const svgWidth = (maxX - minX) * UNIT_PX + PADDING * 2;
-  const svgHeight = (maxY - minY) * UNIT_PX + PADDING * 2;
-  const ox = -minX * UNIT_PX;
-  const oy = -minY * UNIT_PX;
+  const svgWidth = (maxX - minX) * unitPx + PADDING * 2;
+  const svgHeight = (maxY - minY) * unitPx + PADDING * 2;
+  const ox = -minX * unitPx;
+  const oy = -minY * unitPx;
 
   const handleElementMouseDown = useCallback(
     (e: MouseEvent, element: PlacedElementSpec) => {
@@ -130,14 +144,14 @@ export function LayoutEditor() {
       pt.x = e.clientX;
       pt.y = e.clientY;
       const svgPt = pt.matrixTransform(svgRef.current.getScreenCTM()!.inverse());
-      const newX = snapToGrid(dragging.origX + (svgPt.x - dragging.startX) / UNIT_PX);
-      const newY = snapToGrid(dragging.origY + (svgPt.y - dragging.startY) / UNIT_PX);
+      const newX = snapToGrid(dragging.origX + (svgPt.x - dragging.startX) / unitPx);
+      const newY = snapToGrid(dragging.origY + (svgPt.y - dragging.startY) / unitPx);
       updateElement(dragging.elementId, {
         x_mm: Math.max(0, newX) * unitPitchMm,
         y_mm: Math.max(0, newY) * unitPitchMm,
       });
     },
-    [dragging, unitPitchMm, updateElement],
+    [dragging, unitPitchMm, unitPx, updateElement],
   );
 
   const handleMouseUp = useCallback(() => setDragging(null), []);
@@ -150,7 +164,7 @@ export function LayoutEditor() {
       ? Math.max(...elements.map((element) => element.y_mm + element.h_mm))
       : 0;
     const id = `el_${Date.now().toString(36)}`;
-    const buttonFamilies = new Set(["gamepad", "handheld_companion", "retro_handheld"]);
+    const buttonFamilies = new Set(["gamepad", "pedal_controller", "breath_controller", "handheld_companion", "retro_handheld"]);
     const buttonLike = buttonFamilies.has(project?.product_family ?? "");
     addElement({
       id,
@@ -174,11 +188,11 @@ export function LayoutEditor() {
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center gap-3 mb-4">
+    <div className="layout-editor flex h-full flex-col">
+      <div className="layout-editor-toolbar mb-4 flex items-center gap-3">
         <button
           onClick={handleAddElement}
-          className="glass-chip h-8 px-3.5 text-[12px] font-medium rounded-xl text-zinc-300 hover:text-white transition-all flex items-center gap-2"
+          className="glass-chip flex h-8 items-center gap-2 rounded-xl px-3.5 text-[12px] font-semibold text-[var(--text-secondary)] transition-all hover:text-[var(--text-primary)]"
         >
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
           Add Element
@@ -187,7 +201,7 @@ export function LayoutEditor() {
           onClick={undo}
           disabled={undoStack.length === 0}
           title="Undo (Cmd+Z)"
-          className="glass-chip h-8 w-8 rounded-xl flex items-center justify-center text-zinc-500 hover:text-white disabled:opacity-30 transition-all"
+          className="glass-chip flex h-8 w-8 items-center justify-center rounded-xl text-[var(--text-tertiary)] transition-all hover:text-[var(--text-primary)] disabled:opacity-30"
         >
           <svg width="13" height="13" viewBox="0 0 12 12" fill="none"><path d="M3 5l-2 2 2 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M1 7h7a3 3 0 000-6H5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
         </button>
@@ -195,17 +209,17 @@ export function LayoutEditor() {
           onClick={redo}
           disabled={redoStack.length === 0}
           title="Redo (Cmd+Shift+Z)"
-          className="glass-chip h-8 w-8 rounded-xl flex items-center justify-center text-zinc-500 hover:text-white disabled:opacity-30 transition-all"
+          className="glass-chip flex h-8 w-8 items-center justify-center rounded-xl text-[var(--text-tertiary)] transition-all hover:text-[var(--text-primary)] disabled:opacity-30"
         >
           <svg width="13" height="13" viewBox="0 0 12 12" fill="none"><path d="M9 5l2 2-2 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M11 7H4a3 3 0 010-6h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
         </button>
         <div className="flex-1" />
-        <span className="text-[12px] font-mono text-zinc-600">{elements.length} elements</span>
-        <span className="text-[11px] text-zinc-700">Del to remove</span>
+        <span className="layout-editor-stat text-[12px] font-mono text-[var(--text-tertiary)]">{elements.length} elements</span>
+        <span className="layout-editor-shortcut text-[11px] text-[var(--text-muted)]">Del to remove</span>
       </div>
 
-      <div className="flex flex-1 min-h-0 gap-4">
-        <div className="glass glass-strong flex-1 overflow-auto rounded-2xl">
+      <div className="layout-editor-workarea flex min-h-0 flex-1 gap-4">
+        <div className="layout-editor-canvas glass glass-strong flex-1 overflow-auto rounded-2xl">
           <svg
             ref={svgRef}
             width={svgWidth}
@@ -217,8 +231,8 @@ export function LayoutEditor() {
             onClick={handleBackgroundClick}
           >
             <defs>
-              <pattern id="grid" width={UNIT_PX} height={UNIT_PX} patternUnits="userSpaceOnUse" x={PADDING + ox} y={PADDING + oy}>
-                <circle cx={UNIT_PX} cy={UNIT_PX} r="0.5" fill="rgba(255,255,255,0.06)" />
+              <pattern id="grid" width={unitPx} height={unitPx} patternUnits="userSpaceOnUse" x={PADDING + ox} y={PADDING + oy}>
+                <circle cx={unitPx} cy={unitPx} r="0.5" fill="rgba(255,255,255,0.06)" />
               </pattern>
               <filter id="keyShadow">
                 <feDropShadow dx="0" dy="1" stdDeviation="1.5" floodColor="#000" floodOpacity="0.25" />
@@ -231,10 +245,10 @@ export function LayoutEditor() {
               const isDragged = dragging?.elementId === element.id;
               const tone = ELEMENT_TONES[element.element_type] ?? ELEMENT_TONES.key_switch;
               const u = elementU(element, unitPitchMm);
-              const x = PADDING + ox + u.x_u * UNIT_PX + KEY_GAP / 2;
-              const y = PADDING + oy + u.y_u * UNIT_PX + KEY_GAP / 2;
-              const w = u.w_u * UNIT_PX - KEY_GAP;
-              const h = u.h_u * UNIT_PX - KEY_GAP;
+              const x = PADDING + ox + u.x_u * unitPx + KEY_GAP / 2;
+              const y = PADDING + oy + u.y_u * unitPx + KEY_GAP / 2;
+              const w = u.w_u * unitPx - KEY_GAP;
+              const h = u.h_u * unitPx - KEY_GAP;
 
               return (
                 <g
@@ -315,6 +329,7 @@ export function LayoutEditor() {
                     {element.label}
                   </text>
                   <text
+                    className="layout-element-type-label"
                     x={x + 8}
                     y={y + 14}
                     fill="rgba(255,255,255,0.28)"
