@@ -187,8 +187,8 @@ export function MarketplacePage() {
     <SitePageShell>
       <PageHero
         eyebrow="Marketplace"
-        title="Amazon for customizable hardware, with proof before checkout."
-        body="The first BreakGen marketplace is not a warehouse of random files. It is a curated catalog where every item can be customized, validated, priced, and moved into a limited pilot run."
+        title="A pilot catalog for customizable control hardware."
+        body="The first BreakGen marketplace is a focused catalog, not an endless warehouse. Each item starts from a constrained baseline, then carries validation, pricing assumptions, and pilot-readiness before it becomes a SKU."
         visual="marketplace"
       >
         <div className="site-hero-actions">

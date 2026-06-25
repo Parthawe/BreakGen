@@ -133,6 +133,36 @@ function projectStatusTone(status: string) {
   }
 }
 
+function ProjectListSkeleton() {
+  return (
+    <section className="project-list-skeleton grid gap-4 md:grid-cols-2 xl:grid-cols-3" aria-label="Loading project records">
+      {Array.from({ length: 6 }).map((_, index) => (
+        <article key={index} className="surface-panel rounded-[26px] p-5">
+          <div className="flex items-start gap-4">
+            <div className="skeleton-block h-14 w-14 shrink-0 rounded-[18px]" />
+            <div className="min-w-0 flex-1">
+              <div className="skeleton-block h-4 w-3/5 rounded-full" />
+              <div className="mt-3 flex gap-2">
+                <div className="skeleton-block h-3 w-16 rounded-full" />
+                <div className="skeleton-block h-3 w-20 rounded-full" />
+              </div>
+            </div>
+          </div>
+          <div className="section-rule mt-5 grid grid-cols-3 gap-3 pt-4">
+            <div className="skeleton-block h-9 rounded-[12px]" />
+            <div className="skeleton-block h-9 rounded-[12px]" />
+            <div className="skeleton-block h-9 rounded-[12px]" />
+          </div>
+          <div className="mt-5 flex items-center justify-between gap-3">
+            <div className="skeleton-block h-7 w-24 rounded-full" />
+            <div className="skeleton-block h-7 w-20 rounded-full" />
+          </div>
+        </article>
+      ))}
+    </section>
+  );
+}
+
 export function ProjectList() {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -188,6 +218,7 @@ export function ProjectList() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate("/")}
+              aria-label="Open BreakGen landing page"
               className="surface-chip flex h-10 w-10 items-center justify-center rounded-2xl"
             >
               <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
@@ -267,12 +298,7 @@ export function ProjectList() {
         </header>
 
         {loading ? (
-          <div className="flex items-center justify-center py-24">
-            <div
-              className="h-7 w-7 animate-spin rounded-full border-2 border-[var(--border-default)]"
-              style={{ borderTopColor: "var(--accent)" }}
-            />
-          </div>
+          <ProjectListSkeleton />
         ) : error ? (
           <section className="surface-panel rounded-[30px] p-12 text-center">
             <h3 className="text-[22px] font-semibold tracking-[-0.03em] text-[var(--text-primary)]">

@@ -493,12 +493,12 @@ function App() {
   };
 
   return (
-    <div className="app-shell workspace-shell flex h-screen w-screen">
+    <div className="app-shell workspace-shell flex">
       <ErrorBanner />
 
       <aside className="workspace-sidebar surface-strong flex w-[304px] shrink-0 flex-col rounded-r-[28px]">
         <div className="surface-toolbar glass-divider flex h-14 items-center gap-2.5 border-b px-5">
-          <button onClick={() => navigate("/app")} className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
+          <button onClick={() => navigate("/app")} aria-label="Open project index" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
             <div className="surface-chip flex h-7 w-7 items-center justify-center rounded-md">
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
                 <rect x="1" y="3" width="6" height="4" rx="1" fill="var(--accent)" />

@@ -146,6 +146,13 @@ export function TemplateSelector({ onSelect, domains, families }: TemplateSelect
     onSelect();
   };
 
+  const scrollToStarterBaseline = () => {
+    document.querySelector(".template-decision-panel--templates")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
+
   if (!activeDomain || !selectedFamily) {
     return (
       <div className="template-selector flex min-h-full items-center justify-center p-4 md:p-10">
@@ -225,6 +232,18 @@ export function TemplateSelector({ onSelect, domains, families }: TemplateSelect
             </div>
             {activeDomainManifest && (
               <p>{activeDomainManifest.description}</p>
+            )}
+            {familyManifest && (
+              <button
+                type="button"
+                className="template-mobile-next-cta"
+                onClick={scrollToStarterBaseline}
+                style={{ "--template-accent": accent } as CSSProperties}
+              >
+                <span>Selected path</span>
+                <b>{familyManifest.display_name}</b>
+                <small>Choose starter baseline</small>
+              </button>
             )}
           </section>
 

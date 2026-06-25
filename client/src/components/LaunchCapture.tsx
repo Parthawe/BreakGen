@@ -39,14 +39,6 @@ const ROLES = [
   "Other",
 ];
 
-function hasCaptured() {
-  try {
-    return window.localStorage.getItem(STORAGE_KEY) === "submitted";
-  } catch {
-    return false;
-  }
-}
-
 function markCaptured() {
   try {
     window.localStorage.setItem(STORAGE_KEY, "submitted");
@@ -88,15 +80,6 @@ export function LaunchCapture({ surface }: { surface: "landing" | "demo" }) {
   const [role, setRole] = useState(ROLES[0]);
   const [note, setNote] = useState("");
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
-
-  useEffect(() => {
-    if (hasCaptured()) return;
-    const timer = window.setTimeout(() => {
-      setOpen(true);
-      trackEvent("launch_capture_auto_open", { surface });
-    }, surface === "landing" ? 9000 : 14000);
-    return () => window.clearTimeout(timer);
-  }, [surface]);
 
   useEffect(() => {
     const openFromPage = (event: Event) => {

@@ -384,7 +384,7 @@ export function Landing() {
           <section className="front-hero">
             <div className="front-hero__copy">
               <div className="eyebrow">Programmable hardware canvas</div>
-              <h1>build physical devices</h1>
+              <h1>design custom hardware with proof attached</h1>
               <p>
                 BreakGen is a canvas for custom workspace devices. Shape the object visually,
                 then keep the engineering proof attached: geometry, electronics, validation,
