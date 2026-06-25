@@ -4728,3 +4728,194 @@ input[type="number"]::-webkit-outer-spin-button {
     max-width: 12ch;
   }
 }
+
+/* Final responsive hardening: the alpha dock should sell the launch, not cover the product. */
+.front-system .front-loop {
+  padding-top: clamp(4.5rem, 8vw, 7rem);
+}
+
+@media (max-width: 919px) {
+  .site-page-hero__copy {
+    padding-bottom: clamp(1.25rem, 5vw, 2.5rem);
+  }
+
+  .site-photo-frame {
+    margin-bottom: 0;
+  }
+}
+
+@media (max-width: 767px) {
+  .launch-capture-dock {
+    position: relative;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    z-index: 2;
+    width: 100%;
+    max-width: none;
+    margin: clamp(1rem, 5vw, 1.75rem) auto 0;
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: stretch;
+    gap: 0.75rem;
+    padding: 0.85rem;
+    transform: none;
+  }
+
+  .launch-capture-dock > div:first-child {
+    max-width: none;
+  }
+
+  .launch-capture-dock__actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+  }
+
+  .launch-capture-dock__actions > button {
+    min-width: 0;
+    min-height: 44px;
+    width: 100%;
+    justify-content: center;
+    padding-inline: 0.7rem;
+    white-space: normal;
+  }
+
+  .launch-capture-dock__actions > button:first-child {
+    display: inline-flex;
+  }
+}
+
+@media (max-width: 640px) {
+  .front-hero__copy {
+    padding-bottom: clamp(1.25rem, 5vw, 2.5rem);
+  }
+}
+
+/* Ship-quality route polish: fixed alpha prompts caused overlap during visual QA. */
+.launch-capture-dock {
+  position: relative;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  z-index: 2;
+  width: min(100%, 44rem);
+  max-width: calc(100vw - 2.5rem);
+  margin: clamp(1.5rem, 4vw, 3.25rem) auto 0;
+  transform: none;
+}
+
+@media (min-width: 768px) {
+  .launch-capture-dock {
+    display: flex;
+  }
+
+  .launch-capture-dock__actions {
+    width: auto;
+  }
+}
+
+@media (max-width: 1024px) {
+  .front-system .front-hero {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+  }
+
+  .front-system .front-instrument {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .front-system .front-page {
+    gap: 2rem;
+    padding-top: 1rem;
+  }
+
+  .front-system .front-hero {
+    gap: 1rem;
+  }
+
+  .front-system .front-hero__copy {
+    min-height: auto;
+    justify-content: flex-start;
+    padding: 1.35rem;
+  }
+
+  .front-system .front-hero__copy h1 {
+    max-width: 7.4ch;
+    margin-top: 0.9rem;
+    font-size: clamp(3.05rem, 15vw, 4.45rem);
+    line-height: 0.9;
+  }
+
+  .front-system .front-hero__copy p {
+    margin-top: 1.15rem;
+    font-size: 1rem;
+    line-height: 1.55;
+  }
+
+  .front-system .front-hero__actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+    margin-top: 1.25rem;
+  }
+
+  .front-system .front-hero__actions > * {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .front-system .front-instrument {
+    padding: 0.75rem;
+  }
+
+  .front-system .front-device-stage {
+    min-height: 18rem;
+  }
+
+  .front-system .front-canvas-panel {
+    min-width: 6.7rem;
+    padding: 0.58rem 0.64rem;
+  }
+
+  .front-system .front-canvas-panel--layout {
+    right: 0.7rem;
+    top: 1.9rem;
+  }
+
+  .front-system .front-canvas-panel--bom {
+    left: 0.7rem;
+    bottom: 0.75rem;
+  }
+
+  .front-system .front-canvas-panel--proof {
+    display: none;
+  }
+
+  .layout-editor-toolbar {
+    gap: 0.55rem;
+  }
+
+  .layout-editor-toolbar button {
+    min-height: 44px;
+  }
+
+  .layout-editor-toolbar button[title] {
+    width: 44px;
+  }
+}
+
+@media (max-width: 919px) {
+  .theme-switcher {
+    width: 100%;
+  }
+
+  .theme-switcher__option {
+    min-height: 44px;
+    height: 44px;
+    flex: 1 1 0;
+  }
+}
