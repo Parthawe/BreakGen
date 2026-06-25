@@ -395,6 +395,44 @@ export interface ProjectRecords {
   latest_export: ArtifactRecord | null;
 }
 
+export interface ExportPreviewFile {
+  path: string;
+  purpose: string;
+}
+
+export interface ExportPreviewBomItem {
+  category: string;
+  item: string;
+  quantity: number;
+  status: string;
+  notes: string;
+}
+
+export interface ExportPreviewBom {
+  status: string;
+  items: ExportPreviewBomItem[];
+  sourcing_gaps: string[];
+  counts: {
+    line_items: number;
+    placed_elements: number;
+    matrix_controls: number;
+    direct_controls: number;
+    pins_needed: number;
+    gpio_remaining: number;
+  };
+}
+
+export interface ExportPreview {
+  project_id: string;
+  revision: number;
+  validation_status: string;
+  export_readiness: string;
+  included_files: ExportPreviewFile[];
+  missing_outputs: string[];
+  bom: ExportPreviewBom;
+  build_guide_markdown: string;
+}
+
 export interface QualityGateItem {
   id: string;
   label: string;

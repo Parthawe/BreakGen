@@ -149,6 +149,7 @@ async def test_project_routes_require_auth_and_enforce_owner_scope(tmp_path: Pat
                 ("POST", f"/api/projects/{project_id}/compile/pcb", None),
                 ("POST", f"/api/projects/{project_id}/compile/mechanical", None),
                 ("POST", f"/api/projects/{project_id}/validate", None),
+                ("GET", f"/api/projects/{project_id}/export/preview", None),
                 ("POST", f"/api/projects/{project_id}/export", None),
                 ("GET", f"/api/projects/{project_id}/records", None),
                 ("GET", f"/api/projects/{project_id}/artifacts", None),
@@ -172,6 +173,7 @@ async def test_project_routes_require_auth_and_enforce_owner_scope(tmp_path: Pat
                 ("POST", f"/api/projects/{project_id}/compile/pcb", None),
                 ("POST", f"/api/projects/{project_id}/compile/mechanical", None),
                 ("POST", f"/api/projects/{project_id}/validate", None),
+                ("GET", f"/api/projects/{project_id}/export/preview", None),
                 ("POST", f"/api/projects/{project_id}/export", None),
                 ("GET", f"/api/projects/{project_id}/records", None),
                 ("GET", f"/api/projects/{project_id}/artifacts", None),
@@ -190,6 +192,13 @@ async def test_project_routes_require_auth_and_enforce_owner_scope(tmp_path: Pat
 
             exported = await client.post(f"/api/projects/{project_id}/export", headers=_auth(owner_token))
             assert exported.status_code == 200
+
+            preview = await client.get(f"/api/projects/{project_id}/export/preview", headers=_auth(owner_token))
+            assert preview.status_code == 200
+            preview_payload = preview.json()
+            assert preview_payload["project_id"] == project_id
+            assert any(item["path"] == "BOM.md" for item in preview_payload["included_files"])
+            assert preview_payload["bom"]["items"]
 
             records = await client.get(f"/api/projects/{project_id}/records", headers=_auth(owner_token))
             assert records.status_code == 200

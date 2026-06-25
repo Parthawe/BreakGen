@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../../lib/api";
 import { useProjectStore } from "../../stores/projectStore";
-import type { ProjectRecords, ValidationReport } from "../../types/project";
+import type { ExportPreview, ProjectRecords, ValidationReport } from "../../types/project";
 
 const STATUS_DOT: Record<string, string> = { pass: "#4ade80", warn: "#fbbf24", fail: "#f87171", skipped: "#52525b" };
 
@@ -57,6 +57,9 @@ export function ExportPanel({
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
+  const [preview, setPreview] = useState<ExportPreview | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
   const latestValidationForRevision = useMemo(() => {
     if (!project || !records?.latest_validation_report) return null;
     return records.latest_validation_report.revision === project.revision
@@ -73,6 +76,37 @@ export function ExportPanel({
   useEffect(() => {
     setValidation(latestValidationForRevision);
   }, [latestValidationForRevision]);
+
+  useEffect(() => {
+    if (!project || mode !== "export") {
+      setPreview(null);
+      setPreviewError(null);
+      setPreviewLoading(false);
+      return;
+    }
+    let active = true;
+    setPreviewLoading(true);
+    setPreviewError(null);
+    api.export
+      .preview(project.project_id)
+      .then((payload) => {
+        if (!active) return;
+        setPreview(payload);
+      })
+      .catch((error) => {
+        if (!active) return;
+        setPreview(null);
+        setPreviewError(error instanceof Error ? error.message : "Export preview unavailable.");
+      })
+      .finally(() => {
+        if (!active) return;
+        setPreviewLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [mode, project?.project_id, project?.revision]);
 
   const handleValidate = async () => {
     if (!project) return;
@@ -114,6 +148,13 @@ export function ExportPanel({
   const canExport = validation && validation.status !== "fail";
   const showExport = mode === "export";
   const copy = familyCopy(project?.product_family);
+  const guidePreviewLines =
+    preview?.build_guide_markdown
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .filter((line) => !line.startsWith("|") && !line.startsWith("---"))
+      .slice(0, 5) ?? [];
   const exportLabel = !validation
     ? "Run validation first"
     : validation.status === "pass"
@@ -198,6 +239,82 @@ export function ExportPanel({
         </button>
       )}
 
+      {showExport && (
+        <div className="glass glass-soft mt-5 rounded-xl px-4 py-3">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
+              Build guide preview
+            </div>
+            {preview && (
+              <div className="text-[10px] uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
+                {preview.export_readiness.replace(/_/g, " ")}
+              </div>
+            )}
+          </div>
+          {previewLoading ? (
+            <div className="text-[12px] text-[var(--text-tertiary)]">Preparing export preview…</div>
+          ) : previewError ? (
+            <div className="text-[12px] leading-[1.6] text-amber-600 dark:text-amber-300">
+              {previewError}
+            </div>
+          ) : preview ? (
+            <div className="space-y-3">
+              <div className="grid grid-cols-3 gap-2">
+                <div className="surface-chip rounded-lg px-3 py-2">
+                  <div className="text-[10px] uppercase tracking-[0.08em] text-[var(--text-tertiary)]">Files</div>
+                  <div className="mt-1 text-[13px] text-[var(--text-primary)]">{preview.included_files.length}</div>
+                </div>
+                <div className="surface-chip rounded-lg px-3 py-2">
+                  <div className="text-[10px] uppercase tracking-[0.08em] text-[var(--text-tertiary)]">BOM lines</div>
+                  <div className="mt-1 text-[13px] text-[var(--text-primary)]">{preview.bom.counts.line_items}</div>
+                </div>
+                <div className="surface-chip rounded-lg px-3 py-2">
+                  <div className="text-[10px] uppercase tracking-[0.08em] text-[var(--text-tertiary)]">Pins left</div>
+                  <div className="mt-1 text-[13px] text-[var(--text-primary)]">{preview.bom.counts.gpio_remaining}</div>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                {guidePreviewLines.map((line) => (
+                  <div key={line} className="text-[12px] leading-[1.55] text-[var(--text-secondary)]">
+                    {line.replace(/^#+\s*/, "")}
+                  </div>
+                ))}
+              </div>
+              <div className="section-rule pt-3">
+                <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
+                  Sourcing gaps
+                </div>
+                <div className="space-y-1.5">
+                  {preview.missing_outputs.slice(0, 3).map((item) => (
+                    <div key={item} className="text-[12px] leading-[1.55] text-[var(--text-secondary)]">
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="section-rule pt-3">
+                <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
+                  Review BOM
+                </div>
+                <div className="space-y-2">
+                  {preview.bom.items.slice(0, 4).map((item) => (
+                    <div key={`${item.category}-${item.item}`} className="flex items-start justify-between gap-3 text-[12px]">
+                      <div className="min-w-0">
+                        <div className="text-[var(--text-primary)]">{item.item}</div>
+                        <div className="mt-0.5 text-[11px] text-[var(--text-tertiary)]">{item.category}</div>
+                      </div>
+                      <div className="shrink-0 text-[var(--text-secondary)]">×{item.quantity}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-[12px] text-[var(--text-tertiary)]">Export preview unavailable.</div>
+          )}
+        </div>
+      )}
+
       {/* Contents note */}
       <div className="glass glass-soft mt-5 px-4 py-3 rounded-xl">
         <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
@@ -205,7 +322,7 @@ export function ExportPanel({
         </div>
         <div className="text-[12px] leading-[1.7] text-[var(--text-secondary)]">
           {showExport
-            ? "Mechanical DXF/spec artifacts, firmware metadata, validation report, manifest, and build guide. Current bundles are review-ready evidence, not complete fabrication packages."
+            ? "Mechanical DXF/spec artifacts, firmware metadata, validation report, manifest, build guide, and review BOM. Current bundles are review-ready evidence, not complete fabrication packages."
             : copy.scope}
         </div>
       </div>

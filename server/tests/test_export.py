@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from server.api.export import export_bundle
 from server.db.models import Base, ProjectArtifactRow, ProjectRow
-from server.export.bundler import create_export_bundle
+from server.export.bundler import build_export_preview, create_export_bundle
 from server.models.project import KeyboardProject, LayoutSpec
 from server.models.validation_schema import CheckStatus
 from server.services.project_state import create_project_record
@@ -76,6 +76,8 @@ def test_bundle_contains_expected_files():
         "BreakGen_Export/manifest.json",
         "BreakGen_Export/validation_report.json",
         "BreakGen_Export/BUILD_GUIDE.md",
+        "BreakGen_Export/BOM.md",
+        "BreakGen_Export/bom.json",
     ]
     for file_name in expected:
         assert file_name in names, f"Missing: {file_name}"
@@ -109,12 +111,33 @@ def test_bundle_uses_supplied_validation_report():
         manifest = json.loads(zf.read("BreakGen_Export/manifest.json"))
         bundled_report = json.loads(zf.read("BreakGen_Export/validation_report.json"))
         guide = zf.read("BreakGen_Export/BUILD_GUIDE.md").decode()
+        bom = json.loads(zf.read("BreakGen_Export/bom.json"))
+        bom_markdown = zf.read("BreakGen_Export/BOM.md").decode()
     assert manifest["validation_report_id"] == report.report_id
     assert manifest["validation_status"] == report.status.value
     assert manifest["export_readiness"] == "candidate"
     assert bundled_report["report_id"] == report.report_id
     assert "candidate" in guide
-    assert "does not yet include Gerbers" in guide
+    assert "supplier-ready PCB BOM" in guide
+    assert bom["status"] == "review_bom"
+    assert bom["items"]
+    assert "review-grade bill of materials" in bom_markdown
+
+
+def test_export_preview_describes_bundle_and_bom_without_writing_files():
+    project = _project_65()
+    preview = build_export_preview(project)
+
+    assert preview["project_id"] == project.project_id
+    assert preview["revision"] == project.revision
+    assert preview["validation_status"] == "pass"
+    assert preview["export_readiness"] == "review_ready"
+    assert any(item["path"] == "BUILD_GUIDE.md" for item in preview["included_files"])
+    assert any(item["path"] == "BOM.md" for item in preview["included_files"])
+    assert preview["bom"]["status"] == "review_bom"
+    assert preview["bom"]["items"]
+    assert "Supplier-ready BOM" in " ".join(preview["missing_outputs"])
+    assert "Build Guide" in preview["build_guide_markdown"]
 
 
 def test_handheld_bundle_contains_shell_artifacts():

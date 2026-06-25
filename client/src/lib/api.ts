@@ -4,6 +4,7 @@
 
 import type {
   AcceptanceState,
+  ExportPreview,
   GenerationProviderManifest,
   CreateProjectRequest,
   KeycapAsset,
@@ -359,6 +360,8 @@ export const api = {
 
   export: {
     bundleUrl: (projectId: string) => `${BASE}/projects/${projectId}/export`,
+    preview: (projectId: string) =>
+      request<ExportPreview>(`/projects/${projectId}/export/preview`),
     download: (projectId: string) =>
       requestResponse(`/projects/${projectId}/export`, { method: "POST" }),
   },

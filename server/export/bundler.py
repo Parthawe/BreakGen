@@ -7,11 +7,12 @@ Creates a ZIP package containing the currently available outputs:
 - Validation report
 - Manifest with artifact hashes and toolchain versions
 - Build guide (markdown)
+- Review BOM / sourcing gaps
 
 Not yet included (requires additional subsystems, so current exports are
 review-ready evidence bundles rather than complete fabrication packages):
 - Gerber files and drill data (requires KiCad backend worker)
-- BOM / component list
+- Supplier-ready PCB BOM / placement files
 - Keycap STL meshes (requires Meshy integration + mesh pipeline)
 - Case STL
 
@@ -27,6 +28,7 @@ import uuid
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from server.config import settings
 from server.eda.control_surface_electronics import (
@@ -51,6 +53,188 @@ def _sha256(path: Path) -> str:
     return h.hexdigest()
 
 
+def _format_element_type(value: str) -> str:
+    return value.replace("_", " ").title()
+
+
+def _review_bom(project: KeyboardProject) -> dict[str, Any]:
+    """Return a review-grade BOM and sourcing-gap summary for the current project."""
+    electronics = compile_control_surface_electronics(project)
+    elements = project.layout.elements
+    switch_like = [
+        element
+        for element in elements
+        if element.element_type.value in {"key_switch", "button"}
+    ]
+    accepted_assets = [
+        asset
+        for asset in project.keycap_assets
+        if asset.acceptance_state.value in {"accepted", "production_ready"}
+    ]
+
+    items: list[dict[str, Any]] = [
+        {
+            "category": "controller",
+            "item": project.pcb.controller.value.upper(),
+            "quantity": 1,
+            "status": "selected",
+            "notes": "Controller family selected in the project electronics profile.",
+        }
+    ]
+
+    if switch_like:
+        items.append(
+            {
+                "category": "controls",
+                "item": project.switch_profile.part_id or "module-specific switch/button",
+                "quantity": len(switch_like),
+                "status": "source_candidate",
+                "notes": "Exact supplier SKU still needs pilot-build confirmation.",
+            }
+        )
+        items.append(
+            {
+                "category": "electronics",
+                "item": f"{project.pcb.diode_direction.value} signal diodes",
+                "quantity": len(switch_like),
+                "status": "source_candidate",
+                "notes": "Required for matrix-scanned switch/button controls.",
+            }
+        )
+
+    for usage in electronics.direct_pin_usage:
+        items.append(
+            {
+                "category": "modules",
+                "item": _format_element_type(usage.element_type),
+                "quantity": usage.control_count,
+                "status": "module_required",
+                "notes": f"{usage.pins_per_control} GPIO pin(s) per control, {usage.total_pins} total.",
+            }
+        )
+
+    items.append(
+        {
+            "category": "mechanical",
+            "item": "Panel or shell material",
+            "quantity": 1,
+            "status": "fabrication_candidate",
+            "notes": "Material and process must be validated against the exported DXF/spec files.",
+        }
+    )
+
+    if switch_like:
+        items.append(
+            {
+                "category": "appearance",
+                "item": "Keycaps / control caps",
+                "quantity": len(switch_like),
+                "status": "needs_acceptance" if not accepted_assets else "accepted_asset_reference",
+                "notes": (
+                    f"{len(accepted_assets)} accepted appearance asset(s) are attached."
+                    if accepted_assets
+                    else "No accepted generated/imported appearance assets are attached."
+                ),
+            }
+        )
+
+    sourcing_gaps = [
+        "Supplier part numbers, alternates, and unit prices are not locked.",
+        "Gerber, drill, pick-place, and PCB assembly BOM outputs require the KiCad worker path.",
+        "Final enclosure STL/STEP files are not present unless a family-specific shell compiler provides them.",
+        "Pilot build quantities, packaging, test procedure, and fulfillment assumptions are not proven.",
+    ]
+
+    return {
+        "status": "review_bom",
+        "items": items,
+        "sourcing_gaps": sourcing_gaps,
+        "counts": {
+            "line_items": len(items),
+            "placed_elements": len(elements),
+            "matrix_controls": electronics.matrix_control_count,
+            "direct_controls": electronics.direct_control_count,
+            "pins_needed": electronics.total_pins,
+            "gpio_remaining": electronics.gpio_remaining,
+        },
+    }
+
+
+def _bom_markdown(project: KeyboardProject, bom: dict[str, Any]) -> str:
+    rows = "\n".join(
+        "| {category} | {item} | {quantity} | {status} | {notes} |".format(
+            category=item["category"],
+            item=item["item"],
+            quantity=item["quantity"],
+            status=item["status"],
+            notes=item["notes"],
+        )
+        for item in bom["items"]
+    )
+    gaps = "\n".join(f"- {gap}" for gap in bom["sourcing_gaps"])
+    return f"""# Review BOM — {project.name}
+
+Generated by BreakGen · Revision {project.revision}
+
+This is a review-grade bill of materials for prototype planning. It is not yet a supplier-ready purchasing BOM.
+
+| Category | Item | Quantity | Status | Notes |
+|----------|------|----------|--------|-------|
+{rows}
+
+## Sourcing Gaps
+
+{gaps}
+"""
+
+
+def _included_files(project: KeyboardProject) -> list[dict[str, str]]:
+    if project.product_family in {ProductFamily.HANDHELD_COMPANION, ProductFamily.RETRO_HANDHELD}:
+        mechanical = [
+            {
+                "path": "shell/front_shell_panel.dxf",
+                "purpose": "Front shell reference panel with display, button, speaker, and microphone cutouts.",
+            },
+            {
+                "path": "shell/back_shell_reference.dxf",
+                "purpose": "Back shell cavity, battery, and service-access reference.",
+            },
+            {
+                "path": "shell/shell_spec.json",
+                "purpose": "Deterministic handheld shell proof specification.",
+            },
+        ]
+    else:
+        mechanical = [
+            {
+                "path": "plate/plate.dxf",
+                "purpose": "Switch plate / control panel planning artifact.",
+            }
+        ]
+
+    return [
+        *mechanical,
+        {"path": "firmware/info.json", "purpose": "Firmware and platform metadata."},
+        {"path": "firmware/keymap.json", "purpose": "Default control mapping payload."},
+        {"path": "firmware/via.json", "purpose": "Layout/remapping metadata."},
+        {"path": "firmware/control-map.json", "purpose": "Family-native control mapping artifact."},
+        {"path": "validation_report.json", "purpose": "Validation results for this export."},
+        {"path": "manifest.json", "purpose": "Artifact hashes and toolchain versions."},
+        {"path": "BUILD_GUIDE.md", "purpose": "Assembly and review guide."},
+        {"path": "BOM.md", "purpose": "Human-readable review BOM and sourcing gaps."},
+        {"path": "bom.json", "purpose": "Machine-readable review BOM."},
+    ]
+
+
+def _missing_outputs() -> list[str]:
+    return [
+        "Gerbers, drill files, and PCB assembly outputs are not generated yet.",
+        "Supplier-ready BOM, placement files, and quote package are not generated yet.",
+        "Final enclosure STL/STEP files are not generated for all product families.",
+        "Physical prototype evidence must be attached before any prototype-ready claim.",
+    ]
+
+
 def _generate_build_guide(
     project: KeyboardProject,
     matrix_rows: int,
@@ -67,19 +251,19 @@ def _generate_build_guide(
         mechanical_rows = """| `shell/front_shell_panel.dxf` | Front shell reference panel with display, button, speaker, and microphone cutouts |
 | `shell/back_shell_reference.dxf` | Back shell cavity, battery, and service-access reference |
 | `shell/shell_spec.json` | Deterministic handheld shell proof specification |"""
-        mechanical_steps = """2. **Prepare shell parts** — Use `shell_spec.json` as the source of truth for enclosure dimensions and `front_shell_panel.dxf` / `back_shell_reference.dxf` as 2D planning references
-3. **Fit portable modules** — Check display, battery, USB-C charging/data access, speaker, and microphone placements against the shell spec before committing to CAD or fabrication
-4. **Solder and integrate electronics** — Install the controller and control modules according to the exported metadata
-5. **Flash proof firmware** — Use `info.json`, `keymap.json`, and `control-map.json` as the current software/hardware contract
-6. **Refine enclosure CAD** — Treat this bundle as a deterministic enclosure baseline, not a finished production shell"""
+        mechanical_steps = """3. **Prepare shell parts** — Use `shell_spec.json` as the source of truth for enclosure dimensions and `front_shell_panel.dxf` / `back_shell_reference.dxf` as 2D planning references
+4. **Fit portable modules** — Check display, battery, USB-C charging/data access, speaker, and microphone placements against the shell spec before committing to CAD or fabrication
+5. **Solder and integrate electronics** — Install the controller and control modules according to the exported metadata
+6. **Flash proof firmware** — Use `info.json`, `keymap.json`, and `control-map.json` as the current software/hardware contract
+7. **Refine enclosure CAD** — Treat this bundle as a deterministic enclosure baseline, not a finished production shell"""
         mechanical_notes = "- This handheld shell path is a proof-grade deterministic baseline, not a full manufacturable enclosure CAD output yet\n- Side-port placement is recorded in `shell_spec.json`; the DXFs are top-down planning references"
     else:
         mechanical_rows = "| `plate/plate.dxf` | Switch plate / control panel — laser cut from 1.5mm aluminum or acrylic |"
-        mechanical_steps = """2. **Cut panel / plate** — Send `plate.dxf` to a laser cutting service. Material: 1.5mm aluminum or acrylic
-3. **Solder components** — Solder the controller and any control modules indicated by the layout
-4. **Install controls** — Mount switches, buttons, encoders, or other surface controls into the panel
-5. **Flash firmware** — Use the metadata in `info.json`, `keymap.json`, and `control-map.json` as the baseline for the target firmware path
-6. **Refine mappings** — Use the exported layout metadata to continue device-specific mapping and remapping"""
+        mechanical_steps = """3. **Cut panel / plate** — Send `plate.dxf` to a laser cutting service. Material: 1.5mm aluminum or acrylic
+4. **Solder components** — Solder the controller and any control modules indicated by the layout
+5. **Install controls** — Mount switches, buttons, encoders, or other surface controls into the panel
+6. **Flash firmware** — Use the metadata in `info.json`, `keymap.json`, and `control-map.json` as the baseline for the target firmware path
+7. **Refine mappings** — Use the exported layout metadata to continue device-specific mapping and remapping"""
         mechanical_notes = "- Switch cutout tolerance: 14.0mm ± 0.1mm\n- Stabilizer cutouts included for wide switch-like elements where applicable\n- Plate kerf compensation: configurable (default 0mm — adjust for your cutter)"
     return f"""# Build Guide — {project.name}
 
@@ -108,10 +292,13 @@ Generated by BreakGen · Revision {project.revision}
 | `firmware/control-map.json` | Family-native control mapping artifact |
 | `validation_report.json` | Validation results for this export |
 | `manifest.json` | Artifact hashes and toolchain versions |
+| `BOM.md` | Review-grade bill of materials and sourcing gaps |
+| `bom.json` | Machine-readable review BOM |
 
 ## Assembly Steps
 
-1. **Review missing fabrication outputs** — This bundle does not yet include Gerbers, drill files, BOM, or final enclosure STLs. Treat it as the source package for review and prototype planning.
+1. **Review missing fabrication outputs** — This bundle does not yet include Gerbers, drill files, supplier-ready PCB BOM, or final enclosure STLs. Treat it as the source package for review and prototype planning.
+2. **Review the BOM** — Use `BOM.md` and `bom.json` to understand component categories, provisional quantities, and unresolved sourcing gaps.
 {mechanical_steps}
 
 ## Notes
@@ -120,6 +307,45 @@ Generated by BreakGen · Revision {project.revision}
 - A `review_ready` export means validation passed for the current evidence bundle, but fabrication artifacts are still incomplete.
 - A `candidate` export means the bundle is useful for review, but at least one non-blocking validation warning is still open.
 """
+
+
+def build_export_preview(
+    project: KeyboardProject,
+    *,
+    validation_report: ValidationReport | None = None,
+    export_readiness: str | None = None,
+) -> dict[str, Any]:
+    """Return read-only export preview data without writing files or metadata."""
+    preview_project = project.model_copy(deep=True)
+    matrix, _ = compile_project_matrix(preview_project)
+    apply_project_matrix(preview_project, matrix)
+    report = validation_report or validate_project(preview_project)
+    readiness = export_readiness
+    if readiness is None:
+        readiness = (
+            "blocked"
+            if report.status.value == "fail"
+            else "review_ready"
+            if report.status.value == "pass"
+            else "candidate"
+        )
+    bom = _review_bom(preview_project)
+    return {
+        "project_id": preview_project.project_id,
+        "revision": preview_project.revision,
+        "validation_status": report.status.value,
+        "export_readiness": readiness,
+        "included_files": _included_files(preview_project),
+        "missing_outputs": _missing_outputs(),
+        "bom": bom,
+        "build_guide_markdown": _generate_build_guide(
+            preview_project,
+            matrix.matrix_rows,
+            matrix.matrix_cols,
+            validation_status=report.status.value,
+            export_readiness=readiness,
+        ),
+    }
 
 
 def create_export_bundle(
@@ -164,6 +390,7 @@ def create_export_bundle(
             json.dump(report.model_dump(mode="json"), f, indent=2)
 
         # --- Build guide ---
+        bom = _review_bom(project)
         guide_path = tmp / "BUILD_GUIDE.md"
         guide_path.write_text(
             _generate_build_guide(
@@ -174,6 +401,9 @@ def create_export_bundle(
                 export_readiness=export_readiness,
             )
         )
+        (tmp / "BOM.md").write_text(_bom_markdown(project, bom))
+        with open(tmp / "bom.json", "w") as f:
+            json.dump(bom, f, indent=2)
 
         # --- Manifest ---
         artifacts: list[ArtifactEntry] = []

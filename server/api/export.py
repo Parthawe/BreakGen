@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from server.api.auth import require_user, user_scope_id
 from server.db.database import get_db
 from server.db.models import UserRow
-from server.export.bundler import create_export_bundle
+from server.export.bundler import build_export_preview, create_export_bundle
 from server.models.project import ProjectStatus
 from server.models.validation_schema import CheckStatus
 from server.services.artifact_registry import (
@@ -69,6 +69,21 @@ async def run_validation(
     )
 
     return report.model_dump(mode="json")
+
+
+@router.get("/{project_id}/export/preview")
+async def preview_export_bundle(
+    project_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: UserRow = Depends(require_user),
+):
+    """Return the current revision's export contents, BOM, and build-guide preview."""
+    _, project = await load_project_state(
+        db,
+        project_id,
+        owner_user_id=user_scope_id(user),
+    )
+    return build_export_preview(project)
 
 
 async def export_project_bundle(
