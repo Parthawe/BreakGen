@@ -100,49 +100,67 @@ const COMING_SOON_PRODUCTS = [
   {
     name: "Split macro pads",
     stage: "closest to alpha",
+    lane: "Kit candidate 01",
     build: "MX PCB, plate, spacer stack, QMK map",
     why: "A small paid kit can prove the compiler because the parts are understandable and the build path is short.",
     modules: ["MX switches", "encoders", "OLED slot"],
+    proof: "10-unit pilot",
+    shape: "split",
     accent: "#8b93ff",
   },
   {
     name: "Creator command consoles",
     stage: "coming soon",
+    lane: "Creator lane",
     build: "LCD grid, USB-C, enclosure, scene profiles",
     why: "Streamers and video editors already hack together shortcut decks. BreakGen can turn that into a repeatable device family.",
     modules: ["display keys", "tact buttons", "USB-C"],
+    proof: "scene profile demo",
+    shape: "console",
     accent: "#4db7ff",
   },
   {
     name: "MIDI sketch controllers",
     stage: "prototype lane",
+    lane: "Music lane",
     build: "pads, knobs, sliders, USB MIDI firmware",
     why: "Music hardware buyers understand custom control surfaces, and early prototypes can be tested with real DAWs.",
     modules: ["rubber pads", "sliders", "encoders"],
+    proof: "DAW mapping test",
+    shape: "midi",
     accent: "#d978b3",
   },
   {
     name: "Accessibility input rigs",
     stage: "research lane",
+    lane: "Assistive lane",
     build: "large buttons, joystick, mounting plate, HID map",
     why: "The most important use cases are not always mass-market. This lane should be developed with users and careful ergonomics.",
     modules: ["arcade buttons", "joystick", "mount points"],
+    proof: "user fit session",
+    shape: "access",
     accent: "#48d48b",
   },
   {
     name: "Pedal and footswitch boards",
     stage: "proof lane",
+    lane: "Performance lane",
     build: "stomp switches, expression input, rugged enclosure",
     why: "Guitar, synth, and live-performance workflows need durable programmable controls that can be configured without rewiring.",
     modules: ["stomp switches", "TRS input", "status LEDs"],
+    proof: "floor test",
+    shape: "pedal",
     accent: "#ebb156",
   },
   {
     name: "Dev-board enclosure kits",
     stage: "fabrication lane",
+    lane: "Shell lane",
     build: "board carrier, ports, screws, print profile",
     why: "Enclosures are a manufacturing wedge beyond keyboards because the artifact can be useful even before BreakGen owns the full PCB.",
     modules: ["RP2040", "ESP32", "sensor bay"],
+    proof: "fit check",
+    shape: "enclosure",
     accent: "#d0a16c",
   },
 ];
@@ -306,6 +324,167 @@ function ProductSignal({ color }: { color: string }) {
       <span style={{ "--signal-color": color } as CSSProperties} />
       <i />
     </div>
+  );
+}
+
+function ProductSpecimen({ product }: { product: (typeof COMING_SOON_PRODUCTS)[number] }) {
+  return (
+    <div
+      className={`product-specimen product-specimen--${product.shape}`}
+      style={{ "--product-accent": product.accent } as CSSProperties}
+      aria-hidden="true"
+    >
+      <div className="product-specimen__trace product-specimen__trace--one" />
+      <div className="product-specimen__trace product-specimen__trace--two" />
+      <div className="product-specimen__body">
+        <span />
+        <span />
+        <span />
+        <span />
+        <span />
+        <span />
+      </div>
+    </div>
+  );
+}
+
+function ComingSoonLab() {
+  const heroProduct = COMING_SOON_PRODUCTS[0];
+  const secondaryProducts = COMING_SOON_PRODUCTS.slice(1);
+
+  return (
+    <section className="manufacture-lab section-rule mt-10 pt-10">
+      <div className="manufacture-lab__intro">
+        <div className="eyebrow">Coming soon</div>
+        <h2>
+          A prototype lab for the manufactured devices BreakGen should earn next.
+        </h2>
+        <p>
+          The roadmap stays close to control surfaces and enclosures because they share the
+          same hard problems: placement, mounting, wiring, firmware maps, build notes, and export evidence.
+          A lane only advances when the prototype evidence catches up to the story.
+        </p>
+      </div>
+
+      <div className="manufacture-lab__stage">
+        <article className="manufacture-hero">
+          <div className="manufacture-hero__copy">
+            <div className="eyebrow">{heroProduct.lane}</div>
+            <h3>{heroProduct.name}</h3>
+            <p>{heroProduct.why}</p>
+            <div className="manufacture-hero__meta">
+              <span>{heroProduct.stage}</span>
+              <span>{heroProduct.proof}</span>
+              <span>{heroProduct.build}</span>
+            </div>
+          </div>
+          <ProductSpecimen product={heroProduct} />
+        </article>
+
+        <div className="manufacture-lanes">
+          {secondaryProducts.map((product, index) => (
+            <article
+              key={product.name}
+              className="manufacture-lane"
+              style={{ "--product-accent": product.accent, "--lane-index": index } as CSSProperties}
+            >
+              <div className="manufacture-lane__head">
+                <ProductSignal color={product.accent} />
+                <div>
+                  <div className="eyebrow">{product.lane}</div>
+                  <h3>{product.name}</h3>
+                </div>
+              </div>
+
+              <p>{product.why}</p>
+
+              <div className="manufacture-lane__footer">
+                <span>{product.stage}</span>
+                <span>{product.proof}</span>
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <div className="manufacture-lab__filter">
+          <span>Manufacturing filter</span>
+          <p>
+            Every lane needs named footprints, enclosure assumptions, BOM gaps, and prototype risks before
+            it can become a real kit or campaign promise.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function KickstarterRunway() {
+  return (
+    <section className="kickstarter-runway section-rule mt-10 pt-10">
+      <div className="kickstarter-runway__copy">
+        <div className="eyebrow">Kickstarter path</div>
+        <h2>Crowdfunding only works here if the prototype story is real.</h2>
+        <p>
+          The first campaign should not sell the whole platform. It should sell one focused device,
+          likely a split macro pad or creator command console, with BreakGen shown as the system
+          that produced the files, records, and build guide.
+        </p>
+        <div className="kickstarter-runway__actions">
+          <button
+            type="button"
+            onClick={() => {
+              trackEvent("landing_cta_click", { surface: "landing", target: "kickstarter_interest", placement: "kickstarter" });
+              window.dispatchEvent(new CustomEvent("breakgen:open-launch-capture", { detail: { mode: "research" } }));
+            }}
+            className="surface-button-primary inline-flex h-11 items-center rounded-full px-5 text-[13px] font-semibold"
+          >
+            Help choose the first kit
+          </button>
+          <a
+            href="https://help.kickstarter.com/hc/en-us/articles/115005134554-What-are-the-rules-for-hardware-and-product-design-projects"
+            target="_blank"
+            rel="noopener"
+            onClick={() => trackEvent("landing_cta_click", { surface: "landing", target: "kickstarter_rules", placement: "kickstarter" })}
+            className="surface-button inline-flex h-11 items-center rounded-full px-5 text-[13px] font-semibold"
+          >
+            Hardware campaign rules
+          </a>
+        </div>
+      </div>
+
+      <div className="kickstarter-runway__track">
+        {KICKSTARTER_PATH.map((item, index) => (
+          <article
+            key={item.gate}
+            className="kickstarter-gate"
+            style={{ "--gate-index": index } as CSSProperties}
+          >
+            <div className="kickstarter-gate__index">0{index + 1}</div>
+            <div>
+              <span>{item.status}</span>
+              <h3>{item.gate}</h3>
+              <p>{item.detail}</p>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <aside className="kickstarter-ledger">
+        <div className="eyebrow">Campaign shape</div>
+        <div className="kickstarter-ledger__stat">
+          <b>10</b>
+          <span>pilot units before a public campaign page</span>
+        </div>
+        <div className="kickstarter-ledger__stat">
+          <b>1</b>
+          <span>hero kit, limited variants, no broad marketplace promise</span>
+        </div>
+        <div className="kickstarter-ledger__stat">
+          <b>6</b>
+          <span>weeks for list building, supplier quotes, rewards, and fulfillment math</span>
+        </div>
+      </aside>
+    </section>
   );
 }
 
@@ -630,142 +809,9 @@ export function Landing() {
           </div>
         </section>
 
-        <section className="section-rule mt-10 grid gap-8 pt-10 lg:grid-cols-[380px_minmax(0,1fr)]">
-          <div>
-            <div className="eyebrow">Coming soon</div>
-            <h2 className="mt-4 text-[36px] font-semibold leading-[0.96] tracking-[-0.05em] text-[var(--text-primary)]">
-              More objects BreakGen can turn into real manufactured kits.
-            </h2>
-            <p className="mt-4 text-[14px] leading-[1.8] text-[var(--text-secondary)]">
-              The roadmap stays close to control surfaces and enclosures because they share the
-              same hard problems: placement, mounting, wiring, firmware maps, build notes, and export evidence.
-              These are listed as coming soon until each lane has prototype proof.
-            </p>
-            <div className="mt-6 rounded-[26px] border border-[var(--border-default)] bg-[var(--surface-soft)] p-5">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
-                Manufacturing filter
-              </div>
-              <p className="mt-3 text-[13px] leading-[1.75] text-[var(--text-secondary)]">
-                A family earns the next stage only when BreakGen can name the source footprints,
-                enclosure assumptions, BOM gaps, and prototype risks. That makes the roadmap useful
-                for makers and credible for crowdfunding.
-              </p>
-            </div>
-          </div>
+        <ComingSoonLab />
 
-          <div className="manufacture-board">
-            {COMING_SOON_PRODUCTS.map((product) => (
-              <article key={product.name} className="manufacture-card">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="eyebrow">{product.stage}</div>
-                    <h3 className="mt-3 text-[22px] font-semibold leading-[1.02] tracking-normal text-[var(--text-primary)]">
-                      {product.name}
-                    </h3>
-                  </div>
-                  <ProductSignal color={product.accent} />
-                </div>
-
-                <p className="mt-4 text-[13px] leading-[1.75] text-[var(--text-secondary)]">
-                  {product.why}
-                </p>
-
-                <div className="mt-5 rounded-[18px] border border-[var(--border-subtle)] bg-[var(--surface-inset)] p-4">
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-tertiary)]">
-                    Build path
-                  </div>
-                  <div className="mt-2 font-mono text-[12px] leading-[1.65] text-[var(--text-primary)]">
-                    {product.build}
-                  </div>
-                </div>
-
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {product.modules.map((module) => (
-                    <span key={module} className="surface-chip rounded-full px-3 py-1 text-[10px] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
-                      {module}
-                    </span>
-                  ))}
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="section-rule mt-10 grid gap-8 pt-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(360px,0.56fr)]">
-          <div className="surface-strong rounded-[34px] p-7 md:p-8">
-            <div className="eyebrow">Kickstarter path</div>
-            <h2 className="mt-4 max-w-[820px] text-[40px] font-semibold leading-[0.95] tracking-normal text-[var(--text-primary)] md:text-[52px]">
-              Crowdfunding only works here if the prototype story is real.
-            </h2>
-            <p className="mt-5 max-w-[760px] text-[15px] leading-[1.85] text-[var(--text-secondary)]">
-              The first campaign should not sell the whole platform. It should sell one focused
-              device, likely a split macro pad or creator command console, with BreakGen shown as
-              the system that produced the files, records, and build guide.
-            </p>
-
-            <div className="mt-7 grid gap-3 md:grid-cols-4">
-              {KICKSTARTER_PATH.map((item) => (
-                <article key={item.gate} className="kickstarter-step">
-                  <div className="kickstarter-step__status">{item.status}</div>
-                  <h3>{item.gate}</h3>
-                  <p>{item.detail}</p>
-                </article>
-              ))}
-            </div>
-
-            <div className="mt-7 flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  trackEvent("landing_cta_click", { surface: "landing", target: "kickstarter_interest", placement: "kickstarter" });
-                  window.dispatchEvent(new CustomEvent("breakgen:open-launch-capture", { detail: { mode: "research" } }));
-                }}
-                className="surface-button-primary inline-flex h-11 items-center rounded-full px-5 text-[13px] font-semibold"
-              >
-                Help choose the first kit
-              </button>
-              <a
-                href="https://help.kickstarter.com/hc/en-us/articles/115005134554-What-are-the-rules-for-hardware-and-product-design-projects"
-                target="_blank"
-                rel="noopener"
-                onClick={() => trackEvent("landing_cta_click", { surface: "landing", target: "kickstarter_rules", placement: "kickstarter" })}
-                className="surface-button inline-flex h-11 items-center rounded-full px-5 text-[13px] font-semibold"
-              >
-                Hardware campaign rules
-              </a>
-            </div>
-          </div>
-
-          <aside className="kickstarter-ledger rounded-[34px] p-6">
-            <div className="eyebrow">Campaign shape</div>
-            <div className="mt-5 space-y-5">
-              <div>
-                <div className="text-[34px] font-semibold leading-none tracking-normal text-[var(--text-primary)]">
-                  10 units
-                </div>
-                <p className="mt-2 text-[13px] leading-[1.75] text-[var(--text-secondary)]">
-                  Pilot build before public campaign page.
-                </p>
-              </div>
-              <div className="section-rule pt-5">
-                <div className="text-[34px] font-semibold leading-none tracking-normal text-[var(--text-primary)]">
-                  1 hero kit
-                </div>
-                <p className="mt-2 text-[13px] leading-[1.75] text-[var(--text-secondary)]">
-                  One device, limited variants, no broad marketplace promise.
-                </p>
-              </div>
-              <div className="section-rule pt-5">
-                <div className="text-[34px] font-semibold leading-none tracking-normal text-[var(--text-primary)]">
-                  6 weeks
-                </div>
-                <p className="mt-2 text-[13px] leading-[1.75] text-[var(--text-secondary)]">
-                  Email list, prototype updates, supplier quotes, reward math, and fulfillment plan.
-                </p>
-              </div>
-            </div>
-          </aside>
-        </section>
+        <KickstarterRunway />
 
         <section className="section-rule mt-10 pt-10">
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
