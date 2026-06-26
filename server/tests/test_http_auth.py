@@ -15,6 +15,7 @@ from server.db.database import get_db
 from server.db.models import Base
 from server.main import app
 from server.api.auth import MAX_BCRYPT_PASSWORD_BYTES, settings as auth_settings
+from server.models.project import MAX_LAYOUT_ELEMENTS
 
 
 @pytest.fixture
@@ -269,6 +270,65 @@ async def test_project_routes_require_auth_and_enforce_owner_scope(tmp_path: Pat
             owner_projects_after_delete = await client.get("/api/projects/", headers=_auth(owner_token))
             assert owner_projects_after_delete.status_code == 200
             assert owner_projects_after_delete.json() == []
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        await engine.dispose()
+
+
+@pytest.mark.anyio
+async def test_project_update_rejects_oversized_layout_payload(tmp_path: Path, monkeypatch):
+    engine, session_factory = await _make_session(tmp_path)
+    monkeypatch.setattr("server.api.auth.settings.public_signup_enabled", True)
+    monkeypatch.setattr("server.api.auth.settings.signup_invite_code", "")
+
+    async def override_get_db():
+        async with session_factory() as session:
+            yield session
+
+    app.dependency_overrides[get_db] = override_get_db
+    transport = httpx.ASGITransport(app=app)
+
+    try:
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+            token = await _signup(client, "payload-cap@example.com")
+            created = await client.post(
+                "/api/projects/",
+                headers=_auth(token),
+                json={
+                    "name": "Payload Cap",
+                    "template_id": "macropad_3x3",
+                    "product_family": "macropad",
+                },
+            )
+            assert created.status_code == 201
+            project = created.json()
+
+            oversized_layout = {
+                "unit_pitch_mm": 19.05,
+                "elements": [
+                    {
+                        "id": f"pad_{i}",
+                        "element_type": "pad",
+                        "label": str(i),
+                        "x_mm": float(i),
+                        "y_mm": 0.0,
+                        "w_mm": 24.0,
+                        "h_mm": 24.0,
+                    }
+                    for i in range(MAX_LAYOUT_ELEMENTS + 1)
+                ],
+            }
+            rejected = await client.patch(
+                f"/api/projects/{project['project_id']}",
+                headers=_auth(token),
+                json={
+                    "expected_revision": project["revision"],
+                    "layout": oversized_layout,
+                },
+            )
+
+            assert rejected.status_code == 422
+            assert "layout elements cannot exceed" in rejected.text
     finally:
         app.dependency_overrides.pop(get_db, None)
         await engine.dispose()

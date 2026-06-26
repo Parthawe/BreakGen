@@ -1,6 +1,7 @@
 import { PLAUSIBLE_DOMAIN, POSTHOG_HOST, POSTHOG_KEY } from "./runtime";
 
 type AnalyticsProps = Record<string, string | number | boolean | null | undefined>;
+export type AnalyticsConsent = "accepted" | "declined" | null;
 type PlausibleFunction = ((eventName: string, options?: { props?: AnalyticsProps }) => void) & {
   q?: [string, { props?: AnalyticsProps }?][];
 };
@@ -21,6 +22,7 @@ declare global {
 let initialized = false;
 let posthogClient: PostHogClient | null = null;
 const pendingPosthogEvents: { eventName: string; props: AnalyticsProps }[] = [];
+const CONSENT_STORAGE_KEY = "breakgen.analytics_consent.v1";
 
 function injectScript(src: string, attributes: Record<string, string> = {}) {
   if (document.querySelector(`script[src="${src}"]`)) return;
@@ -33,8 +35,39 @@ function injectScript(src: string, attributes: Record<string, string> = {}) {
   document.head.appendChild(script);
 }
 
+export function analyticsConfigured() {
+  return Boolean(PLAUSIBLE_DOMAIN || POSTHOG_KEY);
+}
+
+export function getAnalyticsConsent(): AnalyticsConsent {
+  if (typeof window === "undefined") return null;
+  try {
+    const value = window.localStorage.getItem(CONSENT_STORAGE_KEY);
+    return value === "accepted" || value === "declined" ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function analyticsConsentAccepted() {
+  return getAnalyticsConsent() === "accepted";
+}
+
+export function setAnalyticsConsent(consent: Exclude<AnalyticsConsent, null>) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(CONSENT_STORAGE_KEY, consent);
+  } catch {
+    // Consent storage failure should not break the app surface.
+  }
+  if (consent === "accepted") {
+    initAnalytics();
+  }
+}
+
 export function initAnalytics() {
   if (initialized || typeof window === "undefined") return;
+  if (!analyticsConfigured() || !analyticsConsentAccepted()) return;
   initialized = true;
 
   if (PLAUSIBLE_DOMAIN) {
@@ -71,6 +104,7 @@ export function initAnalytics() {
 
 export function trackEvent(eventName: string, props: AnalyticsProps = {}) {
   if (typeof window === "undefined") return;
+  if (!analyticsConsentAccepted()) return;
   const payload = {
     path: window.location.pathname,
     ...props,

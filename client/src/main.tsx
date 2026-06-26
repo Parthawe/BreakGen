@@ -6,6 +6,7 @@ import { Landing } from "./pages/Landing";
 import { Login, Signup } from "./pages/Auth";
 import { ProjectList } from "./pages/ProjectList";
 import { CreatorsPage, HowItWorksPage, ManufacturingPage, MarketplacePage } from "./pages/SitePages";
+import { AnalyticsConsent } from "./components/AnalyticsConsent";
 import { PUBLIC_DEMO_PATH, PUBLIC_SITE, ROUTER_BASENAME } from "./lib/runtime";
 import { initAnalytics, trackPageView } from "./lib/analytics";
 import { ThemeProvider, bootstrapTheme } from "./lib/theme";
@@ -87,6 +88,7 @@ function Root() {
           )}
         </Routes>
       </Suspense>
+      <AnalyticsConsent />
     </BrowserRouter>
   );
 }

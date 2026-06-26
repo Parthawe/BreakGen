@@ -17,6 +17,9 @@ from pydantic import BaseModel, Field, model_validator
 
 
 UNIT_PITCH_MM = 19.05
+MAX_LAYOUT_KEYS = 512
+MAX_LAYOUT_ELEMENTS = 768
+MAX_LAYOUT_PAYLOAD_ITEMS = 1024
 
 
 # --- Enums ---
@@ -184,6 +187,28 @@ def _raw_item_dict(item: Any) -> dict:
     return dict(item)
 
 
+def _raw_collection_length(value: Any) -> int:
+    if value is None:
+        return 0
+    try:
+        return len(value)
+    except TypeError:
+        return 0
+
+
+def _validate_raw_layout_size(keys: Any, elements: Any) -> None:
+    key_count = _raw_collection_length(keys)
+    element_count = _raw_collection_length(elements)
+    if key_count > MAX_LAYOUT_KEYS:
+        raise ValueError(f"layout keys cannot exceed {MAX_LAYOUT_KEYS} items")
+    if element_count > MAX_LAYOUT_ELEMENTS:
+        raise ValueError(f"layout elements cannot exceed {MAX_LAYOUT_ELEMENTS} items")
+    if key_count + element_count > MAX_LAYOUT_PAYLOAD_ITEMS:
+        raise ValueError(
+            f"layout payload cannot exceed {MAX_LAYOUT_PAYLOAD_ITEMS} combined keys/elements"
+        )
+
+
 # --- Key specification ---
 
 
@@ -265,9 +290,13 @@ class LayoutSpec(BaseModel):
     )
     keys: list[KeySpec] = Field(
         default_factory=list,
+        max_length=MAX_LAYOUT_KEYS,
         description="Legacy key compatibility view for switch-like elements.",
     )
-    elements: list[PlacedElementSpec] = Field(default_factory=list)
+    elements: list[PlacedElementSpec] = Field(
+        default_factory=list,
+        max_length=MAX_LAYOUT_ELEMENTS,
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -275,9 +304,13 @@ class LayoutSpec(BaseModel):
         if not isinstance(data, dict):
             return data
 
+        raw_keys = data.get("keys") or []
+        raw_elements = data.get("elements") or []
+        _validate_raw_layout_size(raw_keys, raw_elements)
+
         unit_pitch_mm = float(data.get("unit_pitch_mm", UNIT_PITCH_MM) or UNIT_PITCH_MM)
-        keys = [_raw_item_dict(item) for item in (data.get("keys") or [])]
-        elements = [_raw_item_dict(item) for item in (data.get("elements") or [])]
+        keys = [_raw_item_dict(item) for item in raw_keys]
+        elements = [_raw_item_dict(item) for item in raw_elements]
 
         if keys and not elements:
             elements = [_key_to_element_dict(item, unit_pitch_mm) for item in keys]
@@ -331,6 +364,10 @@ class LayoutSpec(BaseModel):
                 for element in self.elements
                 if element.element_type in {ElementType.KEY_SWITCH, ElementType.BUTTON}
             ]
+        if len(self.keys) > MAX_LAYOUT_KEYS:
+            raise ValueError(f"layout keys cannot exceed {MAX_LAYOUT_KEYS} items")
+        if len(self.elements) > MAX_LAYOUT_ELEMENTS:
+            raise ValueError(f"layout elements cannot exceed {MAX_LAYOUT_ELEMENTS} items")
         return self
 
     def editable_elements(self) -> list[PlacedElementSpec]:

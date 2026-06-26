@@ -3,11 +3,15 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from server.models.project import (
     KeyboardProject,
     ProductDomain,
     KeySpec,
     LayoutSpec,
+    MAX_LAYOUT_ELEMENTS,
+    MAX_LAYOUT_KEYS,
     ProjectStatus,
     StabilizerType,
     SwitchFamily,
@@ -100,6 +104,34 @@ def test_layout_compatibility_excludes_pads_from_legacy_keys():
     )
     assert len(layout.elements) == 1
     assert layout.keys == []
+
+
+def test_layout_rejects_oversized_key_payloads():
+    oversized_keys = [
+        {"id": f"k{i}", "x_u": float(i), "y_u": 0.0}
+        for i in range(MAX_LAYOUT_KEYS + 1)
+    ]
+
+    with pytest.raises(ValueError, match="layout keys cannot exceed"):
+        LayoutSpec(keys=oversized_keys)
+
+
+def test_layout_rejects_oversized_element_payloads_before_view_sync():
+    oversized_elements = [
+        {
+            "id": f"pad_{i}",
+            "element_type": "pad",
+            "label": str(i),
+            "x_mm": float(i),
+            "y_mm": 0.0,
+            "w_mm": 24.0,
+            "h_mm": 24.0,
+        }
+        for i in range(MAX_LAYOUT_ELEMENTS + 1)
+    ]
+
+    with pytest.raises(ValueError, match="layout elements cannot exceed"):
+        LayoutSpec(elements=oversized_elements)
 
 
 def test_template_key_counts_match():
