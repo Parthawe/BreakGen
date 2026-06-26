@@ -6,8 +6,9 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
 
 from server.api import auth, export, geometry, launch, pcb, platform, projects, records, switches, templates
 from server.config import SERVER_DIR, settings
@@ -42,6 +43,43 @@ app.add_middleware(
     allow_headers=["Content-Type", "Authorization"],
 )
 
+
+def _is_local_origin(origin: str) -> bool:
+    return origin.startswith(("http://localhost", "https://localhost", "http://127.0.0.1", "https://127.0.0.1"))
+
+
+def _websocket_origin(origin: str) -> str | None:
+    if origin.startswith("https://"):
+        return f"wss://{origin.removeprefix('https://')}"
+    if origin.startswith("http://"):
+        return f"ws://{origin.removeprefix('http://')}"
+    return None
+
+
+def content_security_policy() -> str:
+    """Return a deployment-aware CSP for API-served responses."""
+    connect_sources = ["'self'"]
+    for origin in settings.cors_origin_list:
+        if settings.debug or not _is_local_origin(origin):
+            connect_sources.append(origin)
+            websocket = _websocket_origin(origin)
+            if websocket and settings.debug:
+                connect_sources.append(websocket)
+    if settings.debug:
+        connect_sources.extend(["http://localhost:5173", "ws://localhost:5173"])
+
+    deduped_connect_sources = list(dict.fromkeys(connect_sources))
+    return (
+        "default-src 'self'; "
+        "base-uri 'self'; "
+        "frame-ancestors 'none'; "
+        "img-src 'self' data: https:; "
+        "style-src 'self' 'unsafe-inline'; "
+        "script-src 'self'; "
+        f"connect-src {' '.join(deduped_connect_sources)}"
+    )
+
+
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
     response = await call_next(request)
@@ -52,15 +90,7 @@ async def security_headers(request: Request, call_next):
     if request.url.path not in {"/docs", "/redoc", "/openapi.json"}:
         response.headers.setdefault(
             "Content-Security-Policy",
-            (
-                "default-src 'self'; "
-                "base-uri 'self'; "
-                "frame-ancestors 'none'; "
-                "img-src 'self' data: https:; "
-                "style-src 'self' 'unsafe-inline'; "
-                "script-src 'self'; "
-                "connect-src 'self' http://localhost:5173 ws://localhost:5173"
-            ),
+            content_security_policy(),
         )
     return response
 
@@ -85,9 +115,39 @@ except ImportError as e:
     logger.warning(f"AI generation routes disabled: {e}")
 
 
+async def _check_database() -> None:
+    async with engine.connect() as conn:
+        await conn.execute(text("SELECT 1"))
+
+
+async def _dependency_health_payload() -> tuple[int, dict]:
+    checks: dict[str, str] = {}
+    status_code = 200
+    try:
+        await _check_database()
+        checks["database"] = "ok"
+    except Exception:
+        logger.exception("Database health check failed")
+        checks["database"] = "unavailable"
+        status_code = 503
+
+    return status_code, {
+        "status": "ok" if status_code == 200 else "unhealthy",
+        "version": "0.1.0",
+        "checks": checks,
+    }
+
+
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "version": "0.1.0"}
+    status_code, payload = await _dependency_health_payload()
+    return JSONResponse(status_code=status_code, content=payload)
+
+
+@app.get("/api/readiness")
+async def readiness():
+    status_code, payload = await _dependency_health_payload()
+    return JSONResponse(status_code=status_code, content=payload)
 
 
 # Serve built frontend in production (client/dist)

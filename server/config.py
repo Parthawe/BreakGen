@@ -43,6 +43,11 @@ class Settings(BaseSettings):
     apple_oauth_private_key: str = ""
     launch_lead_rate_limit_per_minute: int = 12
     launch_lead_note_max_length: int = 1000
+    auth_rate_limit_per_minute: int = 20
+    generation_rate_limit_per_minute: int = 8
+    compile_rate_limit_per_minute: int = 12
+    validation_rate_limit_per_minute: int = 20
+    export_rate_limit_per_minute: int = 6
     free_generation_jobs_per_project: int = 20
     free_export_bundles_per_project: int = 10
 
@@ -109,6 +114,16 @@ class Settings(BaseSettings):
             raise ValueError("BREAKGEN_LAUNCH_LEAD_RATE_LIMIT_PER_MINUTE must be at least 1")
         if self.launch_lead_note_max_length < 1:
             raise ValueError("BREAKGEN_LAUNCH_LEAD_NOTE_MAX_LENGTH must be at least 1")
+        if self.auth_rate_limit_per_minute < 1:
+            raise ValueError("BREAKGEN_AUTH_RATE_LIMIT_PER_MINUTE must be at least 1")
+        if self.generation_rate_limit_per_minute < 1:
+            raise ValueError("BREAKGEN_GENERATION_RATE_LIMIT_PER_MINUTE must be at least 1")
+        if self.compile_rate_limit_per_minute < 1:
+            raise ValueError("BREAKGEN_COMPILE_RATE_LIMIT_PER_MINUTE must be at least 1")
+        if self.validation_rate_limit_per_minute < 1:
+            raise ValueError("BREAKGEN_VALIDATION_RATE_LIMIT_PER_MINUTE must be at least 1")
+        if self.export_rate_limit_per_minute < 1:
+            raise ValueError("BREAKGEN_EXPORT_RATE_LIMIT_PER_MINUTE must be at least 1")
         if self.free_generation_jobs_per_project < 1:
             raise ValueError("BREAKGEN_FREE_GENERATION_JOBS_PER_PROJECT must be at least 1")
         if self.free_export_bundles_per_project < 1:

@@ -16,6 +16,7 @@ from server.db.models import Base
 from server.main import app
 from server.api.auth import MAX_BCRYPT_PASSWORD_BYTES, settings as auth_settings
 from server.models.project import MAX_LAYOUT_ELEMENTS
+from server.services.rate_limit import reset_rate_limits
 
 
 @pytest.fixture
@@ -441,5 +442,116 @@ async def test_auth_rejects_oversized_bcrypt_password_inputs(tmp_path: Path, mon
             )
             assert login.status_code == 401
     finally:
+        app.dependency_overrides.pop(get_db, None)
+        await engine.dispose()
+
+
+@pytest.mark.anyio
+async def test_login_attempts_are_rate_limited(tmp_path: Path, monkeypatch):
+    reset_rate_limits()
+    engine, session_factory = await _make_session(tmp_path)
+    monkeypatch.setattr("server.api.auth.settings.public_signup_enabled", True)
+    monkeypatch.setattr("server.api.auth.settings.signup_invite_code", "")
+    monkeypatch.setattr("server.api.auth.settings.auth_rate_limit_per_minute", 2)
+
+    async def override_get_db():
+        async with session_factory() as session:
+            yield session
+
+    app.dependency_overrides[get_db] = override_get_db
+    transport = httpx.ASGITransport(app=app)
+
+    try:
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+            await _signup(client, "limited@example.com")
+            payload = {"email": "limited@example.com", "password": "wrong-password"}
+
+            first = await client.post("/api/auth/login", json=payload)
+            second = await client.post("/api/auth/login", json=payload)
+            third = await client.post("/api/auth/login", json=payload)
+
+            assert first.status_code == 401
+            assert second.status_code == 401
+            assert third.status_code == 429
+            assert third.headers["retry-after"]
+    finally:
+        reset_rate_limits()
+        app.dependency_overrides.pop(get_db, None)
+        await engine.dispose()
+
+
+@pytest.mark.anyio
+async def test_expensive_project_routes_are_rate_limited(tmp_path: Path, monkeypatch):
+    reset_rate_limits()
+    engine, session_factory = await _make_session(tmp_path)
+    artifacts_dir = tmp_path / "artifacts"
+    monkeypatch.setattr("server.services.artifact_registry.settings.artifacts_dir", str(artifacts_dir))
+    monkeypatch.setattr("server.export.bundler.settings.artifacts_dir", str(artifacts_dir))
+    monkeypatch.setattr("server.api.auth.settings.public_signup_enabled", True)
+    monkeypatch.setattr("server.api.auth.settings.signup_invite_code", "")
+    monkeypatch.setattr("server.api.generation.settings.generation_rate_limit_per_minute", 1)
+    monkeypatch.setattr("server.api.pcb.settings.compile_rate_limit_per_minute", 1)
+    monkeypatch.setattr("server.api.geometry.settings.compile_rate_limit_per_minute", 1)
+    monkeypatch.setattr("server.api.export.settings.export_rate_limit_per_minute", 1)
+    monkeypatch.setattr("server.api.export.settings.free_export_bundles_per_project", 10)
+
+    async def override_get_db():
+        async with session_factory() as session:
+            yield session
+
+    app.dependency_overrides[get_db] = override_get_db
+    transport = httpx.ASGITransport(app=app)
+
+    try:
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+            token = await _signup(client, "expensive@example.com")
+            created = await client.post(
+                "/api/projects/",
+                headers=_auth(token),
+                json={
+                    "name": "Expensive Route Limit",
+                    "template_id": "macropad_3x3",
+                    "product_family": "macropad",
+                },
+            )
+            assert created.status_code == 201
+            project_id = created.json()["project_id"]
+
+            first_compile = await client.post(
+                f"/api/projects/{project_id}/compile/pcb",
+                headers=_auth(token),
+            )
+            second_compile = await client.post(
+                f"/api/projects/{project_id}/compile/pcb",
+                headers=_auth(token),
+            )
+            assert first_compile.status_code == 200
+            assert second_compile.status_code == 429
+
+            first_generate = await client.post(
+                f"/api/projects/{project_id}/generate-keycaps",
+                headers=_auth(token),
+                json={"prompt": "machined aluminum", "variant_count": 1},
+            )
+            second_generate = await client.post(
+                f"/api/projects/{project_id}/generate-keycaps",
+                headers=_auth(token),
+                json={"prompt": "machined aluminum", "variant_count": 1},
+            )
+            assert first_generate.status_code == 200
+            assert second_generate.status_code == 429
+
+            first_export = await client.post(
+                f"/api/projects/{project_id}/export",
+                headers=_auth(token),
+            )
+            second_export = await client.post(
+                f"/api/projects/{project_id}/export",
+                headers=_auth(token),
+            )
+            assert first_export.status_code == 200
+            assert second_export.status_code == 429
+    finally:
+        reset_rate_limits()
         app.dependency_overrides.pop(get_db, None)
         await engine.dispose()

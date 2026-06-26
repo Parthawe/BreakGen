@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from server.config import settings
 from server.db.database import get_db
 from server.db.models import UserRow
+from server.services.rate_limit import enforce_rate_limit
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -142,6 +143,14 @@ def _planned_oauth_provider(
     )
 
 
+def _enforce_auth_rate_limit(request: Request, scope: str) -> None:
+    enforce_rate_limit(
+        request,
+        scope=f"auth:{scope}",
+        limit=settings.auth_rate_limit_per_minute,
+    )
+
+
 @router.get("/providers", response_model=AuthProvidersResponse)
 async def auth_providers():
     """Return the server-owned list of authentication methods for this deployment."""
@@ -193,8 +202,13 @@ async def auth_providers():
 
 
 @router.post("/signup", response_model=AuthResponse)
-async def signup(req: SignupRequest, db: AsyncSession = Depends(get_db)):
+async def signup(
+    req: SignupRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
     """Create a new account."""
+    _enforce_auth_rate_limit(request, "signup")
     if not settings.public_signup_enabled:
         raise HTTPException(status_code=403, detail="Signup is disabled")
 
@@ -238,8 +252,13 @@ async def signup(req: SignupRequest, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/login", response_model=AuthResponse)
-async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login(
+    req: LoginRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
     """Log in with email and password."""
+    _enforce_auth_rate_limit(request, "login")
     email = req.email.strip().lower()
     result = await db.execute(select(UserRow).where(UserRow.email == email))
     user = result.scalar_one_or_none()

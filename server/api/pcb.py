@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.api.auth import require_user, user_scope_id
+from server.config import settings
 from server.db.database import get_db
 from server.db.models import UserRow
 from server.eda.control_surface_electronics import (
@@ -27,8 +28,21 @@ from server.services.project_state import (
     invalidate_derived_state,
     load_project_state,
 )
+from server.services.rate_limit import enforce_rate_limit
 
 router = APIRouter(prefix="/api/projects", tags=["pcb"])
+
+
+async def enforce_compile_rate_limit(
+    request: Request,
+    user: UserRow = Depends(require_user),
+) -> None:
+    enforce_rate_limit(
+        request,
+        scope="project:compile",
+        limit=settings.compile_rate_limit_per_minute,
+        identity=f"user:{user.id}",
+    )
 
 
 @router.post("/{project_id}/compile/pcb")
@@ -36,6 +50,7 @@ async def compile_pcb(
     project_id: str,
     db: AsyncSession = Depends(get_db),
     user: UserRow = Depends(require_user),
+    _rate_limit: None = Depends(enforce_compile_rate_limit),
 ):
     return await compile_pcb_for_project(
         project_id,

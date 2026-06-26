@@ -7,7 +7,7 @@ from pathlib import Path
 import httpx
 import pytest
 
-from server.main import _resolve_frontend_file, app
+from server.main import _resolve_frontend_file, app, content_security_policy
 
 
 @pytest.fixture
@@ -38,3 +38,32 @@ async def test_security_headers_are_set_on_api_responses():
     assert response.headers["x-frame-options"] == "DENY"
     assert response.headers["referrer-policy"] == "no-referrer"
     assert "frame-ancestors 'none'" in response.headers["content-security-policy"]
+
+
+def test_production_csp_does_not_include_hardcoded_localhost(monkeypatch):
+    monkeypatch.setattr("server.main.settings.debug", False)
+    monkeypatch.setattr(
+        "server.main.settings.cors_origins",
+        "http://localhost:5173,https://breakgen.example",
+    )
+
+    csp = content_security_policy()
+
+    assert "https://breakgen.example" in csp
+    assert "http://localhost:5173" not in csp
+    assert "ws://localhost:5173" not in csp
+
+
+@pytest.mark.anyio
+async def test_health_reports_unhealthy_when_database_check_fails(monkeypatch):
+    async def fail_database_check() -> None:
+        raise RuntimeError("database unavailable")
+
+    monkeypatch.setattr("server.main._check_database", fail_database_check)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        response = await client.get("/api/health")
+
+    assert response.status_code == 503
+    assert response.json()["status"] == "unhealthy"
+    assert response.json()["checks"]["database"] == "unavailable"

@@ -4,13 +4,14 @@ from datetime import datetime, timezone
 import tempfile
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.api.auth import require_user, user_scope_id
+from server.config import settings
 from server.db.database import get_db
 from server.db.models import ProjectArtifactRow, ProjectRow, UserRow
 from server.geometry.plate_generator import (
@@ -32,6 +33,7 @@ from server.services.artifact_registry import (
     record_mechanical_shell_compile,
 )
 from server.services.project_state import persist_project_metadata
+from server.services.rate_limit import enforce_rate_limit
 
 router = APIRouter(prefix="/api/projects", tags=["geometry"])
 
@@ -82,6 +84,18 @@ MECHANICAL_ARTIFACT_KINDS = {
     "back-shell-reference.dxf": "mechanical_back_shell_dxf",
     "shell-spec.json": "mechanical_shell_spec",
 }
+
+
+async def enforce_compile_rate_limit(
+    request: Request,
+    user: UserRow = Depends(require_user),
+) -> None:
+    enforce_rate_limit(
+        request,
+        scope="project:compile",
+        limit=settings.compile_rate_limit_per_minute,
+        identity=f"user:{user.id}",
+    )
 
 
 def _panel_dxf_url(project_id: str) -> str:
@@ -431,6 +445,7 @@ async def compile_plate(
     config: PlateConfigRequest | None = None,
     db: AsyncSession = Depends(get_db),
     user: UserRow = Depends(require_user),
+    _rate_limit: None = Depends(enforce_compile_rate_limit),
 ):
     """Compile mechanical panel geometry from the project's layout."""
     row = await _load_project_row(project_id, db, user_scope_id(user))
@@ -452,6 +467,7 @@ async def compile_shell(
     config: ShellConfigRequest | None = None,
     db: AsyncSession = Depends(get_db),
     user: UserRow = Depends(require_user),
+    _rate_limit: None = Depends(enforce_compile_rate_limit),
 ):
     """Compile handheld shell metadata for planned portable proof families."""
     row = await _load_project_row(project_id, db, user_scope_id(user))
@@ -479,6 +495,7 @@ async def compile_mechanical(
     config: MechanicalCompileRequest | None = None,
     db: AsyncSession = Depends(get_db),
     user: UserRow = Depends(require_user),
+    _rate_limit: None = Depends(enforce_compile_rate_limit),
 ):
     return await compile_mechanical_for_project(
         project_id,

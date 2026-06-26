@@ -68,6 +68,19 @@ def test_usage_limits_must_be_positive():
         Settings(free_export_bundles_per_project=0)
 
 
+def test_route_rate_limits_must_be_positive():
+    with pytest.raises(ValidationError, match="BREAKGEN_AUTH_RATE_LIMIT"):
+        Settings(auth_rate_limit_per_minute=0)
+    with pytest.raises(ValidationError, match="BREAKGEN_GENERATION_RATE_LIMIT"):
+        Settings(generation_rate_limit_per_minute=0)
+    with pytest.raises(ValidationError, match="BREAKGEN_COMPILE_RATE_LIMIT"):
+        Settings(compile_rate_limit_per_minute=0)
+    with pytest.raises(ValidationError, match="BREAKGEN_VALIDATION_RATE_LIMIT"):
+        Settings(validation_rate_limit_per_minute=0)
+    with pytest.raises(ValidationError, match="BREAKGEN_EXPORT_RATE_LIMIT"):
+        Settings(export_rate_limit_per_minute=0)
+
+
 def test_google_oauth_settings_must_be_complete():
     with pytest.raises(ValidationError, match="GOOGLE_OAUTH"):
         Settings(google_oauth_client_id="google-client")

@@ -6,7 +6,7 @@ import hashlib
 import json
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,10 +27,35 @@ from server.services.project_state import (
     load_project_state,
     persist_project_metadata,
 )
+from server.services.rate_limit import enforce_rate_limit
 from server.services.usage_registry import record_usage_event, usage_total
 from server.validation.engine import validate_project
 
 router = APIRouter(prefix="/api/projects", tags=["export"])
+
+
+async def enforce_validation_rate_limit(
+    request: Request,
+    user: UserRow = Depends(require_user),
+) -> None:
+    enforce_rate_limit(
+        request,
+        scope="project:validate",
+        limit=settings.validation_rate_limit_per_minute,
+        identity=f"user:{user.id}",
+    )
+
+
+async def enforce_export_rate_limit(
+    request: Request,
+    user: UserRow = Depends(require_user),
+) -> None:
+    enforce_rate_limit(
+        request,
+        scope="project:export",
+        limit=settings.export_rate_limit_per_minute,
+        identity=f"user:{user.id}",
+    )
 
 
 def _export_readiness(report_status: CheckStatus) -> str:
@@ -81,6 +106,7 @@ async def run_validation(
     project_id: str,
     db: AsyncSession = Depends(get_db),
     user: UserRow = Depends(require_user),
+    _rate_limit: None = Depends(enforce_validation_rate_limit),
 ):
     """Run validation checks and persist the result on the project."""
     row, project = await load_project_state(
@@ -268,6 +294,7 @@ async def export_bundle(
     project_id: str,
     db: AsyncSession = Depends(get_db),
     user: UserRow = Depends(require_user),
+    _rate_limit: None = Depends(enforce_export_rate_limit),
 ):
     """Generate and download the export bundle as a ZIP."""
     return await export_project_bundle(

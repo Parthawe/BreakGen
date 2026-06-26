@@ -1,0 +1,61 @@
+"""Small request rate limiter for alpha-facing HTTP endpoints.
+
+This is an in-process guardrail for brute-force and expensive-route abuse.
+Production multi-worker deployments should replace or back this with Redis or
+another shared store so limits survive restarts and apply across workers.
+"""
+
+from __future__ import annotations
+
+from collections import defaultdict, deque
+from datetime import datetime, timedelta, timezone
+from typing import Deque
+
+from fastapi import HTTPException, Request
+
+
+_rate_events: dict[str, Deque[datetime]] = defaultdict(deque)
+
+
+def client_rate_key(request: Request) -> str:
+    """Return a stable-enough client key from proxy or socket metadata."""
+    forwarded_for = request.headers.get("x-forwarded-for", "")
+    if forwarded_for:
+        return forwarded_for.split(",", 1)[0].strip()
+    if request.client and request.client.host:
+        return request.client.host
+    return "unknown"
+
+
+def enforce_rate_limit(
+    request: Request,
+    *,
+    scope: str,
+    limit: int,
+    window_seconds: int = 60,
+    identity: str | None = None,
+) -> None:
+    """Raise 429 if a request scope exceeds its moving-window limit."""
+    now = datetime.now(timezone.utc)
+    window = timedelta(seconds=window_seconds)
+    key = f"{scope}:{identity or client_rate_key(request)}"
+    events = _rate_events[key]
+
+    window_start = now - window
+    while events and events[0] < window_start:
+        events.popleft()
+
+    if len(events) >= limit:
+        retry_after = max(1, int((events[0] + window - now).total_seconds())) if events else window_seconds
+        raise HTTPException(
+            status_code=429,
+            detail="Too many requests; try again later",
+            headers={"Retry-After": str(retry_after)},
+        )
+
+    events.append(now)
+
+
+def reset_rate_limits() -> None:
+    """Clear in-process counters for tests."""
+    _rate_events.clear()

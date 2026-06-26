@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -39,6 +39,7 @@ from server.services.project_state import (
     load_project_state,
     persist_project_metadata,
 )
+from server.services.rate_limit import enforce_rate_limit
 from server.services.usage_registry import record_usage_event, usage_total
 
 router = APIRouter(prefix="/api/projects", tags=["generation"])
@@ -76,6 +77,18 @@ _MANUAL_ASSET_STATES = {
     AcceptanceState.REJECTED,
     AcceptanceState.PRODUCTION_READY,
 }
+
+
+async def enforce_generation_submit_rate_limit(
+    request: Request,
+    user: UserRow = Depends(require_user),
+) -> None:
+    enforce_rate_limit(
+        request,
+        scope="generation:submit",
+        limit=settings.generation_rate_limit_per_minute,
+        identity=f"user:{user.id}",
+    )
 
 
 def _sync_asset_registry_metadata(project) -> None:
@@ -344,6 +357,7 @@ async def generate_keycaps(
     req: GenerateKeycapsRequest,
     db: AsyncSession = Depends(get_db),
     user: UserRow = Depends(require_user),
+    _rate_limit: None = Depends(enforce_generation_submit_rate_limit),
 ):
     """Submit a provider-backed keycap generation request."""
     return await _submit_keycap_generation_request(
@@ -360,6 +374,7 @@ async def create_generation_job(
     req: GenerationJobRequest,
     db: AsyncSession = Depends(get_db),
     user: UserRow = Depends(require_user),
+    _rate_limit: None = Depends(enforce_generation_submit_rate_limit),
 ):
     """Submit a provider-backed generation job through the platform contract."""
     if req.asset_type != "keycap":
