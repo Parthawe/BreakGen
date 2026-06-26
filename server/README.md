@@ -34,6 +34,20 @@ Or:
 make dev-server
 ```
 
+Local debug startup creates missing SQLite tables for convenience. Hosted
+production startup does not create or mutate schema automatically; run Alembic
+migrations before starting the API:
+
+```bash
+cd server
+BREAKGEN_DATABASE_URL="postgresql+asyncpg://user:password@host:5432/breakgen" \
+  uv run alembic -c ../alembic.ini upgrade head
+```
+
+Production must use `BREAKGEN_DEBUG=false`, a non-default JWT secret, and a
+non-SQLite async database URL. If the database is not at the Alembic head,
+startup fails before serving traffic.
+
 ## Seed a Reviewer Account
 
 Private alpha is invite-only for this milestone. Seed a local reviewer account with an explicit password:
@@ -154,7 +168,7 @@ they do not mutate canonical project state.
 | Variable | Default | Description |
 | --- | --- | --- |
 | `BREAKGEN_DEBUG` | `true` | Enable debug logging |
-| `BREAKGEN_DATABASE_URL` | local sqlite in `server/` | Database connection string |
+| `BREAKGEN_DATABASE_URL` | local sqlite in `server/` | Database connection string. Production must use `postgresql+asyncpg://...` and must be migrated with Alembic before startup. |
 | `BREAKGEN_ARTIFACTS_DIR` | `server/artifacts` | Durable artifact storage |
 | `BREAKGEN_ARTIFACT_STORAGE_BACKEND` | `local` | Artifact storage backend. Only `local` is active today; `r2` is planned but rejected until upload/download transport exists. |
 | `BREAKGEN_ARTIFACT_STORAGE_PUBLIC_BASE_URL` | empty | Optional public artifact URL base; leave empty for owner-scoped API downloads |
@@ -168,6 +182,11 @@ they do not mutate canonical project state.
 | `BREAKGEN_MIN_PASSWORD_LENGTH` | `8` | Minimum signup password length |
 | `BREAKGEN_PUBLIC_SIGNUP_ENABLED` | `false` | Signup switch; keep `false` for invite-only hosted alpha |
 | `BREAKGEN_SIGNUP_INVITE_CODE` | empty | Required when production signup remains enabled |
+| `BREAKGEN_AUTH_RATE_LIMIT_PER_MINUTE` | `20` | Per-client login/signup throttle for alpha abuse control |
+| `BREAKGEN_GENERATION_RATE_LIMIT_PER_MINUTE` | `8` | Per-user generation-submit throttle |
+| `BREAKGEN_COMPILE_RATE_LIMIT_PER_MINUTE` | `12` | Per-user compile throttle for PCB/mechanical routes |
+| `BREAKGEN_VALIDATION_RATE_LIMIT_PER_MINUTE` | `20` | Per-user validation throttle |
+| `BREAKGEN_EXPORT_RATE_LIMIT_PER_MINUTE` | `6` | Per-user export throttle |
 | `BREAKGEN_FREE_GENERATION_JOBS_PER_PROJECT` | `20` | Private-alpha generation job limit per project before operator intervention |
 | `BREAKGEN_FREE_EXPORT_BUNDLES_PER_PROJECT` | `10` | Private-alpha export bundle limit per project before operator intervention |
 | `BREAKGEN_GOOGLE_OAUTH_CLIENT_ID` | empty | Google OAuth client ID; exposed only as configured state until OAuth callbacks are implemented |

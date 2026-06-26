@@ -50,6 +50,24 @@ def test_production_rejects_sqlite_database_url():
             )
 
 
+def test_production_requires_async_postgres_driver():
+    with pytest.raises(ValidationError, match="postgresql\\+asyncpg"):
+        Settings(
+            debug=False,
+            jwt_secret="prod-secret",
+            cors_origins="https://breakgen.example",
+            database_url="postgresql://user:pass@db.example/breakgen",
+        )
+
+    settings = Settings(
+        debug=False,
+        jwt_secret="prod-secret",
+        cors_origins="https://breakgen.example",
+        database_url="postgresql+asyncpg://user:pass@db.example/breakgen",
+    )
+    assert settings.database_url.startswith("postgresql+asyncpg://")
+
+
 def test_r2_storage_backend_is_planned_not_active():
     with pytest.raises(ValidationError, match="planned but not active"):
         Settings(

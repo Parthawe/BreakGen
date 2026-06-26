@@ -13,6 +13,7 @@ from sqlalchemy import text
 from server.api import auth, export, geometry, launch, pcb, platform, projects, records, switches, templates
 from server.config import SERVER_DIR, settings
 from server.db.database import engine
+from server.db.migrations import assert_database_migrated
 from server.db.models import Base
 
 logger = logging.getLogger(__name__)
@@ -20,9 +21,12 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Create tables on startup
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    if settings.debug:
+        # Local dev/test convenience only. Production must run Alembic first.
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+    else:
+        await assert_database_migrated(engine)
     yield
 
 

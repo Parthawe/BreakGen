@@ -87,10 +87,15 @@ class Settings(BaseSettings):
             raise ValueError(
                 "BREAKGEN_CORS_ORIGINS cannot include * with credentials in production"
             )
-        database_scheme = self.database_url.strip().split(":", 1)[0].split("+", 1)[0].lower()
+        database_driver = self.database_url.strip().split(":", 1)[0].lower()
+        database_scheme = database_driver.split("+", 1)[0]
         if not self.debug and database_scheme == "sqlite":
             raise ValueError(
                 "BREAKGEN_DATABASE_URL must use a production database when BREAKGEN_DEBUG=false"
+            )
+        if not self.debug and database_scheme in {"postgres", "postgresql"} and database_driver != "postgresql+asyncpg":
+            raise ValueError(
+                "BREAKGEN_DATABASE_URL must use postgresql+asyncpg:// when BREAKGEN_DEBUG=false"
             )
         google_fields = [
             self.google_oauth_client_id,
