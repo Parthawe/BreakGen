@@ -15,17 +15,29 @@ from pathlib import Path
 
 from server.eda.control_surface_electronics import compile_control_surface_electronics
 from server.eda.matrix_compiler import MatrixAssignment
-from server.models.project import ElementType, KeyboardProject, ProductFamily
+from server.models.project import ControllerFamily, ElementType, KeyboardProject, ProductFamily
 
 
-# Default pin assignments for RP2040-based controllers
-# These match common Pro Micro RP2040 pinouts
-RP2040_ROW_PINS = ["GP0", "GP1", "GP2", "GP3", "GP4", "GP5", "GP6", "GP7"]
-RP2040_COL_PINS = [
-    "GP8", "GP9", "GP10", "GP11", "GP12", "GP13", "GP14", "GP15",
-    "GP16", "GP17", "GP18", "GP19", "GP20", "GP21", "GP22", "GP23",
-    "GP26", "GP27", "GP28", "GP29",
-]
+CONTROLLER_QMK_PROFILES = {
+    ControllerFamily.RP2040: {
+        "processor": "RP2040",
+        "bootloader": "rp2040",
+        "pins": [
+            "GP0", "GP1", "GP2", "GP3", "GP4", "GP5", "GP6", "GP7",
+            "GP8", "GP9", "GP10", "GP11", "GP12", "GP13", "GP14", "GP15",
+            "GP16", "GP17", "GP18", "GP19", "GP20", "GP21", "GP22", "GP23",
+            "GP26", "GP27",
+        ],
+    },
+    ControllerFamily.ATMEGA32U4: {
+        "processor": "atmega32u4",
+        "bootloader": "caterina",
+        "pins": [
+            "D1", "D0", "D4", "C6", "D7", "E6", "B4", "B5", "B6",
+            "F4", "F5", "F6", "F7", "B1", "B3", "B2", "B0", "D2",
+        ],
+    },
+}
 
 # Standard QWERTY keymap for common layout positions
 QWERTY_MAP: dict[str, str] = {
@@ -302,9 +314,16 @@ def generate_qmk_info(
     """
     keyboard_name = project.name.lower().replace(" ", "_").replace("-", "_")
 
-    # Pin assignments (limited by matrix size)
-    row_pins = RP2040_ROW_PINS[: matrix.matrix_rows]
-    col_pins = RP2040_COL_PINS[: matrix.matrix_cols]
+    profile = CONTROLLER_QMK_PROFILES[project.pcb.controller]
+    pins = profile["pins"]
+    pins_needed = matrix.matrix_rows + matrix.matrix_cols
+    if pins_needed > len(pins):
+        raise ValueError(
+            f"{project.pcb.controller.value} has {len(pins)} configured QMK GPIO pins, "
+            f"but this matrix needs {matrix.matrix_rows} row + {matrix.matrix_cols} column pins"
+        )
+    row_pins = pins[: matrix.matrix_rows]
+    col_pins = pins[matrix.matrix_rows:pins_needed]
     electronics = compile_control_surface_electronics(project)
 
     # Layout definition — key positions for QMK's layout macro
@@ -330,8 +349,8 @@ def generate_qmk_info(
             "pid": "0xBEEF",
             "device_version": "0.0.1",
         },
-        "processor": "RP2040",
-        "bootloader": "rp2040",
+        "processor": profile["processor"],
+        "bootloader": profile["bootloader"],
         "diode_direction": project.pcb.diode_direction.value,
         "matrix_pins": {
             "rows": row_pins,

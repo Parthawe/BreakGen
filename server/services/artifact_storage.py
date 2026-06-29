@@ -136,6 +136,32 @@ def read_artifact_bytes(path: str | Path) -> bytes:
             close()
 
 
+def iter_artifact_bytes(path: str | Path, *, chunk_size: int = 1024 * 1024):
+    """Yield artifact bytes without loading the whole object into memory."""
+    config = artifact_storage_config()
+    if config.backend == "local":
+        with open(path, "rb") as f:
+            for chunk in iter(lambda: f.read(chunk_size), b""):
+                yield chunk
+        return
+
+    if not config.r2_bucket:
+        raise FileNotFoundError("R2 artifact storage is missing a bucket")
+    response = _s3_client().get_object(
+        Bucket=config.r2_bucket,
+        Key=str(path).replace("\\", "/"),
+    )
+    body = response["Body"]
+    try:
+        for chunk in body.iter_chunks(chunk_size=chunk_size):
+            if chunk:
+                yield chunk
+    finally:
+        close = getattr(body, "close", None)
+        if close:
+            close()
+
+
 def delete_project_artifacts(
     project_id: str,
     *,

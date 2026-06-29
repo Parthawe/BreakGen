@@ -19,6 +19,7 @@ from server.services.rate_limit import enforce_rate_limit
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 MAX_BCRYPT_PASSWORD_BYTES = 72
+DUMMY_PASSWORD_HASH = "$2b$12$sZSd6uJ4I/r1sVsA1h13s..bsWlHoSueVXLeVrvx1TTKKArkK6Jv2"
 
 
 class SignupRequest(BaseModel):
@@ -265,9 +266,10 @@ async def login(
 
     password_bytes = req.password.encode("utf-8")
     password_valid = False
-    if user and len(password_bytes) <= MAX_BCRYPT_PASSWORD_BYTES:
+    if len(password_bytes) <= MAX_BCRYPT_PASSWORD_BYTES:
+        hash_to_check = user.password_hash if user else DUMMY_PASSWORD_HASH
         try:
-            password_valid = _bcrypt.checkpw(password_bytes, user.password_hash.encode())
+            password_valid = _bcrypt.checkpw(password_bytes, hash_to_check.encode())
         except ValueError:
             password_valid = False
 

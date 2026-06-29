@@ -21,6 +21,12 @@ def test_cors_origins_parse_comma_separated_values():
     ]
 
 
+def test_trusted_proxy_hosts_parse_comma_separated_values():
+    settings = Settings(trusted_proxy_hosts="127.0.0.1, 10.0.0.10")
+
+    assert settings.trusted_proxy_host_list == ["127.0.0.1", "10.0.0.10"]
+
+
 def test_production_rejects_wildcard_cors_with_credentials():
     with pytest.raises(ValidationError, match="cannot include"):
         Settings(

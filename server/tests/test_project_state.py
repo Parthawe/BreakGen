@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 from fastapi import HTTPException
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from server.db.models import Base, ProjectRevisionRow, ProjectRow
@@ -185,6 +186,40 @@ async def test_commit_project_mutation_rechecks_expected_revision_before_commit(
             ).scalar_one()
             assert row.name == "Fresh"
             assert row.revision == 2
+    finally:
+        await engine.dispose()
+
+
+@pytest.mark.anyio
+async def test_commit_project_mutation_maps_integrity_collision_to_conflict(
+    tmp_path: Path,
+    monkeypatch,
+):
+    engine, session_factory = await _make_session(tmp_path)
+    try:
+        async with session_factory() as db:
+            project = KeyboardProject(project_id="bg_test_integrity", name="Before")
+            await create_project_record(db, project, change_summary="Project created")
+
+            row, loaded = await load_project_state(db, project.project_id, expected_revision=1)
+            loaded.name = "After"
+
+            async def fail_commit():
+                raise IntegrityError("insert", {}, Exception("unique revision collision"))
+
+            monkeypatch.setattr(db, "commit", fail_commit)
+
+            with pytest.raises(HTTPException) as conflict_exc:
+                await commit_project_mutation(
+                    db,
+                    row,
+                    loaded,
+                    change_summary="Updated: name",
+                    expected_revision=1,
+                )
+
+            assert conflict_exc.value.status_code == 409
+            assert "Revision conflict" in conflict_exc.value.detail
     finally:
         await engine.dispose()
 

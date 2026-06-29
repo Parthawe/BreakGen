@@ -13,18 +13,25 @@ from typing import Deque
 
 from fastapi import HTTPException, Request
 
+from server.config import settings
+
 
 _rate_events: dict[str, Deque[datetime]] = defaultdict(deque)
 
 
+def _is_trusted_proxy(host: str | None) -> bool:
+    if not host:
+        return False
+    return host in set(settings.trusted_proxy_host_list)
+
+
 def client_rate_key(request: Request) -> str:
-    """Return a stable-enough client key from proxy or socket metadata."""
+    """Return a rate-limit identity without trusting spoofable proxy headers."""
+    socket_host = request.client.host if request.client and request.client.host else "unknown"
     forwarded_for = request.headers.get("x-forwarded-for", "")
-    if forwarded_for:
+    if forwarded_for and _is_trusted_proxy(socket_host):
         return forwarded_for.split(",", 1)[0].strip()
-    if request.client and request.client.host:
-        return request.client.host
-    return "unknown"
+    return socket_host
 
 
 def enforce_rate_limit(

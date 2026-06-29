@@ -4,13 +4,14 @@ import json
 from pathlib import Path
 
 from server.eda.control_surface_electronics import apply_project_matrix, compile_project_matrix
+from server.eda.matrix_compiler import MatrixAssignment
 from server.firmware.qmk_generator import (
     generate_control_map,
     generate_keymap,
     generate_qmk_info,
     generate_via_definition,
 )
-from server.models.project import KeyboardProject, LayoutSpec, ProductFamily
+from server.models.project import ControllerFamily, KeyboardProject, LayoutSpec, ProductFamily
 
 
 TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "templates"
@@ -49,6 +50,35 @@ def test_qmk_info_structure():
     assert len(info["matrix_pins"]["rows"]) == matrix.matrix_rows
     assert len(info["matrix_pins"]["cols"]) == matrix.matrix_cols
     assert "LAYOUT" in info["layouts"]
+
+
+def test_qmk_info_does_not_truncate_row_heavy_matrices():
+    project, _ = _project_from_template("macropad_3x3")
+    matrix = MatrixAssignment(
+        matrix_rows=9,
+        matrix_cols=2,
+        assignments={},
+        row_pins_needed=9,
+        col_pins_needed=2,
+    )
+
+    info = generate_qmk_info(project, matrix)
+
+    assert len(info["matrix_pins"]["rows"]) == 9
+    assert len(info["matrix_pins"]["cols"]) == 2
+    assert set(info["matrix_pins"]["rows"]).isdisjoint(info["matrix_pins"]["cols"])
+
+
+def test_qmk_info_uses_selected_controller_profile():
+    project, matrix = _project_from_template("macropad_3x3")
+    project.pcb.controller = ControllerFamily.ATMEGA32U4
+
+    info = generate_qmk_info(project, matrix)
+
+    assert info["processor"] == "atmega32u4"
+    assert info["bootloader"] == "caterina"
+    assert all(not pin.startswith("GP") for pin in info["matrix_pins"]["rows"])
+    assert all(not pin.startswith("GP") for pin in info["matrix_pins"]["cols"])
 
 
 def test_keymap_maps_all_keys():

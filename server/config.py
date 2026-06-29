@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     signup_invite_code: str = ""
     cors_origins: str = "http://localhost:5173"
     cors_allow_credentials: bool = True
+    trusted_proxy_hosts: str = ""
     google_oauth_client_id: str = ""
     google_oauth_client_secret: str = ""
     apple_oauth_client_id: str = ""
@@ -63,6 +64,15 @@ class Settings(BaseSettings):
             origin.strip()
             for origin in self.cors_origins.split(",")
             if origin.strip()
+        ]
+
+    @property
+    def trusted_proxy_host_list(self) -> list[str]:
+        """Return trusted proxy hosts allowed to supply X-Forwarded-For."""
+        return [
+            host.strip()
+            for host in self.trusted_proxy_hosts.split(",")
+            if host.strip()
         ]
 
     @model_validator(mode="after")

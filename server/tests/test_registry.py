@@ -26,6 +26,7 @@ from server.services.artifact_storage import (
     artifact_exists,
     artifact_storage_metadata,
     delete_project_artifacts,
+    iter_artifact_bytes,
     read_artifact_bytes,
     store_artifact_file,
 )
@@ -239,7 +240,7 @@ class _FakeS3Client:
     def get_object(self, *, Bucket: str, Key: str):
         if (Bucket, Key) not in self.objects:
             raise KeyError(Key)
-        return {"Body": io.BytesIO(self.objects[(Bucket, Key)])}
+        return {"Body": _FakeStreamingBody(self.objects[(Bucket, Key)])}
 
     def get_paginator(self, name: str):
         assert name == "list_objects_v2"
@@ -248,6 +249,15 @@ class _FakeS3Client:
     def delete_objects(self, *, Bucket: str, Delete: dict):
         for item in Delete["Objects"]:
             self.objects.pop((Bucket, item["Key"]), None)
+
+
+class _FakeStreamingBody(io.BytesIO):
+    def iter_chunks(self, chunk_size: int):
+        while True:
+            chunk = self.read(chunk_size)
+            if not chunk:
+                break
+            yield chunk
 
 
 def test_r2_storage_upload_read_metadata_and_delete(tmp_path: Path, monkeypatch):
@@ -270,6 +280,7 @@ def test_r2_storage_upload_read_metadata_and_delete(tmp_path: Path, monkeypatch)
     assert fake_client.content_types[("breakgen", stored.path)] == "application/zip"
     assert artifact_exists(stored.path)
     assert read_artifact_bytes(stored.path) == b"zip-bytes"
+    assert b"".join(iter_artifact_bytes(stored.path, chunk_size=3)) == b"zip-bytes"
     assert artifact_storage_metadata(stored.path) == {
         "storage_backend": "r2",
         "storage_location": "object_key",

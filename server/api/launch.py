@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from server.config import settings
 from server.db.database import get_db
 from server.db.models import LaunchLeadRow
+from server.services.rate_limit import client_rate_key
 
 router = APIRouter(prefix="/api/launch", tags=["launch"])
 
@@ -84,12 +85,7 @@ class LaunchLeadResponse(BaseModel):
 
 
 def _client_rate_key(request: Request) -> str:
-    forwarded_for = request.headers.get("x-forwarded-for", "")
-    if forwarded_for:
-        return forwarded_for.split(",", 1)[0].strip()
-    if request.client and request.client.host:
-        return request.client.host
-    return "unknown"
+    return client_rate_key(request)
 
 
 def _enforce_rate_limit(request: Request) -> None:

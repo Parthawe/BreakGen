@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 
 from fastapi import HTTPException
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.db.models import ProjectRevisionRow, ProjectRow
@@ -91,7 +92,14 @@ async def create_project_record(
         },
     )
 
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Project could not be created because a database constraint was violated",
+        ) from exc
     return project_dict
 
 
@@ -160,7 +168,14 @@ async def commit_project_mutation(
         )
     )
 
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Revision conflict: project was modified concurrently",
+        ) from exc
     return project_dict
 
 

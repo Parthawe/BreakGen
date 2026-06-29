@@ -7,7 +7,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,7 +16,12 @@ from server.db.database import get_db
 from server.db.models import UserRow
 from server.models.validation_schema import ValidationReport
 from server.services.artifact_registry import get_project_artifact, list_project_artifacts
-from server.services.artifact_storage import artifact_exists, artifact_storage_config, read_artifact_bytes
+from server.services.artifact_storage import (
+    artifact_exists,
+    artifact_storage_config,
+    iter_artifact_bytes,
+    read_artifact_bytes,
+)
 from server.services.job_registry import list_project_jobs
 from server.services.project_state import load_project_state
 from server.services.quality_gate import QualityGateInput, build_quality_gate_summary
@@ -174,8 +179,8 @@ async def download_project_artifact(
             filename=filename,
             headers=headers,
         )
-    return Response(
-        content=read_artifact_bytes(row.path),
+    return StreamingResponse(
+        iter_artifact_bytes(row.path),
         media_type=media_type,
         headers=headers,
     )

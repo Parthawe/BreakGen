@@ -466,9 +466,21 @@ async def test_login_attempts_are_rate_limited(tmp_path: Path, monkeypatch):
             await _signup(client, "limited@example.com")
             payload = {"email": "limited@example.com", "password": "wrong-password"}
 
-            first = await client.post("/api/auth/login", json=payload)
-            second = await client.post("/api/auth/login", json=payload)
-            third = await client.post("/api/auth/login", json=payload)
+            first = await client.post(
+                "/api/auth/login",
+                json=payload,
+                headers={"X-Forwarded-For": "203.0.113.10"},
+            )
+            second = await client.post(
+                "/api/auth/login",
+                json=payload,
+                headers={"X-Forwarded-For": "203.0.113.11"},
+            )
+            third = await client.post(
+                "/api/auth/login",
+                json=payload,
+                headers={"X-Forwarded-For": "203.0.113.12"},
+            )
 
             assert first.status_code == 401
             assert second.status_code == 401
