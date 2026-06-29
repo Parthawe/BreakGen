@@ -41,7 +41,9 @@ def client_rate_key(request: Request) -> str:
     if trusted_header:
         header_value = request.headers.get(trusted_header, "").strip()
         if header_value:
-            return header_value.split(",", 1)[0].strip()
+            platform_client = header_value.split(",", 1)[0].strip()
+            if platform_client:
+                return platform_client
 
     socket_host = request.client.host if request.client and request.client.host else "unknown"
     forwarded_for = request.headers.get("x-forwarded-for", "")

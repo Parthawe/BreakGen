@@ -55,11 +55,11 @@ fly secrets set BREAKGEN_MESHY_API_KEY="..."
 
 On Fly, the socket peer inside the container is always Fly's internal proxy, so
 without configuration every user would share one rate-limit bucket. Fly sets a
-non-spoofable `Fly-Client-IP` header (it strips any inbound copy), so the
-recommended setting is:
+non-spoofable `Fly-Client-IP` header (it strips any inbound copy), so
+`fly.toml` sets:
 
-```bash
-fly secrets set BREAKGEN_TRUSTED_CLIENT_IP_HEADER="Fly-Client-IP"
+```toml
+BREAKGEN_TRUSTED_CLIENT_IP_HEADER = "Fly-Client-IP"
 ```
 
 `client_rate_key` uses that header first when configured. Other platforms expose

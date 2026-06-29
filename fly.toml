@@ -9,6 +9,7 @@ primary_region = "sjc"
   BREAKGEN_ARTIFACT_STORAGE_BACKEND = "r2"
   BREAKGEN_CORS_ORIGINS = "https://breakgen-alpha.fly.dev"
   BREAKGEN_PUBLIC_SIGNUP_ENABLED = "false"
+  BREAKGEN_TRUSTED_CLIENT_IP_HEADER = "Fly-Client-IP"
   BREAKGEN_UVICORN_WORKERS = "1"
 
 [http_service]
