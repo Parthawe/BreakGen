@@ -33,6 +33,6 @@
     "react-router-dom": "^7.15.1",
     "tailwindcss": "^4.2.2",
     "three": "^0.183.2",
-    "zustand": "^5.0.12"
+    "zustand": "^5.0.14"
   }
 }
