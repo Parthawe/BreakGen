@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:5173"
     cors_allow_credentials: bool = True
     trusted_proxy_hosts: str = ""
+    # Platform client-IP header (e.g. "Fly-Client-IP", "CF-Connecting-IP") that the
+    # edge sets and strips from inbound requests, so it is not client-spoofable like
+    # X-Forwarded-For. Leave empty unless the host platform guarantees this header.
+    trusted_client_ip_header: str = ""
     google_oauth_client_id: str = ""
     google_oauth_client_secret: str = ""
     apple_oauth_client_id: str = ""
