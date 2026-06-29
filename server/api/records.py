@@ -7,7 +7,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,6 +16,7 @@ from server.db.database import get_db
 from server.db.models import UserRow
 from server.models.validation_schema import ValidationReport
 from server.services.artifact_registry import get_project_artifact, list_project_artifacts
+from server.services.artifact_storage import artifact_exists, artifact_storage_config, read_artifact_bytes
 from server.services.job_registry import list_project_jobs
 from server.services.project_state import load_project_state
 from server.services.quality_gate import QualityGateInput, build_quality_gate_summary
@@ -41,9 +42,8 @@ def _read_json_artifact(path: str | None) -> dict | None:
     if not path:
         return None
     try:
-        with open(path) as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return json.loads(read_artifact_bytes(path).decode("utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError, OSError, UnicodeDecodeError):
         return None
 
 
@@ -143,8 +143,7 @@ async def download_project_artifact(
     if row is None:
         raise HTTPException(status_code=404, detail="Artifact not found")
 
-    path = Path(row.path)
-    if not path.exists() or not path.is_file():
+    if not artifact_exists(row.path):
         raise HTTPException(status_code=404, detail="Artifact file not found")
 
     filename = _download_filename(row)
@@ -163,14 +162,22 @@ async def download_project_artifact(
         },
     )
     await db.commit()
-    return FileResponse(
-        path,
-        media_type=row.content_type or "application/octet-stream",
-        filename=filename,
-        headers={
-            "Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}",
-            "X-BreakGen-Artifact-Id": row.artifact_id,
-        },
+    headers = {
+        "Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}",
+        "X-BreakGen-Artifact-Id": row.artifact_id,
+    }
+    media_type = row.content_type or "application/octet-stream"
+    if artifact_storage_config().backend == "local":
+        return FileResponse(
+            Path(row.path),
+            media_type=media_type,
+            filename=filename,
+            headers=headers,
+        )
+    return Response(
+        content=read_artifact_bytes(row.path),
+        media_type=media_type,
+        headers=headers,
     )
 
 

@@ -202,7 +202,8 @@ async def test_platform_storage_exposes_safe_configuration():
     storage = await get_platform_storage()
 
     assert storage["backend"] == "local"
-    assert storage["available_backends"] == ["local"]
-    assert storage["planned_backends"] == ["r2"]
+    assert storage["available_backends"] == ["local", "r2"]
+    assert storage["planned_backends"] == []
+    assert storage["bucket"] is None
     assert storage["owner_scoped_downloads"] is True
     assert "notes" in storage

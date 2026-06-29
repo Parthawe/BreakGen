@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import io
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -21,7 +22,13 @@ from server.services.artifact_registry import (
     record_mechanical_shell_compile,
     record_validation_report,
 )
-from server.services.artifact_storage import artifact_storage_metadata
+from server.services.artifact_storage import (
+    artifact_exists,
+    artifact_storage_metadata,
+    delete_project_artifacts,
+    read_artifact_bytes,
+    store_artifact_file,
+)
 from server.services.job_registry import create_project_job, update_job_by_external_ref
 
 
@@ -140,6 +147,51 @@ async def test_record_export_bundle_registers_bundle(tmp_path: Path):
         await engine.dispose()
 
 
+@pytest.mark.anyio
+async def test_record_export_bundle_uploads_to_r2_and_records_object_key(tmp_path: Path, monkeypatch):
+    engine, session_factory = await _make_session(tmp_path)
+    bundle_path = tmp_path / "projects" / "p_export_r2" / "exports" / "bundle_test.zip"
+    bundle_path.parent.mkdir(parents=True)
+    with zipfile.ZipFile(bundle_path, "w") as zf:
+        zf.writestr("demo.txt", "hello")
+    fake_client = _FakeS3Client()
+    monkeypatch.setattr("server.services.artifact_storage.settings.artifacts_dir", str(tmp_path))
+    monkeypatch.setattr("server.services.artifact_storage.settings.artifact_storage_backend", "r2")
+    monkeypatch.setattr("server.services.artifact_storage.settings.r2_endpoint_url", "https://r2.example")
+    monkeypatch.setattr("server.services.artifact_storage.settings.r2_bucket", "breakgen")
+    monkeypatch.setattr("server.services.artifact_storage.settings.r2_access_key_id", "key")
+    monkeypatch.setattr("server.services.artifact_storage.settings.r2_secret_access_key", "secret")
+    monkeypatch.setattr("server.services.artifact_storage._s3_client", lambda: fake_client)
+
+    try:
+        async with session_factory() as db:
+            record_export_bundle(
+                db,
+                project_id="p_export_r2",
+                revision=4,
+                bundle_id="bundle_registry_r2",
+                zip_path=bundle_path,
+                validation_report_id="vr_registry",
+            )
+            await db.commit()
+
+            stored = (
+                await db.execute(
+                    select(ProjectArtifactRow).where(
+                        ProjectArtifactRow.artifact_id == "bundle_registry_r2"
+                    )
+                )
+            ).scalar_one()
+
+            assert stored.path == "projects/p_export_r2/exports/bundle_test.zip"
+            assert stored.details["storage_backend"] == "r2"
+            assert stored.details["storage_location"] == "object_key"
+            assert stored.details["bucket"] == "breakgen"
+            assert fake_client.objects[("breakgen", stored.path)].startswith(b"PK")
+    finally:
+        await engine.dispose()
+
+
 def test_artifact_storage_metadata_redacts_to_storage_key(tmp_path: Path, monkeypatch):
     artifact_path = tmp_path / "projects" / "p1" / "exports" / "bundle.zip"
     artifact_path.parent.mkdir(parents=True)
@@ -154,6 +206,80 @@ def test_artifact_storage_metadata_redacts_to_storage_key(tmp_path: Path, monkey
         "storage_location": "local_path",
         "storage_key": "projects/p1/exports/bundle.zip",
     }
+
+
+class _FakePaginator:
+    def __init__(self, fake_client):
+        self.fake_client = fake_client
+
+    def paginate(self, *, Bucket: str, Prefix: str):
+        keys = [
+            {"Key": key}
+            for (bucket, key) in self.fake_client.objects
+            if bucket == Bucket and key.startswith(Prefix)
+        ]
+        return [{"Contents": keys}]
+
+
+class _FakeS3Client:
+    def __init__(self):
+        self.objects: dict[tuple[str, str], bytes] = {}
+        self.content_types: dict[tuple[str, str], str] = {}
+
+    def upload_file(self, filename: str, bucket: str, key: str, ExtraArgs=None):
+        self.objects[(bucket, key)] = Path(filename).read_bytes()
+        if ExtraArgs and ExtraArgs.get("ContentType"):
+            self.content_types[(bucket, key)] = ExtraArgs["ContentType"]
+
+    def head_object(self, *, Bucket: str, Key: str):
+        if (Bucket, Key) not in self.objects:
+            raise KeyError(Key)
+        return {"ContentLength": len(self.objects[(Bucket, Key)])}
+
+    def get_object(self, *, Bucket: str, Key: str):
+        if (Bucket, Key) not in self.objects:
+            raise KeyError(Key)
+        return {"Body": io.BytesIO(self.objects[(Bucket, Key)])}
+
+    def get_paginator(self, name: str):
+        assert name == "list_objects_v2"
+        return _FakePaginator(self)
+
+    def delete_objects(self, *, Bucket: str, Delete: dict):
+        for item in Delete["Objects"]:
+            self.objects.pop((Bucket, item["Key"]), None)
+
+
+def test_r2_storage_upload_read_metadata_and_delete(tmp_path: Path, monkeypatch):
+    source = tmp_path / "projects" / "p_r2" / "exports" / "bundle.zip"
+    source.parent.mkdir(parents=True)
+    source.write_bytes(b"zip-bytes")
+    fake_client = _FakeS3Client()
+    monkeypatch.setattr("server.services.artifact_storage.settings.artifacts_dir", str(tmp_path))
+    monkeypatch.setattr("server.services.artifact_storage.settings.artifact_storage_backend", "r2")
+    monkeypatch.setattr("server.services.artifact_storage.settings.r2_endpoint_url", "https://r2.example")
+    monkeypatch.setattr("server.services.artifact_storage.settings.r2_bucket", "breakgen")
+    monkeypatch.setattr("server.services.artifact_storage.settings.r2_access_key_id", "key")
+    monkeypatch.setattr("server.services.artifact_storage.settings.r2_secret_access_key", "secret")
+    monkeypatch.setattr("server.services.artifact_storage._s3_client", lambda: fake_client)
+
+    stored = store_artifact_file(source, project_id="p_r2", content_type="application/zip")
+
+    assert stored.path == "projects/p_r2/exports/bundle.zip"
+    assert fake_client.objects[("breakgen", stored.path)] == b"zip-bytes"
+    assert fake_client.content_types[("breakgen", stored.path)] == "application/zip"
+    assert artifact_exists(stored.path)
+    assert read_artifact_bytes(stored.path) == b"zip-bytes"
+    assert artifact_storage_metadata(stored.path) == {
+        "storage_backend": "r2",
+        "storage_location": "object_key",
+        "storage_key": "projects/p_r2/exports/bundle.zip",
+        "bucket": "breakgen",
+    }
+
+    delete_project_artifacts("p_r2")
+
+    assert not artifact_exists(stored.path)
 
 
 @pytest.mark.anyio

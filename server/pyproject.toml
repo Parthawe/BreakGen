@@ -21,6 +21,7 @@ dependencies = [
     "passlib[bcrypt]>=1.7.4",
     "alembic>=1.18.5",
     "asyncpg>=0.31.0",
+    "boto3>=1.43.36",
 ]
 
 [project.optional-dependencies]

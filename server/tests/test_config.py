@@ -68,15 +68,23 @@ def test_production_requires_async_postgres_driver():
     assert settings.database_url.startswith("postgresql+asyncpg://")
 
 
-def test_r2_storage_backend_is_planned_not_active():
-    with pytest.raises(ValidationError, match="planned but not active"):
+def test_r2_storage_backend_requires_complete_transport_settings():
+    with pytest.raises(ValidationError, match="BREAKGEN_R2_ENDPOINT_URL"):
         Settings(
             artifact_storage_backend="r2",
             r2_endpoint_url="https://example.r2.cloudflarestorage.com",
             r2_bucket="breakgen",
             r2_access_key_id="key",
-            r2_secret_access_key="secret",
         )
+
+    settings = Settings(
+        artifact_storage_backend="r2",
+        r2_endpoint_url="https://example.r2.cloudflarestorage.com",
+        r2_bucket="breakgen",
+        r2_access_key_id="key",
+        r2_secret_access_key="secret",
+    )
+    assert settings.artifact_storage_backend == "r2"
 
 
 def test_usage_limits_must_be_positive():

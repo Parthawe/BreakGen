@@ -94,11 +94,11 @@ async def get_platform_storage():
     return {
         "backend": config.backend,
         "status": "active",
-        "available_backends": ["local"],
-        "planned_backends": ["r2"],
-        "local_root": config.local_root,
-        "bucket": None,
+        "available_backends": ["local", "r2"],
+        "planned_backends": [],
+        "local_root": config.local_root if config.backend == "local" else None,
+        "bucket": config.r2_bucket if config.backend == "r2" else None,
         "public_base_url_configured": bool(config.public_base_url),
         "owner_scoped_downloads": True,
-        "notes": "Local filesystem artifact storage is active for private alpha. R2 is planned but disabled until upload/download transport exists.",
+        "notes": "Artifacts are registered with owner-scoped downloads. Local storage writes filesystem paths; R2 writes S3-compatible object keys.",
     }

@@ -134,12 +134,19 @@ class Settings(BaseSettings):
         if self.free_export_bundles_per_project < 1:
             raise ValueError("BREAKGEN_FREE_EXPORT_BUNDLES_PER_PROJECT must be at least 1")
         storage_backend = self.artifact_storage_backend.strip().lower()
-        if storage_backend != "local":
-            if storage_backend == "r2":
+        if storage_backend not in {"local", "r2"}:
+            raise ValueError("BREAKGEN_ARTIFACT_STORAGE_BACKEND must be local or r2")
+        if storage_backend == "r2":
+            r2_fields = [
+                self.r2_endpoint_url,
+                self.r2_bucket,
+                self.r2_access_key_id,
+                self.r2_secret_access_key,
+            ]
+            if not all(field.strip() for field in r2_fields):
                 raise ValueError(
-                    "BREAKGEN_ARTIFACT_STORAGE_BACKEND=r2 is planned but not active until object upload/download transport is implemented"
+                    "BREAKGEN_R2_ENDPOINT_URL, BREAKGEN_R2_BUCKET, BREAKGEN_R2_ACCESS_KEY_ID, and BREAKGEN_R2_SECRET_ACCESS_KEY must be set when artifact storage backend is r2"
                 )
-            raise ValueError("BREAKGEN_ARTIFACT_STORAGE_BACKEND must be local")
         return self
 
 

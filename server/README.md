@@ -170,12 +170,12 @@ they do not mutate canonical project state.
 | `BREAKGEN_DEBUG` | `true` | Enable debug logging |
 | `BREAKGEN_DATABASE_URL` | local sqlite in `server/` | Database connection string. Production must use `postgresql+asyncpg://...` and must be migrated with Alembic before startup. |
 | `BREAKGEN_ARTIFACTS_DIR` | `server/artifacts` | Durable artifact storage |
-| `BREAKGEN_ARTIFACT_STORAGE_BACKEND` | `local` | Artifact storage backend. Only `local` is active today; `r2` is planned but rejected until upload/download transport exists. |
+| `BREAKGEN_ARTIFACT_STORAGE_BACKEND` | `local` | Artifact storage backend. Use `local` for development or `r2` for Cloudflare R2/S3-compatible object storage. |
 | `BREAKGEN_ARTIFACT_STORAGE_PUBLIC_BASE_URL` | empty | Optional public artifact URL base; leave empty for owner-scoped API downloads |
-| `BREAKGEN_R2_ENDPOINT_URL` | empty | Planned Cloudflare R2/S3-compatible endpoint URL; not used until the R2 adapter is implemented |
-| `BREAKGEN_R2_BUCKET` | empty | Planned R2 bucket name |
-| `BREAKGEN_R2_ACCESS_KEY_ID` | empty | Planned R2 access key from deployment secrets |
-| `BREAKGEN_R2_SECRET_ACCESS_KEY` | empty | Planned R2 secret key from deployment secrets |
+| `BREAKGEN_R2_ENDPOINT_URL` | empty | Cloudflare R2/S3-compatible endpoint URL. Required when `BREAKGEN_ARTIFACT_STORAGE_BACKEND=r2`. |
+| `BREAKGEN_R2_BUCKET` | empty | R2 bucket name. Required when `BREAKGEN_ARTIFACT_STORAGE_BACKEND=r2`. |
+| `BREAKGEN_R2_ACCESS_KEY_ID` | empty | R2 access key from deployment secrets. Required when `BREAKGEN_ARTIFACT_STORAGE_BACKEND=r2`. |
+| `BREAKGEN_R2_SECRET_ACCESS_KEY` | empty | R2 secret key from deployment secrets. Required when `BREAKGEN_ARTIFACT_STORAGE_BACKEND=r2`. |
 | `BREAKGEN_TEMPLATES_DIR` | `server/templates` | Template directory |
 | `BREAKGEN_JWT_SECRET` | development-only secret | JWT signing secret; required when `BREAKGEN_DEBUG=false` |
 | `BREAKGEN_JWT_EXPIRE_HOURS` | `72` | JWT lifetime in hours |

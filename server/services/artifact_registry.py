@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -15,7 +14,11 @@ from server.config import settings
 from server.db.models import ProjectArtifactRow
 from server.models.project import KeyboardProject
 from server.models.validation_schema import ValidationReport
-from server.services.artifact_storage import artifact_storage_metadata
+from server.services.artifact_storage import (
+    artifact_storage_metadata,
+    delete_project_artifacts,
+    store_artifact_file,
+)
 
 
 def project_artifact_dir(
@@ -38,11 +41,7 @@ def delete_project_artifact_tree(
     base_dir: str | Path | None = None,
 ) -> None:
     """Delete all artifact files owned by a project."""
-    root = Path(base_dir or settings.artifacts_dir).resolve()
-    target = (root / "projects" / project_id).resolve()
-    if root not in target.parents:
-        raise ValueError("Refusing to delete artifact path outside artifact root")
-    shutil.rmtree(target, ignore_errors=True)
+    delete_project_artifacts(project_id, base_dir=base_dir)
 
 
 def sha256_for_path(path: str | Path) -> str:
@@ -117,13 +116,14 @@ def register_artifact(
     created_at: datetime | None = None,
 ) -> ProjectArtifactRow:
     """Register a durable artifact row; commit is managed by the caller."""
-    artifact_details = {**(details or {}), **artifact_storage_metadata(path)}
+    stored = store_artifact_file(path, project_id=project_id, content_type=content_type)
+    artifact_details = {**(details or {}), **artifact_storage_metadata(stored.path)}
     row = ProjectArtifactRow(
         artifact_id=artifact_id,
         project_id=project_id,
         revision=revision,
         kind=kind,
-        path=str(path),
+        path=stored.path,
         sha256=sha256,
         content_type=content_type,
         details=artifact_details,
@@ -147,7 +147,8 @@ async def upsert_artifact(
     created_at: datetime | None = None,
 ) -> ProjectArtifactRow:
     """Create or replace a durable artifact row with a stable artifact id."""
-    artifact_details = {**(details or {}), **artifact_storage_metadata(path)}
+    stored = store_artifact_file(path, project_id=project_id, content_type=content_type)
+    artifact_details = {**(details or {}), **artifact_storage_metadata(stored.path)}
     result = await db.execute(
         select(ProjectArtifactRow).where(ProjectArtifactRow.artifact_id == artifact_id)
     )
@@ -158,7 +159,7 @@ async def upsert_artifact(
             project_id=project_id,
             revision=revision,
             kind=kind,
-            path=str(path),
+            path=stored.path,
             sha256=sha256,
             content_type=content_type,
             details=artifact_details,
@@ -170,7 +171,7 @@ async def upsert_artifact(
     row.project_id = project_id
     row.revision = revision
     row.kind = kind
-    row.path = str(path)
+    row.path = stored.path
     row.sha256 = sha256
     row.content_type = content_type
     row.details = artifact_details
@@ -193,6 +194,8 @@ def copy_project_artifact(
         parts.append(subdir)
     out_dir = project_artifact_dir(project_id, *parts, base_dir=base_dir)
     dest = out_dir / artifact_name
+    import shutil
+
     shutil.copy2(source_path, dest)
     return dest
 
