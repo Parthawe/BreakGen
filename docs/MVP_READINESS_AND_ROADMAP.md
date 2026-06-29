@@ -1,7 +1,7 @@
 # BreakGen MVP Readiness & Roadmap
 
 > Consolidated, ground-truth assessment of everything still pending for BreakGen to be a *good* MVP — backend, operations, security, and design/polish — plus a sequenced roadmap.
-> Assessment date: 2026-06-26. Verified against the code, not the docs. 170 server tests passing.
+> Assessment date: 2026-06-29. Verified against the code, not the docs. 191 server tests passing on the hosted-alpha prep branch.
 
 ## The one-sentence truth
 
@@ -29,16 +29,16 @@ A line-by-line read found several items that earlier audits (and an earlier draf
 
 These are verified by reading the code, not speculation. Severity in brackets.
 
-> **STATUS (commit `d6be82b`, 2026-06-29):** #1, #2, #3, #7 are **FIXED with tests** (trusted-proxy rate-limit gating; `IntegrityError`→409; streaming R2 downloads; dummy-hash login compare). The firmware "bugs" were fabricated and retracted. **Still open:** #4 (per-worker limiter → Redis, only matters past one instance), #5 (FK cascade), #6 (request-body-size cap), #8/#10 (stabilizer warn — trivial/debatable).
+> **STATUS (commit `2179c7c` + hosted-alpha prep branch, 2026-06-29):** #1, #2, #3, #5, #6, #7, and #8 are **FIXED with tests** (trusted-proxy rate-limit gating; `IntegrityError`→409; streaming R2 downloads; FK cascade migration; request body cap; dummy-hash login compare; stabilizer scope). The firmware "bugs" were fabricated and retracted. **Still open:** #4 (per-worker limiter → Redis, only matters past one instance).
 
 1. **[HIGH] Rate-limit bypass + memory-DoS via spoofable `X-Forwarded-For`.** `client_rate_key` takes the leftmost client-supplied XFF value (`services/rate_limit.py:20-27`). An attacker rotates the header per request to get a fresh bucket → auth brute-force protection is fully defeated. Same vector grows the in-process `_rate_events` dict without bound (keys are never evicted) → memory exhaustion. *Only safe if a trusted proxy overwrites XFF — there is no trusted-proxy config.* Fix: trust XFF only from a configured proxy hop (or use the rightmost trusted value) and cap/evict the key map.
 2. **[MED-HIGH] Optimistic-lock race surfaces as an unhandled 500.** `commit_project_mutation` does `db.refresh(row)` + revision compare with **no `with_for_update`** (`services/project_state.py:137-146`); two concurrent edits both pass, then collide on the `uq_project_revision` unique constraint, raising `IntegrityError` that **nothing catches** (zero `IntegrityError` handlers in the codebase) → HTTP 500 instead of a clean 409. The unique constraint prevents data corruption (the saving grace), but the intended optimistic-lock path is not actually atomic. Fix: `SELECT … FOR UPDATE` on load, or catch `IntegrityError` → 409.
 3. **[MED] R2 downloads buffer the whole artifact into memory.** `download_project_artifact` for non-local backends returns `Response(content=read_artifact_bytes(...))` (`api/records.py:177-181`), which does `body.read()` on the full object. A 64 MB mesh or large export ZIP is loaded entirely per request — no streaming, no presigned-URL redirect (despite docs promising "signed download URLs"). Fix: issue a presigned GET URL or stream.
 4. **[MED] In-process rate limiter is per-worker.** Acknowledged in its own docstring. Under multi-worker/multi-instance hosting the effective limit = limit × workers and resets on deploy. Needs Redis (or similar) before horizontal scaling.
-5. **[MED] No foreign keys / DB-level cascade.** `db/models.py` has zero `ForeignKey`; `user_id`/`project_id` are plain columns. Deletes cascade only in app code, and artifact-file deletion is separate from row deletion → a crash mid-delete orphans rows and/or files (TOCTOU). Fix: real FKs with `ondelete=CASCADE` + wrap delete in one transaction.
-6. **[LOW-MED] No request-body size cap; unbounded string/dict fields.** List counts are bounded, but there's no body-size middleware and fields like `PlacedElementSpec.metadata` (`dict[str, Any]`) and labels have no size limit, so a single huge JSON value is still buffered into memory. Fix: a body-size limit + bound free-form string/dict fields.
+5. **[MED] DB-level cascade.** **FIXED** on the hosted-alpha prep branch with SQLAlchemy `ForeignKey` declarations, Alembic migration `0002_add_foreign_keys`, SQLite FK enforcement, and cascade tests.
+6. **[LOW-MED] Request-body size cap.** **FIXED** on the hosted-alpha prep branch with `BREAKGEN_MAX_REQUEST_BODY_BYTES` and 413 middleware. Residual hardening later: add field-level size limits for the largest free-form dict/string fields.
 7. **[LOW] Login user-enumeration timing oracle.** When the email doesn't exist, bcrypt is skipped (`api/auth.py:266-275`), so a missing email responds measurably faster than a real one. Fix: always run a dummy bcrypt compare.
-8. **[LOW, debatable] Stabilizer check warns on wide non-key controls.** `validation/engine.py:307-309` iterates `project.layout.keys`, which is derived to include `BUTTON` elements (`models/project.py:362-365`); a wide (≥2u) footswitch/arcade button gets a "missing stabilizer" WARN. Arguably wrong for non-keyswitch controls, but `KeySpec` doesn't retain `element_type`, so it's a design nuance, not a clean fix. Low priority.
+8. **[LOW, debatable] Stabilizer check warns on wide non-key controls.** **FIXED** on the hosted-alpha prep branch by checking `KEY_SWITCH` elements when the generic layout view is available, with a wide-button regression test.
 
 > **RETRACTED — two false "bugs" from a subagent audit (do not act on these):** an earlier draft listed "[HIGH] firmware pin truncation" and "[MED] ATmega32u4 always emits RP2040." Both were **fabricated** — the subagent quoted constants (`RP2040_ROW_PINS`/`RP2040_COL_PINS`) that **do not exist** in `qmk_generator.py`. Verified against the venv: the real code uses `CONTROLLER_QMK_PROFILES` keyed by `project.pcb.controller` (RP2040→26 pins, ATmega32u4→`atmega32u4`/`caterina`/18 pins) and **raises `ValueError` if `rows+cols` exceed the pin budget** — no truncation, no hardcoded MCU. This is the second unreliable subagent audit in this repo; it is *why* the verify-before-acting rule exists.
 
@@ -51,7 +51,7 @@ These are verified by reading the code, not speculation. Severity in brackets.
 Severity: **P0** = blocks a real user using it at all · **P1** = needed for a trustworthy/operable alpha · **P2** = credibility & polish · **P3** = post-MVP depth.
 
 ### A. Hosting & infrastructure — *the unlock* (P0)
-1. **No hosted backend.** Docker is dev-only (`BREAKGEN_DEBUG=true`, SQLite, `--reload`, volume mounts). Only CI deploy is the client→GitHub Pages public demo. → Deploy the API (Fly/Render/Railway) and point the hosted client at it. **This is the single make-or-break gap.**
+1. **No provisioned hosted backend yet.** A production Docker path, migration entrypoint, Fly config, and hosted-alpha runbook now exist. Remaining work is provisioning Postgres/R2/Fly secrets and deploying. **This is the single make-or-break gap.**
 2. ~~Postgres + Alembic migrations~~ — **DONE** (Alembic + `assert_database_migrated`; SQLite rejected in prod). Remaining: a managed Postgres (Neon/Supabase) actually provisioned and the migration run wired into deploy.
 3. ~~R2 artifact transport~~ — **DONE** (boto3 transport). Remaining: fix the buffer-whole-file download (bug #3) and provision a real bucket.
 4. **Production secrets/config.** Real JWT secret, Meshy key, DB URL, explicit CORS origins. Guardrails exist; real values don't. *(operator task)*
@@ -64,7 +64,7 @@ Severity: **P0** = blocks a real user using it at all · **P1** = needed for a t
 
 ### C. Security & abuse hardening (P0/P1)
 9. ~~Rate limiting~~ — **DONE** (auth/generation/export/compile/geometry + quotas), **but has real bugs** — see Confirmed bugs #1 (XFF spoof bypass) and #4 (per-worker only). Those must be fixed before hosting.
-10. ~~Payload/size caps~~ — **DONE** for list counts. Residual: no request-body-size cap + unbounded string/dict fields (bug #6).
+10. ~~Payload/size caps~~ — **DONE** for list counts and request body bytes. Residual later: bound largest free-form string/dict fields.
 11. **CSP.** Only residual nit is `style-src 'unsafe-inline'` (low). The "`ws://localhost` in prod" claim was false (debug-gated).
 12. **Signup trust.** Anyone can sign up with anyone's email (no verification) — see D.
 
@@ -81,7 +81,7 @@ Severity: **P0** = blocks a real user using it at all · **P1** = needed for a t
 20. **Uptime/metrics monitoring.**
 
 ### F. Data integrity (P1)
-21. **DB-enforced cascades / FK constraints.** Deletes cascade *manually* in app code (`server/api/projects.py:302`); a mid-delete crash orphans rows. No `ondelete=CASCADE`.
+21. ~~DB-enforced cascades / FK constraints~~ — **DONE** on the hosted-alpha prep branch.
 22. **Artifact cleanup TOCTOU.** Crash after DB delete but before filesystem delete leaks artifact files.
 23. **Multi-step mutation atomicity.** Wrap revision+artifact+job writes in an explicit transaction (`async with session.begin()`).
 
@@ -93,7 +93,7 @@ Severity: **P0** = blocks a real user using it at all · **P1** = needed for a t
 27. **Inline form validation.** Auth and key-properties inputs lack field-level error messages / `aria-describedby`.
 28. **Accessibility.** Missing icon alt text/`<title>`, 3D canvas has no accessible name, errors not associated with inputs, possible contrast failures on tertiary text.
 29. **Micro-polish.** Inconsistent transitions/hover depth, varying icon sizes, some verbose/unclear copy.
-30. **Frontend tests — zero.** No vitest/testing-library/Playwright; no client typecheck/lint in CI.
+30. **Frontend tests — zero.** No vitest/testing-library/Playwright yet. CI now runs the frontend TypeScript/Vite build.
 31. **Component internals audit.** Confirm SwitchExplorer, PCBPanel, TemplateSelector, KeyProperties, MechanicalReviewPanel have no dead/TODO handlers.
 
 ### H. Public surface & growth (P2)
@@ -103,7 +103,7 @@ Severity: **P0** = blocks a real user using it at all · **P1** = needed for a t
 
 ### I. API & repo hygiene (P2)
 35. **API versioning.** Unversioned; add `/v1` before any external client depends on it.
-36. **Dependabot/Renovate.** Lockfiles exist; no automated security updates.
+36. ~~Dependabot/Renovate~~ — **DONE** with Dependabot for GitHub Actions, server Python dependencies, and client npm dependencies.
 37. **Repo state.** 3 audit docs are deleted-but-uncommitted; decide commit vs restore. Consider consolidating the ~16 planning docs.
 
 ### J. Product depth — post-MVP (P3)
@@ -123,11 +123,11 @@ Severity: **P0** = blocks a real user using it at all · **P1** = needed for a t
 - Resolve the uncommitted doc deletions; fold scattered plans into this file.
 
 ### Phase 1 — Real hosted alpha *(the make-or-break, ≈1–2 weeks now that infra primitives exist)*
-Provision managed Postgres + R2 bucket · deploy API + wire hosted client · production secrets/CORS · backups (PITR + bucket lifecycle) · **fix the rate-limiter XFF bypass (bug #1) and move to a shared store (bug #4) before opening to anyone** · fix R2 streaming download (bug #3) · catch `IntegrityError`→409 (bug #2).
-**Exit:** an invited user runs the full loop in a browser on hosted infra; brute-force protection actually holds; nightly backups verified.
+Provision managed Postgres + R2 bucket · deploy API/client as one service · production secrets/CORS · backups (PITR + bucket lifecycle) · keep one worker until rate limiting moves to Redis.
+**Exit:** an invited user runs the full loop in a browser on hosted infra; artifacts persist in R2; nightly backups verified.
 
 ### Phase 2 — Trust & operate *(≈2–3 weeks)*
-Worker boundary for generate/compile/export · Sentry + structured logs + request IDs · operator web dashboard · transactional email (invite/verify/reset/export-ready) · DB FK cascades + atomic multi-step writes.
+Worker boundary for future long-running KiCad/CadQuery/export work · Sentry + structured logs + request IDs · operator web dashboard · transactional email (invite/verify/reset/export-ready) · atomic multi-step artifact/job writes where needed.
 **Exit:** founder can see every signup/job/failure; long jobs don't time out; accounts are recoverable.
 
 ### Phase 3 — Credible UX & growth *(≈2 weeks)*
@@ -147,7 +147,7 @@ The codebase is healthier than the docs implied; the failure mode here is **drif
 - **Verify before trusting.** Every "done" is backed by a test or a code citation, never a subagent's summary. (This pass caught 6 false "missing" claims.)
 - **Docs ship with code.** When a feature lands, `README` + `docs/CURRENT_STATE.md` update in the *same* change. Consolidate the ~16 planning docs down to this file + `CURRENT_STATE` to stop the drift.
 - **Branch + PR, not main.** Move off direct-to-`main`. Each slice = a branch + a reviewable diff; I add the `Co-Authored-By` trailer.
-- **CI gate.** Today the only workflow is GitHub Pages deploy. Add a CI job running `pytest` + `client build`/typecheck on every push *before* hosting. (Add Dependabot while there.)
+- **CI gate.** **DONE** on the hosted-alpha prep branch: backend pytest plus frontend TypeScript/Vite build on push/PR, with Dependabot.
 - **Definition of done per slice:** code + test + docs updated + verified via `make demo-proof`, the test suite, and (post-hosting) a hosted smoke test.
 
 ### Division of labor
@@ -166,9 +166,9 @@ Pick one slice → I scope + implement on a branch → you review the diff → w
 ## Launch checklist (definition of done for "good MVP")
 - [ ] Invited user signs up + runs create→edit→compile→validate→export on hosted infra
 - [ ] Postgres + migrations + verified nightly backups
-- [ ] Artifacts in R2 with owner-scoped signed downloads
-- [ ] Generation/compile run as async jobs without timeouts
-- [ ] Rate limits + payload caps + CSP hardened; no committed secrets
+- [ ] Artifacts in R2 with owner-scoped streaming downloads
+- [ ] Long-running provider/CAD jobs have a worker path before they exceed hosted request limits
+- [ ] Rate limits + payload/body caps + CSP hardened; no committed secrets
 - [ ] Password reset + email verification working
 - [ ] Operator dashboard + Sentry + structured logs live
 - [ ] Loading states, toasts, mobile workspace, form validation shipped

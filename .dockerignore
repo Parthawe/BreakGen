@@ -1,0 +1,17 @@
+.git
+.github
+.pytest_cache
+.venv
+**/__pycache__
+**/*.pyc
+
+client/dist
+client/node_modules
+client/.vite
+
+server/.venv
+server/artifacts
+server/breakgen.db
+
+test-results
+*.log

@@ -152,7 +152,7 @@ BreakGen is not yet a general-purpose hardware factory.
 
 Current gaps that still need product work:
 
-- Hosted production deployment and migration discipline
+- Provisioned hosted production deployment
 - Async worker infrastructure for long-running generation and compile jobs
 - Deeper CAD and enclosure outputs beyond panel and shell proof artifacts
 - Fabrication partner presets and physical calibration data
@@ -164,6 +164,7 @@ Current gaps that still need product work:
 - [server/](server/): FastAPI backend, compilers, validation, artifacts, auth, and tests
 - [client/](client/): React workspace, public demo, authenticated alpha UI
 - [docs/PRIVATE_ALPHA_RUNBOOK.md](docs/PRIVATE_ALPHA_RUNBOOK.md): reviewer and operator runbook
+- [docs/HOSTED_ALPHA_DEPLOYMENT.md](docs/HOSTED_ALPHA_DEPLOYMENT.md): Fly/Postgres/R2 hosted-alpha deployment runbook
 - [docs/STARTUP_OPERATING_SYSTEM.md](docs/STARTUP_OPERATING_SYSTEM.md): YC/startup execution plan and company operating cadence
 - [docs/FINANCE_AND_OPS_MODEL.md](docs/FINANCE_AND_OPS_MODEL.md): finance, pricing, private-alpha ops, and cost discipline
 - [docs/TECHNOLOGY_AND_MONETIZATION_PLAN.md](docs/TECHNOLOGY_AND_MONETIZATION_PLAN.md): free-tier stack, paid plans, billing, CAD/EDA, storage, and fabrication integrations
