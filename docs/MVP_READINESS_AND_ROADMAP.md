@@ -1,7 +1,7 @@
 # BreakGen MVP Readiness & Roadmap
 
 > Consolidated, ground-truth assessment of everything still pending for BreakGen to be a *good* MVP — backend, operations, security, and design/polish — plus a sequenced roadmap.
-> Assessment date: 2026-06-29. Verified against the code, not the docs. 191 server tests passing on the hosted-alpha prep branch.
+> Assessment date: 2026-06-29. Verified against the code, not the docs. Hosted-alpha prep is merged to `main`; 197 server tests plus 5 frontend tests pass on the Phase 2 observability/test branch.
 
 ## The one-sentence truth
 
@@ -76,8 +76,8 @@ Severity: **P0** = blocks a real user using it at all · **P1** = needed for a t
 
 ### E. Operator & observability (P1)
 17. **Operator dashboard.** Only a CLI snapshot (`server/scripts/operator_snapshot.py`); no web view of leads/users/projects/jobs/failures/exports.
-18. **Structured logging + request IDs.** Currently a lone `logger.warning`; can't trace a user's flow.
-19. **Error tracking (Sentry).** Runtime exceptions are effectively invisible.
+18. ~~Structured logging + request IDs~~ — **DONE in code** on the Phase 2 observability branch: every HTTP response gets `X-Request-ID`, logs include request id/method/path/status/duration/client IP, and logs emit JSON lines.
+19. ~~Error tracking (Sentry)~~ — **DONE in code** on the Phase 2 observability branch: env-gated `sentry-sdk` integration with `BREAKGEN_SENTRY_DSN`. Remaining: provision the Sentry project and set the DSN in hosting secrets.
 20. **Uptime/metrics monitoring.**
 
 ### F. Data integrity (P1)
@@ -93,7 +93,7 @@ Severity: **P0** = blocks a real user using it at all · **P1** = needed for a t
 27. **Inline form validation.** Auth and key-properties inputs lack field-level error messages / `aria-describedby`.
 28. **Accessibility.** Missing icon alt text/`<title>`, 3D canvas has no accessible name, errors not associated with inputs, possible contrast failures on tertiary text.
 29. **Micro-polish.** Inconsistent transitions/hover depth, varying icon sizes, some verbose/unclear copy.
-30. **Frontend tests — zero.** No vitest/testing-library/Playwright yet. CI now runs the frontend TypeScript/Vite build.
+30. ~~Frontend tests — zero~~ — **DONE for unit/component test scaffolding** on the Phase 2 observability branch: Vitest + Testing Library + jsdom, initial API-helper and theme-switcher tests, and CI runs `pnpm test` before build. Remaining later: Playwright smoke tests for the core create→edit→export flow.
 31. **Component internals audit.** Confirm SwitchExplorer, PCBPanel, TemplateSelector, KeyProperties, MechanicalReviewPanel have no dead/TODO handlers.
 
 ### H. Public surface & growth (P2)
@@ -127,7 +127,7 @@ Provision managed Postgres + R2 bucket · deploy API/client as one service · pr
 **Exit:** an invited user runs the full loop in a browser on hosted infra; artifacts persist in R2; nightly backups verified.
 
 ### Phase 2 — Trust & operate *(≈2–3 weeks)*
-Worker boundary for future long-running KiCad/CadQuery/export work · Sentry + structured logs + request IDs · operator web dashboard · transactional email (invite/verify/reset/export-ready) · atomic multi-step artifact/job writes where needed.
+Worker boundary for future long-running KiCad/CadQuery/export work · Sentry + structured logs + request IDs (code complete; DSN required in deploy) · operator web dashboard · transactional email (invite/verify/reset/export-ready) · atomic multi-step artifact/job writes where needed.
 **Exit:** founder can see every signup/job/failure; long jobs don't time out; accounts are recoverable.
 
 ### Phase 3 — Credible UX & growth *(≈2 weeks)*
@@ -170,7 +170,7 @@ Pick one slice → I scope + implement on a branch → you review the diff → w
 - [ ] Long-running provider/CAD jobs have a worker path before they exceed hosted request limits
 - [ ] Rate limits + payload/body caps + CSP hardened; no committed secrets
 - [ ] Password reset + email verification working
-- [ ] Operator dashboard + Sentry + structured logs live
+- [ ] Operator dashboard live; Sentry DSN provisioned; request-correlated logs visible in hosting
 - [ ] Loading states, toasts, mobile workspace, form validation shipped
 - [ ] Privacy/terms/consent live; analytics gated
 - [ ] Every public claim matches what an exported bundle actually contains

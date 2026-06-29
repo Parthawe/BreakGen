@@ -48,7 +48,11 @@ fly secrets set \
 Optional:
 
 ```bash
-fly secrets set BREAKGEN_MESHY_API_KEY="..."
+fly secrets set \
+  BREAKGEN_MESHY_API_KEY="..." \
+  BREAKGEN_SENTRY_DSN="..." \
+  BREAKGEN_SENTRY_ENVIRONMENT="alpha" \
+  BREAKGEN_SENTRY_TRACES_SAMPLE_RATE="0.05"
 ```
 
 ### Client identity for rate limiting
