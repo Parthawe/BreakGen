@@ -184,6 +184,10 @@ they do not mutate canonical project state.
 | `BREAKGEN_SIGNUP_INVITE_CODE` | empty | Required when production signup remains enabled |
 | `BREAKGEN_TRUSTED_CLIENT_IP_HEADER` | empty | Platform-set client IP header to trust for rate-limit identity, for example `Fly-Client-IP`; set only when the platform strips inbound copies |
 | `BREAKGEN_TRUSTED_PROXY_HOSTS` | empty | Comma-separated proxy socket hosts whose `X-Forwarded-For` headers may be trusted for rate-limit identity |
+| `BREAKGEN_LOG_LEVEL` | `INFO` | JSON application log level |
+| `BREAKGEN_SENTRY_DSN` | empty | Optional Sentry DSN; when unset, error reporting is disabled |
+| `BREAKGEN_SENTRY_ENVIRONMENT` | `development` | Sentry environment name |
+| `BREAKGEN_SENTRY_TRACES_SAMPLE_RATE` | `0.0` | Sentry tracing sample rate between `0` and `1` |
 | `BREAKGEN_MAX_REQUEST_BODY_BYTES` | `2097152` | Maximum accepted HTTP request body size before returning `413` |
 | `BREAKGEN_AUTH_RATE_LIMIT_PER_MINUTE` | `20` | Per-client login/signup throttle for alpha abuse control |
 | `BREAKGEN_GENERATION_RATE_LIMIT_PER_MINUTE` | `8` | Per-user generation-submit throttle |

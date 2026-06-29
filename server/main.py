@@ -15,7 +15,12 @@ from server.config import SERVER_DIR, settings
 from server.db.database import engine
 from server.db.migrations import assert_database_migrated
 from server.db.models import Base
+from server.services.observability import (
+    configure_observability,
+    request_observability_middleware,
+)
 
+configure_observability()
 logger = logging.getLogger(__name__)
 
 
@@ -145,6 +150,11 @@ def content_security_policy() -> str:
         "script-src 'self'; "
         f"connect-src {' '.join(deduped_connect_sources)}"
     )
+
+
+@app.middleware("http")
+async def observability(request: Request, call_next):
+    return await request_observability_middleware(request, call_next)
 
 
 @app.middleware("http")

@@ -54,6 +54,10 @@ class Settings(BaseSettings):
     apple_oauth_private_key: str = ""
     launch_lead_rate_limit_per_minute: int = 12
     launch_lead_note_max_length: int = 1000
+    log_level: str = "INFO"
+    sentry_dsn: str = ""
+    sentry_environment: str = "development"
+    sentry_traces_sample_rate: float = 0.0
     max_request_body_bytes: int = 2 * 1024 * 1024
     auth_rate_limit_per_minute: int = 20
     generation_rate_limit_per_minute: int = 8
@@ -140,6 +144,8 @@ class Settings(BaseSettings):
             raise ValueError("BREAKGEN_LAUNCH_LEAD_RATE_LIMIT_PER_MINUTE must be at least 1")
         if self.launch_lead_note_max_length < 1:
             raise ValueError("BREAKGEN_LAUNCH_LEAD_NOTE_MAX_LENGTH must be at least 1")
+        if self.sentry_traces_sample_rate < 0 or self.sentry_traces_sample_rate > 1:
+            raise ValueError("BREAKGEN_SENTRY_TRACES_SAMPLE_RATE must be between 0 and 1")
         if self.max_request_body_bytes < 1:
             raise ValueError("BREAKGEN_MAX_REQUEST_BODY_BYTES must be at least 1")
         trusted_client_ip_header = self.trusted_client_ip_header.strip()
