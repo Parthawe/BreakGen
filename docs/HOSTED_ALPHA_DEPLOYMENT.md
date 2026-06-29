@@ -51,9 +51,22 @@ Optional:
 fly secrets set BREAKGEN_MESHY_API_KEY="..."
 ```
 
-Only set `BREAKGEN_TRUSTED_PROXY_HOSTS` after confirming the socket peer address
-used by the deployment proxy. If it is wrong, rate limiting can either collapse
-all users into one bucket or trust spoofed `X-Forwarded-For` values.
+### Client identity for rate limiting
+
+On Fly, the socket peer inside the container is always Fly's internal proxy, so
+without configuration every user would share one rate-limit bucket. Fly sets a
+non-spoofable `Fly-Client-IP` header (it strips any inbound copy), so
+`fly.toml` sets:
+
+```toml
+BREAKGEN_TRUSTED_CLIENT_IP_HEADER = "Fly-Client-IP"
+```
+
+`client_rate_key` uses that header first when configured. Other platforms expose
+an equivalent (Cloudflare `CF-Connecting-IP`, etc.). Only fall back to
+`BREAKGEN_TRUSTED_PROXY_HOSTS` (X-Forwarded-For from a known proxy address) if the
+platform has no guaranteed client-IP header — a wrong value there either collapses
+all users into one bucket or trusts spoofed `X-Forwarded-For`.
 
 ## Deploy
 

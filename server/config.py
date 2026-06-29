@@ -8,6 +8,12 @@ from pydantic_settings import BaseSettings
 # Anchor all relative paths to the server/ directory, not cwd
 SERVER_DIR = Path(__file__).resolve().parent
 DEV_JWT_SECRET = "breakgen-dev-secret-change-in-production"
+_HEADER_NAME_ALLOWED = set(
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    "abcdefghijklmnopqrstuvwxyz"
+    "0123456789"
+    "!#$%&'*+-.^_`|~"
+)
 
 
 class Settings(BaseSettings):
@@ -36,6 +42,10 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:5173"
     cors_allow_credentials: bool = True
     trusted_proxy_hosts: str = ""
+    # Platform client-IP header (e.g. "Fly-Client-IP", "CF-Connecting-IP") that the
+    # edge sets and strips from inbound requests, so it is not client-spoofable like
+    # X-Forwarded-For. Leave empty unless the host platform guarantees this header.
+    trusted_client_ip_header: str = ""
     google_oauth_client_id: str = ""
     google_oauth_client_secret: str = ""
     apple_oauth_client_id: str = ""
@@ -132,6 +142,13 @@ class Settings(BaseSettings):
             raise ValueError("BREAKGEN_LAUNCH_LEAD_NOTE_MAX_LENGTH must be at least 1")
         if self.max_request_body_bytes < 1:
             raise ValueError("BREAKGEN_MAX_REQUEST_BODY_BYTES must be at least 1")
+        trusted_client_ip_header = self.trusted_client_ip_header.strip()
+        if trusted_client_ip_header and (
+            len(trusted_client_ip_header) > 128
+            or any(char not in _HEADER_NAME_ALLOWED for char in trusted_client_ip_header)
+        ):
+            raise ValueError("BREAKGEN_TRUSTED_CLIENT_IP_HEADER must be a valid HTTP header name")
+        self.trusted_client_ip_header = trusted_client_ip_header
         if self.auth_rate_limit_per_minute < 1:
             raise ValueError("BREAKGEN_AUTH_RATE_LIMIT_PER_MINUTE must be at least 1")
         if self.generation_rate_limit_per_minute < 1:

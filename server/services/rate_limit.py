@@ -26,7 +26,25 @@ def _is_trusted_proxy(host: str | None) -> bool:
 
 
 def client_rate_key(request: Request) -> str:
-    """Return a rate-limit identity without trusting spoofable proxy headers."""
+    """Return a rate-limit identity without trusting spoofable proxy headers.
+
+    Resolution order:
+    1. A platform client-IP header (``trusted_client_ip_header``), if configured.
+       Hosts like Fly.io set ``Fly-Client-IP`` and strip any inbound copy, so it
+       is not client-spoofable. This is the correct source behind such a proxy,
+       where the socket peer is always the platform's internal proxy address.
+    2. The leftmost ``X-Forwarded-For`` value, but only when the socket peer is a
+       configured trusted proxy.
+    3. The raw socket peer (safe default; never trusts client-supplied headers).
+    """
+    trusted_header = settings.trusted_client_ip_header.strip()
+    if trusted_header:
+        header_value = request.headers.get(trusted_header, "").strip()
+        if header_value:
+            platform_client = header_value.split(",", 1)[0].strip()
+            if platform_client:
+                return platform_client
+
     socket_host = request.client.host if request.client and request.client.host else "unknown"
     forwarded_for = request.headers.get("x-forwarded-for", "")
     if forwarded_for and _is_trusted_proxy(socket_host):
