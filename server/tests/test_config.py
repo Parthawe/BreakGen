@@ -101,6 +101,8 @@ def test_usage_limits_must_be_positive():
 
 
 def test_route_rate_limits_must_be_positive():
+    with pytest.raises(ValidationError, match="BREAKGEN_MAX_REQUEST_BODY_BYTES"):
+        Settings(max_request_body_bytes=0)
     with pytest.raises(ValidationError, match="BREAKGEN_AUTH_RATE_LIMIT"):
         Settings(auth_rate_limit_per_minute=0)
     with pytest.raises(ValidationError, match="BREAKGEN_GENERATION_RATE_LIMIT"):

@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     apple_oauth_private_key: str = ""
     launch_lead_rate_limit_per_minute: int = 12
     launch_lead_note_max_length: int = 1000
+    max_request_body_bytes: int = 2 * 1024 * 1024
     auth_rate_limit_per_minute: int = 20
     generation_rate_limit_per_minute: int = 8
     compile_rate_limit_per_minute: int = 12
@@ -129,6 +130,8 @@ class Settings(BaseSettings):
             raise ValueError("BREAKGEN_LAUNCH_LEAD_RATE_LIMIT_PER_MINUTE must be at least 1")
         if self.launch_lead_note_max_length < 1:
             raise ValueError("BREAKGEN_LAUNCH_LEAD_NOTE_MAX_LENGTH must be at least 1")
+        if self.max_request_body_bytes < 1:
+            raise ValueError("BREAKGEN_MAX_REQUEST_BODY_BYTES must be at least 1")
         if self.auth_rate_limit_per_minute < 1:
             raise ValueError("BREAKGEN_AUTH_RATE_LIMIT_PER_MINUTE must be at least 1")
         if self.generation_rate_limit_per_minute < 1:

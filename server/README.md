@@ -183,6 +183,7 @@ they do not mutate canonical project state.
 | `BREAKGEN_PUBLIC_SIGNUP_ENABLED` | `false` | Signup switch; keep `false` for invite-only hosted alpha |
 | `BREAKGEN_SIGNUP_INVITE_CODE` | empty | Required when production signup remains enabled |
 | `BREAKGEN_TRUSTED_PROXY_HOSTS` | empty | Comma-separated proxy socket hosts whose `X-Forwarded-For` headers may be trusted for rate-limit identity |
+| `BREAKGEN_MAX_REQUEST_BODY_BYTES` | `2097152` | Maximum accepted HTTP request body size before returning `413` |
 | `BREAKGEN_AUTH_RATE_LIMIT_PER_MINUTE` | `20` | Per-client login/signup throttle for alpha abuse control |
 | `BREAKGEN_GENERATION_RATE_LIMIT_PER_MINUTE` | `8` | Per-user generation-submit throttle |
 | `BREAKGEN_COMPILE_RATE_LIMIT_PER_MINUTE` | `12` | Per-user compile throttle for PCB/mechanical routes |

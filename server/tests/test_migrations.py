@@ -43,4 +43,4 @@ async def test_database_revision_check_accepts_current_head(tmp_path: Path):
 
 def test_migration_files_are_present():
     assert migration_paths_exist()
-    assert migration_heads() == {"0001_initial_schema"}
+    assert migration_heads() == {"0002_add_foreign_keys"}

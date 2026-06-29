@@ -70,6 +70,7 @@ async def create_project_record(
         updated_at=project.updated_at,
     )
     db.add(row)
+    await db.flush()
     db.add(
         ProjectRevisionRow(
             project_id=project.project_id,
