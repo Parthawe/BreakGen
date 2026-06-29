@@ -27,6 +27,18 @@ def test_trusted_proxy_hosts_parse_comma_separated_values():
     assert settings.trusted_proxy_host_list == ["127.0.0.1", "10.0.0.10"]
 
 
+def test_trusted_client_ip_header_is_trimmed_and_validated():
+    settings = Settings(trusted_client_ip_header=" Fly-Client-IP ")
+
+    assert settings.trusted_client_ip_header == "Fly-Client-IP"
+
+    with pytest.raises(ValidationError, match="BREAKGEN_TRUSTED_CLIENT_IP_HEADER"):
+        Settings(trusted_client_ip_header="Fly-Client-IP: bad")
+
+    with pytest.raises(ValidationError, match="BREAKGEN_TRUSTED_CLIENT_IP_HEADER"):
+        Settings(trusted_client_ip_header="Fly-Client-IP\r\nX-Forwarded-For")
+
+
 def test_production_rejects_wildcard_cors_with_credentials():
     with pytest.raises(ValidationError, match="cannot include"):
         Settings(
@@ -101,6 +113,8 @@ def test_usage_limits_must_be_positive():
 
 
 def test_route_rate_limits_must_be_positive():
+    with pytest.raises(ValidationError, match="BREAKGEN_MAX_REQUEST_BODY_BYTES"):
+        Settings(max_request_body_bytes=0)
     with pytest.raises(ValidationError, match="BREAKGEN_AUTH_RATE_LIMIT"):
         Settings(auth_rate_limit_per_minute=0)
     with pytest.raises(ValidationError, match="BREAKGEN_GENERATION_RATE_LIMIT"):

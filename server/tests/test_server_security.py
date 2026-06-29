@@ -6,8 +6,14 @@ from pathlib import Path
 
 import httpx
 import pytest
+from fastapi import FastAPI, Request
 
-from server.main import _resolve_frontend_file, app, content_security_policy
+from server.main import (
+    RequestBodyLimitMiddleware,
+    _resolve_frontend_file,
+    app,
+    content_security_policy,
+)
 
 
 @pytest.fixture
@@ -38,6 +44,26 @@ async def test_security_headers_are_set_on_api_responses():
     assert response.headers["x-frame-options"] == "DENY"
     assert response.headers["referrer-policy"] == "no-referrer"
     assert "frame-ancestors 'none'" in response.headers["content-security-policy"]
+
+
+@pytest.mark.anyio
+async def test_request_body_limit_rejects_large_payloads():
+    limited_app = FastAPI()
+    limited_app.add_middleware(RequestBodyLimitMiddleware, max_body_bytes=16)
+
+    @limited_app.post("/echo")
+    async def echo(request: Request):
+        return {"size": len(await request.body())}
+
+    transport = httpx.ASGITransport(app=limited_app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        accepted = await client.post("/echo", content=b"small")
+        rejected = await client.post("/echo", content=b"x" * 17)
+
+    assert accepted.status_code == 200
+    assert accepted.json()["size"] == 5
+    assert rejected.status_code == 413
+    assert rejected.json()["detail"] == "Request body too large"
 
 
 def test_production_csp_does_not_include_hardcoded_localhost(monkeypatch):

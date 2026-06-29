@@ -74,6 +74,30 @@ def test_wide_key_with_stab_passes():
     assert stab_check.status == CheckStatus.PASS
 
 
+def test_wide_button_does_not_require_keyboard_stabilizer():
+    project = KeyboardProject(
+        project_id="test",
+        layout=LayoutSpec(
+            elements=[
+                PlacedElementSpec(
+                    id="wide_footswitch",
+                    element_type=ElementType.BUTTON,
+                    label="Foot",
+                    x_mm=0,
+                    y_mm=0,
+                    w_mm=50,
+                    h_mm=30,
+                )
+            ]
+        ),
+    )
+
+    report = validate_project(project)
+
+    stab_check = next(c for c in report.checks if c.id == "stabilizer_assignment")
+    assert stab_check.status == CheckStatus.PASS
+
+
 def test_overlapping_elements_fail():
     project = _project_with_keys([
         KeySpec(id="k1", x_u=0, y_u=0, w_u=1, h_u=1, label="A"),

@@ -19,6 +19,64 @@ from server.db.models import Base
 logger = logging.getLogger(__name__)
 
 
+class RequestBodyTooLarge(Exception):
+    pass
+
+
+class RequestBodyLimitMiddleware:
+    """Reject HTTP request bodies above the configured byte ceiling."""
+
+    def __init__(self, app, max_body_bytes: int):
+        self.app = app
+        self.max_body_bytes = max_body_bytes
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        headers = {key.lower(): value for key, value in scope.get("headers", [])}
+        content_length = headers.get(b"content-length")
+        if content_length is not None:
+            try:
+                if int(content_length.decode("ascii")) > self.max_body_bytes:
+                    await JSONResponse(
+                        status_code=413,
+                        content={"detail": "Request body too large"},
+                    )(scope, receive, send)
+                    return
+            except ValueError:
+                pass
+
+        received = 0
+        response_started = False
+
+        async def limited_receive():
+            nonlocal received
+            message = await receive()
+            if message["type"] == "http.request":
+                received += len(message.get("body", b""))
+                if received > self.max_body_bytes:
+                    raise RequestBodyTooLarge
+            return message
+
+        async def tracking_send(message):
+            nonlocal response_started
+            if message["type"] == "http.response.start":
+                response_started = True
+            await send(message)
+
+        try:
+            await self.app(scope, limited_receive, tracking_send)
+        except RequestBodyTooLarge:
+            if response_started:
+                raise
+            await JSONResponse(
+                status_code=413,
+                content={"detail": "Request body too large"},
+            )(scope, receive, send)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if settings.debug:
@@ -35,6 +93,11 @@ app = FastAPI(
     description="Creative and engineering platform for custom electronic products — API",
     version="0.1.0",
     lifespan=lifespan,
+)
+
+app.add_middleware(
+    RequestBodyLimitMiddleware,
+    max_body_bytes=settings.max_request_body_bytes,
 )
 
 # CORS origins are environment-backed so hosted API deployments only trust

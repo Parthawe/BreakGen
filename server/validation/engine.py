@@ -304,9 +304,20 @@ def _check_control_clearance(project: KeyboardProject) -> ValidationCheck:
 
 def _check_stabilizers(project: KeyboardProject) -> ValidationCheck:
     missing = []
-    for key in project.layout.keys:
-        if key.w_u >= 2.0 and key.stabilizer == "none":
-            missing.append(f"{key.id} ({key.w_u}u)")
+    if project.layout.elements:
+        key_like = [
+            element
+            for element in project.layout.elements
+            if element.element_type == ElementType.KEY_SWITCH
+        ]
+        for element in key_like:
+            width_u = element.w_mm / project.layout.unit_pitch_mm
+            if width_u >= 2.0 and element.stabilizer == "none":
+                missing.append(f"{element.id} ({width_u:g}u)")
+    else:
+        for key in project.layout.keys:
+            if key.w_u >= 2.0 and key.stabilizer == "none":
+                missing.append(f"{key.id} ({key.w_u}u)")
 
     if missing:
         return ValidationCheck(
