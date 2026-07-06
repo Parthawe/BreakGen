@@ -4,6 +4,7 @@ import { ThemeSwitcher } from "./components/ThemeSwitcher";
 import { api, isApiError } from "./lib/api";
 import { countLayoutElements } from "./lib/projectCompat";
 import { useAuthStore } from "./stores/authStore";
+import { useNotificationStore } from "./stores/notificationStore";
 import { useProjectStore } from "./stores/projectStore";
 import type {
   GenerationProviderManifest,
@@ -234,6 +235,7 @@ function App() {
   const logout = useAuthStore((state) => state.logout);
   const sessionState = useAuthStore((state) => state.sessionState);
   const handleUnauthorized = useAuthStore((state) => state.handleUnauthorized);
+  const notify = useNotificationStore((state) => state.notify);
   const navigate = useNavigate();
 
   const hasProject = !!project;
@@ -251,6 +253,25 @@ function App() {
   const activeStage = stages.find((stage) => stage.id === currentStageId) ?? stages[0];
   const activeStageIndex = Math.max(0, stages.findIndex((stage) => stage.id === activeStage?.id));
   const nextStage = stages[activeStageIndex + 1] ?? null;
+
+  const handleSave = useCallback(async () => {
+    const before = useProjectStore.getState().project;
+    await save();
+    const state = useProjectStore.getState();
+    if (state.error) {
+      notify({ tone: "error", title: "Save failed", message: state.error });
+      return;
+    }
+    if (state.revisionConflict) return;
+    if (before && state.project) {
+      notify({
+        tone: "success",
+        title: "Revision saved",
+        message: `${state.project.name} is now revision r${state.project.revision}.`,
+      });
+    }
+  }, [notify, save]);
+
   const refreshRecords = useCallback(async (targetProjectId?: string) => {
     const id = targetProjectId ?? project?.project_id;
     if (!id) {
@@ -573,7 +594,7 @@ function App() {
             )}
             {dirty && (
               <button
-                onClick={() => void save()}
+                onClick={() => void handleSave()}
                 disabled={loading}
                 className="surface-button-primary h-8 rounded-lg px-3 text-[12px] font-semibold transition-colors disabled:opacity-50"
               >

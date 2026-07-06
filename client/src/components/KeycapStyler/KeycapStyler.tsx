@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../../lib/api";
+import { ActionRunway } from "../ActionRunway";
 import type {
   AcceptanceState,
   GenerationProviderManifest,
   KeycapAsset,
 } from "../../types/project";
 import { useProjectStore } from "../../stores/projectStore";
+import { useNotificationStore } from "../../stores/notificationStore";
 
 interface Preset {
   id: string;
@@ -55,6 +57,7 @@ export function KeycapStyler({
   const [generating, setGenerating] = useState(false);
   const [assetActionById, setAssetActionById] = useState<Record<string, AssetAction | undefined>>({});
   const [message, setMessage] = useState<string | null>(null);
+  const notify = useNotificationStore((s) => s.notify);
 
   useEffect(() => {
     api.keycaps.presets().then(setPresets).catch(() => {});
@@ -119,10 +122,20 @@ export function KeycapStyler({
             ? `Submitted ${response.variant_count ?? 0} provider jobs. Review them from the workspace records while they complete.`
             : "Generated preview assets. Accept the ones that should enter the canonical project library.")
       );
+      notify({
+        tone: response.status === "generating" ? "info" : "success",
+        title: response.status === "generating" ? "Generation queued" : "Preview assets generated",
+        message:
+          response.status === "generating"
+            ? `${response.variant_count ?? 0} provider jobs are attached to this project.`
+            : "Review the candidate assets before applying them to the layout.",
+      });
       await useProjectStore.getState().loadProject(project.project_id);
       await onRecordsRefresh?.();
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : "Generation failed");
+      const detail = e instanceof Error ? e.message : "Generation failed";
+      setMessage(detail);
+      notify({ tone: "error", title: "Generation failed", message: detail });
     }
     setGenerating(false);
   };
@@ -137,7 +150,9 @@ export function KeycapStyler({
     try {
       await callback();
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : "Asset update failed");
+      const detail = e instanceof Error ? e.message : "Asset update failed";
+      setMessage(detail);
+      notify({ tone: "error", title: "Asset update failed", message: detail });
     } finally {
       setAssetActionById((current) => ({ ...current, [assetId]: undefined }));
     }
@@ -159,6 +174,11 @@ export function KeycapStyler({
       setMessage(
         `Asset ${response.asset_id} is now ${response.acceptance_state.replace(/_/g, " ")} at revision r${response.revision}.`,
       );
+      notify({
+        tone: acceptanceState === "rejected" ? "warning" : "success",
+        title: acceptanceState === "rejected" ? "Asset rejected" : "Asset accepted",
+        message: `Revision r${response.revision} now records this asset as ${response.acceptance_state.replace(/_/g, " ")}.`,
+      });
       await useProjectStore.getState().loadProject(project.project_id);
       await onRecordsRefresh?.();
     });
@@ -175,6 +195,11 @@ export function KeycapStyler({
       setMessage(
         `Applied ${response.asset_id} to ${response.applied_to} controls at revision r${response.revision}.`,
       );
+      notify({
+        tone: "success",
+        title: "Asset applied",
+        message: `${response.applied_to} controls updated at revision r${response.revision}.`,
+      });
       await useProjectStore.getState().loadProject(project.project_id);
       await onRecordsRefresh?.();
     });
@@ -371,6 +396,14 @@ export function KeycapStyler({
       >
         {generating ? "Generating..." : "Generate Preview Assets"}
       </button>
+
+      {generating && (
+        <ActionRunway
+          eyebrow="Appearance pipeline"
+          title="Generating preview assets"
+          detail="The project stays editable while candidate assets are created outside canonical state."
+        />
+      )}
 
       {message && (
         <div className="glass glass-soft mb-6 rounded-xl px-4 py-3 text-[12px] text-[var(--text-secondary)]">

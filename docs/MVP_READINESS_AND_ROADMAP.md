@@ -87,8 +87,8 @@ Severity: **P0** = blocks a real user using it at all · **P1** = needed for a t
 
 ### G. Design & polish — credibility (P2)
 *Foundation is good: real CSS-variable design system, light/dark/system theming, coherent nav/breadcrumbs, designed empty states, good error banner, real Three.js preview (not a placeholder cube), polished landing.* Gaps:
-24. **Loading states for async actions.** No spinners/progress on generate, compile, validate, export — only disabled buttons. App *feels frozen* during the most important moments.
-25. **Toast/notification system.** Only a single global error banner; no success/async toasts.
+24. ~~Loading states for async actions~~ — **DONE in code** on the premium action feedback branch: generate, electronics compile, mechanical compile, validation, and export now show inline action runways instead of only disabled buttons.
+25. ~~Toast/notification system~~ — **DONE in code** on the premium action feedback branch: global toast deck with success, info, warning, and error feedback is wired into save, generate, asset actions, compile, validation, export, downloads, and billing-interest capture.
 26. **Mobile workspace.** Landing/auth/project-list are responsive; the core editor + 3D preview are likely broken < 768px.
 27. **Inline form validation.** Auth and key-properties inputs lack field-level error messages / `aria-describedby`.
 28. **Accessibility.** Missing icon alt text/`<title>`, 3D canvas has no accessible name, errors not associated with inputs, possible contrast failures on tertiary text.
@@ -131,7 +131,7 @@ Worker boundary for future long-running KiCad/CadQuery/export work · Sentry + s
 **Exit:** founder can see every signup/job/failure; long jobs don't time out; accounts are recoverable.
 
 ### Phase 3 — Credible UX & growth *(≈2 weeks)*
-Loading states + toasts · mobile workspace · inline form validation · a11y pass · onboarding + sample project · SEO/OG/meta · legal pages + cookie consent · first client smoke tests.
+Loading states + toasts (code complete) · mobile workspace · inline form validation · a11y pass · onboarding + sample project · SEO/OG/meta · legal pages + cookie consent · first client smoke tests.
 **Exit:** the product feels finished and trustworthy to a first-time user; analytics is consent-gated.
 
 ### Phase 4 — Depth *(post-MVP, parallelizable)*
@@ -171,6 +171,6 @@ Pick one slice → I scope + implement on a branch → you review the diff → w
 - [ ] Rate limits + payload/body caps + CSP hardened; no committed secrets
 - [ ] Password reset + email verification working
 - [ ] Operator dashboard live; Sentry DSN provisioned; request-correlated logs visible in hosting
-- [ ] Loading states, toasts, mobile workspace, form validation shipped
+- [ ] Loading states and toasts shipped; mobile workspace and form validation still pending
 - [ ] Privacy/terms/consent live; analytics gated
 - [ ] Every public claim matches what an exported bundle actually contains
