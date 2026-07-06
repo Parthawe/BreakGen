@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
 import { useProjectStore } from "../../stores/projectStore";
+import { useNotificationStore } from "../../stores/notificationStore";
+import { ActionRunway } from "../ActionRunway";
 import type { MechanicalCompileResult, ProjectDocument } from "../../types/project";
 
 function humanize(value: string) {
@@ -81,6 +83,7 @@ export function MechanicalReviewPanel({
   const [result, setResult] = useState<MechanicalCompileResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
+  const notify = useNotificationStore((s) => s.notify);
 
   useEffect(() => {
     if (!project) {
@@ -132,9 +135,16 @@ export function MechanicalReviewPanel({
         await loadProject(project.project_id);
         await onRecordsRefresh?.();
         setResult(compiled);
+        notify({
+          tone: "success",
+          title: "Mechanical output compiled",
+          message: `${humanize(compiled.mechanical_kind)} artifacts recorded for revision r${compiled.revision}.`,
+        });
       } catch (e) {
       setResult(null);
-      setError(e instanceof Error ? e.message : "Mechanical compile failed");
+      const detail = e instanceof Error ? e.message : "Mechanical compile failed";
+      setError(detail);
+      notify({ tone: "error", title: "Mechanical compile failed", message: detail });
     } finally {
       setLoading(false);
     }
@@ -146,8 +156,11 @@ export function MechanicalReviewPanel({
     setError(null);
     try {
       await api.geometry.downloadMechanicalArtifactUrl(url, artifactName);
+      notify({ tone: "success", title: "Artifact download started", message: artifactName });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Artifact download failed");
+      const detail = e instanceof Error ? e.message : "Artifact download failed";
+      setError(detail);
+      notify({ tone: "error", title: "Artifact download failed", message: detail });
     } finally {
       setDownloadingKey(null);
     }
@@ -188,6 +201,14 @@ export function MechanicalReviewPanel({
         <div className="mb-4 px-4 py-3 rounded-xl bg-red-500/8 border border-red-500/15 text-[12px] text-red-400">
           {error}
         </div>
+      )}
+
+      {loading && (
+        <ActionRunway
+          eyebrow="Mechanical pipeline"
+          title="Compiling current revision outputs"
+          detail="Panel or shell artifacts are being generated from the saved project state."
+        />
       )}
 
       {!result && !loading && !error && (

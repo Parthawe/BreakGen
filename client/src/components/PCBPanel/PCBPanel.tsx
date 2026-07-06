@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
 import { useProjectStore } from "../../stores/projectStore";
+import { useNotificationStore } from "../../stores/notificationStore";
+import { ActionRunway } from "../ActionRunway";
 
 interface CompileResult {
   matrix_rows: number;
@@ -31,6 +33,7 @@ export function PCBPanel() {
   const [result, setResult] = useState<CompileResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [downloadingArtifact, setDownloadingArtifact] = useState<string | null>(null);
+  const notify = useNotificationStore((s) => s.notify);
   const persistedSummary = (project?.derived?.electronics as CompileResult | undefined) ?? null;
   const currentPersistedSummary =
     persistedSummary?.source_revision === project?.revision ? persistedSummary : null;
@@ -47,12 +50,22 @@ export function PCBPanel() {
 
   const handleCompile = async () => {
     if (!project) return;
-    setCompiling(true); setError(null);
+    setCompiling(true);
+    setError(null);
     try {
       const r = await api.pcb.compile(project.project_id);
       setResult(r);
+      notify({
+        tone: "success",
+        title: "Electronics compiled",
+        message: `${r.pins_needed}/${r.gpio_budget} GPIO used for revision r${r.source_revision ?? project.revision}.`,
+      });
       await useProjectStore.getState().loadProject(project.project_id);
-    } catch (e) { setError(e instanceof Error ? e.message : "Compilation failed"); }
+    } catch (e) {
+      const detail = e instanceof Error ? e.message : "Compilation failed";
+      setError(detail);
+      notify({ tone: "error", title: "Electronics compile failed", message: detail });
+    }
     setCompiling(false);
   };
 
@@ -62,8 +75,15 @@ export function PCBPanel() {
     setError(null);
     try {
       await api.geometry.downloadMechanicalArtifact(project.project_id, artifactName);
+      notify({
+        tone: "success",
+        title: "Artifact download started",
+        message: artifactName,
+      });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Artifact download failed");
+      const detail = e instanceof Error ? e.message : "Artifact download failed";
+      setError(detail);
+      notify({ tone: "error", title: "Artifact download failed", message: detail });
     } finally {
       setDownloadingArtifact(null);
     }
@@ -92,6 +112,14 @@ export function PCBPanel() {
         className="surface-button-primary mb-6 h-10 w-full rounded-xl text-[13px] font-semibold transition-all disabled:opacity-50">
         {compiling ? "Compiling..." : ready ? "Recompile Electronics" : "Compile Electronics"}
       </button>
+
+      {compiling && (
+        <ActionRunway
+          eyebrow="Electronics pipeline"
+          title="Compiling matrix, GPIO, and firmware metadata"
+          detail="Outputs will be tied to the current saved revision before they appear as ready."
+        />
+      )}
 
       {error && (
         <div className="mb-6 rounded-xl border border-red-500/15 bg-red-500/8 px-4 py-3 text-[13px] text-red-600 dark:text-red-400">{error}</div>

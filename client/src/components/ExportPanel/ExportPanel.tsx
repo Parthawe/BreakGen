@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../../lib/api";
 import { useProjectStore } from "../../stores/projectStore";
+import { useNotificationStore } from "../../stores/notificationStore";
+import { ActionRunway } from "../ActionRunway";
 import type { ExportPreview, ProjectRecords, ValidationReport } from "../../types/project";
 
 const STATUS_DOT: Record<string, string> = { pass: "#4ade80", warn: "#fbbf24", fail: "#f87171", skipped: "#52525b" };
@@ -61,6 +63,7 @@ export function ExportPanel({
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [billingIntentState, setBillingIntentState] = useState<"idle" | "saving" | "saved">("idle");
+  const notify = useNotificationStore((s) => s.notify);
   const latestValidationForRevision = useMemo(() => {
     if (!project || !records?.latest_validation_report) return null;
     return records.latest_validation_report.revision === project.revision
@@ -111,19 +114,32 @@ export function ExportPanel({
 
   const handleValidate = async () => {
     if (!project) return;
-    setValidating(true); setError(null); setExportMessage(null);
+    setValidating(true);
+    setError(null);
+    setExportMessage(null);
     try {
       const r = await api.validation.run(project.project_id);
       setValidation(r);
+      notify({
+        tone: r.status === "pass" ? "success" : r.status === "warn" ? "warning" : "error",
+        title: `Validation ${r.status}`,
+        message: `${r.checks.length} checks recorded for revision r${r.revision}.`,
+      });
       await loadProject(project.project_id);
       await onRecordsRefresh?.();
-    } catch (e) { setError(e instanceof Error ? e.message : "Validation failed"); }
+    } catch (e) {
+      const detail = e instanceof Error ? e.message : "Validation failed";
+      setError(detail);
+      notify({ tone: "error", title: "Validation failed", message: detail });
+    }
     setValidating(false);
   };
 
   const handleExport = async () => {
     if (!project) return;
-    setDownloading(true); setError(null); setExportMessage(null);
+    setDownloading(true);
+    setError(null);
+    setExportMessage(null);
     try {
       const res = await api.export.download(project.project_id);
       if (!res.ok) throw new Error(await res.text());
@@ -140,9 +156,18 @@ export function ExportPanel({
           ? `Bundle exported with ${validationStatus} validation status and review-ready evidence.`
           : `Bundle exported as a candidate with ${validationStatus} validation status. Resolve warnings before relying on it for prototype planning.`
       );
+      notify({
+        tone: readiness === "review_ready" ? "success" : "warning",
+        title: readiness === "review_ready" ? "Review bundle ready" : "Candidate bundle downloaded",
+        message: `${validationStatus} validation status, revision r${project.revision}.`,
+      });
       await loadProject(project.project_id);
       await onRecordsRefresh?.();
-    } catch (e) { setError(e instanceof Error ? e.message : "Export failed"); }
+    } catch (e) {
+      const detail = e instanceof Error ? e.message : "Export failed";
+      setError(detail);
+      notify({ tone: "error", title: "Export failed", message: detail });
+    }
     setDownloading(false);
   };
 
@@ -161,8 +186,18 @@ export function ExportPanel({
       });
       await onRecordsRefresh?.();
       setBillingIntentState("saved");
+      notify({
+        tone: "success",
+        title: "Pricing interest recorded",
+        message: "This helps prioritize usage limits and private project capacity.",
+      });
     } catch {
       setBillingIntentState("idle");
+      notify({
+        tone: "error",
+        title: "Could not record pricing interest",
+        message: "Try again after the backend connection is healthy.",
+      });
     }
   };
 
@@ -209,6 +244,14 @@ export function ExportPanel({
         className="surface-button mb-5 h-10 w-full rounded-xl text-[13px] font-semibold transition-all disabled:opacity-50">
         {validating ? "Validating..." : "Run Validation"}
       </button>
+
+      {validating && (
+        <ActionRunway
+          eyebrow="Quality gate"
+          title="Running revision checks"
+          detail="Spacing, controls, GPIO, labeling, assets, and export readiness are being evaluated."
+        />
+      )}
 
       {error && (
         <div className="glass-danger mb-5 rounded-xl px-4 py-3 text-[13px]">{error}</div>
@@ -265,6 +308,14 @@ export function ExportPanel({
           className="surface-button-primary h-11 w-full rounded-xl text-[14px] font-semibold transition-all disabled:opacity-40">
           {downloading ? "Packaging..." : exportLabel}
         </button>
+      )}
+
+      {showExport && downloading && (
+        <ActionRunway
+          eyebrow="Export pipeline"
+          title="Packaging review bundle"
+          detail="Manifest, checksums, validation report, build guide, firmware metadata, and mechanical outputs are being assembled."
+        />
       )}
 
       {showExport && (
