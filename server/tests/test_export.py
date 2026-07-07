@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from server.api.export import export_bundle
-from server.db.models import Base, ProjectArtifactRow, ProjectRow
+from server.db.models import Base, ProjectArtifactRow, ProjectRow, ProjectUsageEventRow
 from server.export.bundler import build_export_preview, create_export_bundle
 from server.models.project import KeyboardProject, LayoutSpec
 from server.models.validation_schema import CheckStatus
@@ -258,11 +258,22 @@ async def test_export_bundle_is_stable_for_same_project_revision(tmp_path: Path,
                     )
                 )
             ).scalars().all()
+            usage_events = (
+                await db.execute(
+                    select(ProjectUsageEventRow).where(
+                        ProjectUsageEventRow.project_id == project.project_id,
+                    )
+                )
+            ).scalars().all()
+            event_types = [event.event_type for event in usage_events]
 
             assert second.headers["X-Bundle-Id"] == first_bundle_id
             assert second_hash == first_hash
             assert first_path == second_path
             assert len(artifacts) == 1
             assert artifacts[0].artifact_id == first_bundle_id
+            assert event_types.count("export_bundle") == 2
+            assert event_types.count("export_created") == 1
+            assert event_types.count("first_validation_passed") == 1
     finally:
         await engine.dispose()

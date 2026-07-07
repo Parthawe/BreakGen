@@ -2,7 +2,7 @@
 
 > Snapshot of the actual product and architecture currently present in the repository.
 
-Date of assessment: May 6, 2026
+Date of assessment: July 6, 2026
 
 ## Product Boundary
 
@@ -24,13 +24,15 @@ Planned families and domains such as `handheld`, `ambient_device`, and `wearable
 The signed-in product already supports the main alpha path:
 
 1. Create a project from a family/template baseline
-2. Edit the layout through authoritative `layout.elements`
-3. Generate and review appearance assets
-4. Compile electronics metadata
-5. Compile mechanical outputs
-6. Run validation
-7. Export a traceable bundle
-8. Inspect jobs, artifacts, validation, and export history
+2. Start from a deterministic intent-to-template proposal or sample project
+3. Edit the layout through authoritative `layout.elements`
+4. Generate and review appearance assets
+5. Accept proposals before they enter the canonical build
+6. Compile electronics metadata
+7. Compile mechanical outputs
+8. Run validation
+9. Export a traceable bundle with QMK/VIA-compatible firmware metadata
+10. Inspect jobs, artifacts, validation, evidence, and export history
 
 ### Platform spine
 
@@ -42,6 +44,8 @@ The repo has a real platform backbone:
 - persistent job records
 - validation artifacts
 - export artifacts
+- evidence ledger records that connect revisions, jobs, artifacts, validation, hashes, and export caveats
+- usage events for revision commits, first passing validation, export creation, billing intent, and TTFB analysis
 - family manifests
 - provider manifests
 - mechanical and electronics compile endpoints
@@ -55,6 +59,10 @@ The client is no longer only a dark demo shell. It now has:
 - a shared product shell across the tiered control-surface paths
 - lazy-loaded heavy modules
 - family-aware define, layout, appearance, electronics, validate, and export stages
+- a signed-in Evidence Ledger surface for inspecting revision-linked artifact provenance
+- empty-state sample/project proposal flows that use deterministic template matching
+- autonomy labels showing whether appearance assets are proposed, in-build, or rejected
+- export UI access to QMK/VIA-compatible firmware metadata without claiming compiled firmware
 
 ### Test health
 
@@ -81,6 +89,7 @@ These are still out of scope:
 - billing
 - quotes and purchasing
 - production manufacturing integrations
+- compiled firmware binaries
 
 ### Broader product-family release
 

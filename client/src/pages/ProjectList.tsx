@@ -4,7 +4,19 @@ import { ThemeSwitcher } from "../components/ThemeSwitcher";
 import { isApiError } from "../lib/api";
 import { api } from "../lib/api";
 import { useAuthStore } from "../stores/authStore";
-import type { ProjectSummary } from "../types/project";
+import type { LayoutTemplate, ProductFamily, ProjectSummary } from "../types/project";
+
+const SAMPLE_TEMPLATE_ID = "streamdeck_display_3x5";
+const INTENT_KEYWORDS: Array<{
+  family: ProductFamily;
+  terms: string[];
+}> = [
+  { family: "streamdeck", terms: ["stream", "deck", "obs", "scene", "twitch", "youtube", "dashboard", "display"] },
+  { family: "macropad", terms: ["macro", "shortcut", "hotkey", "productivity", "photoshop", "editing"] },
+  { family: "midi", terms: ["midi", "music", "audio", "drum", "clip", "sample", "ableton", "encoder"] },
+  { family: "gamepad", terms: ["game", "controller", "dpad", "joystick", "arcade"] },
+  { family: "keyboard", terms: ["keyboard", "typing", "keys", "layout", "portable"] },
+];
 
 const FAMILY_META: Record<
   string,
@@ -128,6 +140,27 @@ function projectStatusTone(status: string) {
   }
 }
 
+export function rankIntentTemplates(intent: string, templates: LayoutTemplate[]): LayoutTemplate[] {
+  const normalized = intent.toLowerCase();
+  const scored = templates.map((template) => {
+    const templateText = `${template.template_id} ${template.name} ${template.description}`.toLowerCase();
+    const familyTerms = INTENT_KEYWORDS.find((item) => item.family === template.product_family)?.terms ?? [];
+    let score = 0;
+    for (const term of familyTerms) {
+      if (normalized.includes(term)) score += 4;
+      if (templateText.includes(term)) score += 1;
+    }
+    for (const token of normalized.split(/[^a-z0-9]+/).filter(Boolean)) {
+      if (token.length > 2 && templateText.includes(token)) score += 2;
+    }
+    if (template.template_id === SAMPLE_TEMPLATE_ID) score += 1;
+    return { template, score };
+  });
+  return scored
+    .sort((a, b) => b.score - a.score || a.template.key_count - b.template.key_count)
+    .map((item) => item.template);
+}
+
 function ProjectListSkeleton() {
   return (
     <section className="project-list-skeleton grid gap-4 md:grid-cols-2 xl:grid-cols-3" aria-label="Loading project records">
@@ -160,6 +193,9 @@ function ProjectListSkeleton() {
 
 export function ProjectList() {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
+  const [templates, setTemplates] = useState<LayoutTemplate[]>([]);
+  const [intent, setIntent] = useState("");
+  const [creatingTemplateId, setCreatingTemplateId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const user = useAuthStore((state) => state.user);
@@ -190,6 +226,7 @@ export function ProjectList() {
   useEffect(() => {
     document.title = "Projects — BreakGen";
     void loadProjects();
+    api.templates.list().then(setTemplates).catch(() => setTemplates([]));
   }, []);
 
   const handleDelete = async (event: React.MouseEvent, id: string) => {
@@ -205,6 +242,37 @@ export function ProjectList() {
       );
     }
   };
+
+  const createFromTemplate = async (template: LayoutTemplate, name: string) => {
+    setCreatingTemplateId(template.template_id);
+    setError(null);
+    try {
+      const project = await api.projects.create({
+        name,
+        template_id: template.template_id,
+        product_family: template.product_family,
+        product_domain: template.product_domain,
+      });
+      navigate(`/app/project/${project.project_id}`);
+    } catch (createError) {
+      if (isApiError(createError) && createError.status === 401) {
+        handleUnauthorized("Your session expired while creating a project. Sign in again to continue.");
+      }
+      setError(
+        createError instanceof Error
+          ? createError.message
+          : "Unable to create this project.",
+      );
+    } finally {
+      setCreatingTemplateId(null);
+    }
+  };
+
+  const sampleTemplate =
+    templates.find((template) => template.template_id === SAMPLE_TEMPLATE_ID) ??
+    templates.find((template) => template.product_family === "streamdeck") ??
+    null;
+  const rankedIntentTemplates = rankIntentTemplates(intent, templates).slice(0, 3);
 
   return (
     <div className="app-shell min-h-screen px-5 py-5 md:px-8 md:py-8">
@@ -318,26 +386,93 @@ export function ProjectList() {
             </div>
           </section>
         ) : projects.length === 0 ? (
-          <section className="surface-panel rounded-[30px] p-12 text-center">
-            <div className="surface-chip mx-auto flex h-16 w-16 items-center justify-center rounded-[22px]">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round">
-                <rect x="2" y="6" width="20" height="12" rx="2" />
-                <path d="M6 10h1M9 10h1M12 10h1M15 10h1M18 10h1M7 14h10" />
-              </svg>
+          <section className="surface-panel rounded-[30px] p-6 md:p-8">
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+              <div>
+                <div className="surface-chip flex h-16 w-16 items-center justify-center rounded-[22px]">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round">
+                    <rect x="2" y="6" width="20" height="12" rx="2" />
+                    <path d="M6 10h1M9 10h1M12 10h1M15 10h1M18 10h1M7 14h10" />
+                  </svg>
+                </div>
+                <h3 className="mt-5 text-[24px] font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
+                  Start with a working proposal
+                </h3>
+                <p className="mt-3 max-w-[560px] text-[15px] leading-[1.75] text-[var(--text-secondary)]">
+                  Use a deterministic template match or open the sample project. The proposal chooses
+                  from existing BreakGen templates; it does not generate a layout with AI.
+                </p>
+                <div className="mt-6 flex flex-wrap gap-3">
+                  {sampleTemplate && (
+                    <button
+                      type="button"
+                      onClick={() => void createFromTemplate(sampleTemplate, "Sample Stream Deck")}
+                      disabled={creatingTemplateId !== null}
+                      className="surface-button-primary h-11 rounded-[16px] px-5 text-[13px] font-semibold disabled:opacity-60"
+                    >
+                      {creatingTemplateId === sampleTemplate.template_id
+                        ? "Opening sample..."
+                        : "Open sample project"}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => navigate("/app/new")}
+                    className="surface-button h-11 rounded-[16px] px-5 text-[13px] font-semibold"
+                  >
+                    Browse templates
+                  </button>
+                </div>
+              </div>
+
+              <div className="surface-subcard rounded-[24px] p-4">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
+                  Describe the control surface
+                </div>
+                <textarea
+                  value={intent}
+                  onChange={(event) => setIntent(event.target.value)}
+                  rows={4}
+                  placeholder="streaming deck with status display and scene controls"
+                  className="glass-input mt-3 w-full resize-none rounded-xl px-4 py-3 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none"
+                />
+                <div className="mt-4 space-y-2">
+                  {(intent.trim() ? rankedIntentTemplates : rankedIntentTemplates.slice(0, 0)).map((template) => (
+                    <button
+                      key={template.template_id}
+                      type="button"
+                      onClick={() => void createFromTemplate(template, `${template.name} Proposal`)}
+                      disabled={creatingTemplateId !== null}
+                      className="glass-subcard w-full rounded-xl px-3 py-3 text-left transition-colors hover:border-[var(--border-default)] disabled:cursor-wait disabled:opacity-60"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="truncate text-[13px] font-medium text-[var(--text-primary)]">
+                            {template.name}
+                          </div>
+                          <div className="mt-1 text-[11px] leading-[1.5] text-[var(--text-tertiary)]">
+                            Matched template - {template.key_count} controls
+                          </div>
+                        </div>
+                        <span className="shrink-0 text-[10px] uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
+                          {creatingTemplateId === template.template_id ? "creating" : "create"}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                  {intent.trim() && rankedIntentTemplates.length === 0 && (
+                    <div className="text-[12px] leading-[1.6] text-[var(--text-tertiary)]">
+                      No template proposal is available yet. Browse templates instead.
+                    </div>
+                  )}
+                  {!intent.trim() && (
+                    <div className="text-[12px] leading-[1.6] text-[var(--text-tertiary)]">
+                      Type an intent to see deterministic template proposals.
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-            <h3 className="mt-5 text-[22px] font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
-              No projects yet
-            </h3>
-            <p className="mx-auto mt-3 max-w-[420px] text-[15px] leading-[1.75] text-[var(--text-secondary)]">
-              The project list is empty because there is no active product record yet. Start with a
-              family, pick a constrained template, and let the platform carry the rest.
-            </p>
-            <button
-              onClick={() => navigate("/app/new")}
-              className="surface-button-primary mt-7 h-11 rounded-[16px] px-6 text-[14px] font-semibold"
-            >
-              Create Your First Project
-            </button>
           </section>
         ) : (
           <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

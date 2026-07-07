@@ -426,6 +426,41 @@ export interface ProjectRecords {
   usage: UsageSummary | null;
 }
 
+export interface EvidenceArtifact {
+  artifact_id: string;
+  kind: string;
+  artifact_role: string;
+  revision: number;
+  source_revision: number;
+  file_name: string | null;
+  sha256: string | null;
+  short_sha256: string | null;
+  content_type: string | null;
+  acceptance_state: ArtifactAcceptanceState | null;
+  producer_id: string | null;
+  created_at: string | null;
+}
+
+export interface EvidenceEvent {
+  event_id: string;
+  event_type: string;
+  revision: number;
+  created_at: string | null;
+  title: string;
+  summary: string;
+  readiness: string;
+  artifacts: EvidenceArtifact[];
+  jobs: ProjectJobRecord[];
+  validation_report: ValidationReport | null;
+}
+
+export interface ProjectEvidence {
+  project_id: string;
+  current_revision: number;
+  missing_outputs: string[];
+  events: EvidenceEvent[];
+}
+
 export interface ExportPreviewFile {
   path: string;
   purpose: string;

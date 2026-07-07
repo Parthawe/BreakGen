@@ -28,7 +28,7 @@ from server.services.project_state import (
     persist_project_metadata,
 )
 from server.services.rate_limit import enforce_rate_limit
-from server.services.usage_registry import record_usage_event, usage_total
+from server.services.usage_registry import record_usage_event, record_usage_event_once, usage_total
 from server.validation.engine import validate_project
 
 router = APIRouter(prefix="/api/projects", tags=["export"])
@@ -144,6 +144,19 @@ async def run_validation(
             "family": project.product_family.value,
         },
     )
+    if report.status == CheckStatus.PASS:
+        await record_usage_event_once(
+            db,
+            event_type="first_validation_passed",
+            user_id=user_scope_id(user),
+            project_id=project.project_id,
+            revision=project.revision,
+            dedupe_revision=False,
+            metadata={
+                "report_id": report.report_id,
+                "family": project.product_family.value,
+            },
+        )
     project.exports.validation_report_id = report.report_id
     await persist_project_metadata(
         db,
@@ -248,6 +261,35 @@ async def export_project_bundle(
     record_usage_event(
         db,
         event_type="export_bundle",
+        user_id=owner_user_id,
+        project_id=project.project_id,
+        revision=project.revision,
+        quantity=1,
+        unit="bundle",
+        metadata={
+            "bundle_id": bundle_id,
+            "readiness": readiness,
+            "validation_status": report.status.value,
+            "family": project.product_family.value,
+        },
+    )
+    if report.status == CheckStatus.PASS:
+        await record_usage_event_once(
+            db,
+            event_type="first_validation_passed",
+            user_id=owner_user_id,
+            project_id=project.project_id,
+            revision=project.revision,
+            dedupe_revision=False,
+            metadata={
+                "report_id": report.report_id,
+                "family": project.product_family.value,
+                "source": "export",
+            },
+        )
+    await record_usage_event_once(
+        db,
+        event_type="export_created",
         user_id=owner_user_id,
         project_id=project.project_id,
         revision=project.revision,

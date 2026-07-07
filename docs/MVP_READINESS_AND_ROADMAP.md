@@ -139,6 +139,55 @@ KiCad Gerbers → supplier BOM → CadQuery enclosure → `prototype_ready` · A
 
 ---
 
+## Experience plan — research-grounded (2026-07-06)
+
+> Synthesis of both verified research passes (`docs/COMPETITIVE_RESEARCH_2026_07.md`), the positioning patterns extracted from the AI-CAD landscape, and the "narrow product compiler" framing. This section answers one question: **what makes BreakGen a tool people actually use** — and maps each move onto the existing phases rather than creating a competing roadmap. Every move cites its evidence verdict; nothing below rests on a refuted or unverified claim.
+
+### North star
+
+**Time-to-first-trusted-bundle (TTFB):** an invited user goes from described intent to a validated, revision-linked export bundle, in their own browser, in under 15 minutes. Speed-to-artifact is the verified universal hero claim in this category (pattern P2); *trusted* is BreakGen's twist on it — the deterministic compiler + evidence lineage is what the AI-CAD players can't claim and the hobbyist chain doesn't attempt.
+
+**The category boundary claim (pattern P1):** theirs is "real CAD, not meshes." Ours is **"evidence, not renders"** — a compiled, validated, revision-linked build, not an AI-shaped guess and not an un-routed PCB. Lead with it everywhere: landing, onboarding, export screen, README.
+
+### The moves
+
+**Move 1 — Intent-to-proposal first-run** *(verdict: Supported · lands in Phase 3, replaces roadmap item 34)*
+Replace the empty first-login with intent capture: describe the control surface in plain language (or pick a template) → BreakGen proposes family + template + constraints → the user lands in a project that already compiles. Ship a seeded sample project (the `yc_proof_streamdeck` proof) so the workspace is never empty. Raven and Zoo validate the intent→parametric pattern; the incumbent gap is the timing. Success = median TTFB under 15 min for invited users.
+
+**Move 2 — The evidence surface** *(verdict: trust feature, NOT a pricing lever · Phase 3)*
+The provenance machinery already exists in data (revisions, artifact IDs, SHA-256, validation lineage). Make it a first-class **Evidence tab** per project: a timeline of revision → compile → validation → export, each entry with its artifact ID, checksum, and readiness tier, plus honest "what this bundle is / is not" copy. The verified practitioner skepticism (no AI tool is yet a pro-CAD substitute; "meshes called CAD") is the adoption barrier for everyone else — BreakGen wins by making trust visible. **Cosmos lesson applied: provenance and validation stay free forever;** the one proven paid layer in this exact niche is cosmetic, so never paywall correctness.
+
+**Move 3 — Labeled autonomy gradient** *(steal PTC Creo 13's Advise/Assist/Automate pattern · Phase 3)*
+BreakGen's core principle — AI at the appearance layer, deterministic compilers at the engineering layer, AI assets not canonical until accepted — is already the trust architecture the incumbents are converging on. Make it legible in the UI with three labeled tiers:
+- **Advise** — explain validation results, suggest fixes (LLM, read-only)
+- **Propose** — AI appearance/layout proposals, visibly marked "proposed — not in your build" until accepted into a revision
+- **Compile** — the deterministic engineering layer, never AI
+Also close roadmap item 38 here: live generation on hosted infra *or* explicit "preview-only" labeling — no silent placeholders.
+
+**Move 4 — Jobs as experience** *(Phase 2 items 7–8, framed as UX)*
+The worker boundary isn't just infra: real progress states for generate/compile/export, and an "export ready" email (rides the Phase-2 transactional-email work). A tool feels useful when long work is visible, not when buttons are disabled.
+
+**Move 5 — Close the firmware + fab handoff gap** *(the differentiation layer · Phase 4, resequenced)*
+Verified: Ergogen — the domain's leading config tool — has **zero** firmware/validation/fab-bundle scope. That unoccupied layer is where BreakGen's story lives. Sequence: QMK/VIA-ready firmware artifacts as first-class bundle members (cheapest unoccupied layer, firmware-facing maps already exist) → KiCad worker for Gerbers (item 39) → supplier BOM (40) → enclosure STL/STEP (41) → `prototype_ready` (42). **Precondition:** run the focused follow-up on how far Cosmos/QMK Configurator/VIA actually go (open question 3 — the 0-3 refutation bounds our differentiation claim). Do not write the fab-gap story into marketing until that lands.
+
+**Move 6 — Context manager, BreakGen-style** *(verdict: Supported — Leo AI validates knowledge-grounding demand · Phase 4)*
+Ground proposals in what the user actually has: the hardware source catalog, a "parts I have" inventory (switches, controllers), and their past projects — and only propose configurations that validate. Kyrall's Context Manager and Leo's PLM grounding are the verified enterprise-moat pattern (P3); BreakGen's maker-scale version is inventory- and catalog-grounding.
+
+**Move 7 — Pricing experiment, not billing** *(anchors verified · Phase 4)*
+Keep billing-intent telemetry running; build no billing until hosted usage data exists. When it comes, the verified shape: **free tier = full engineering loop with quotas** (validation/provenance never gated) · maker tier in the **$10–20/mo band** (Raven $9.99–99, Kyrall €20/mo) metered on generation credits (pattern P5) · premium carries **appearance/cosmetic + convenience** (the Cosmos-proven willingness-to-pay), staying under Onshape's $1,500/yr floor. The hosted alpha *is* the demand experiment the research couldn't find data for — set explicit thresholds (activation %, export %, billing-intent CTR) before calling the wedge proven.
+
+### Metrics to instrument (usage events already exist)
+
+TTFB · activation (first validated revision) · export rate per project · revision depth (return editing) · billing-intent CTR · weekly returning builders.
+
+### Risks the research makes explicit
+
+1. **The window is time-limited.** PTC signaled geometry agents for 2026; Zookeeper already ships editable parametric B-rep. Response: Phase 1 deploy urgency, and *no family expansion* — keyboard + macropad deep, everything else stays labeled proof.
+2. **Demand is unproven.** Zero market-size/WTP claims survived verification on either pass. Response: treat the hosted alpha as the experiment, with kill/expand thresholds, not as a launch.
+3. **This repo's own failure mode is unverified claims.** Response: every public claim traces to actual bundle contents (existing principle), and strategy docs cite only verified findings.
+
+---
+
 ## Plan for further collaboration (how we work this down)
 
 The codebase is healthier than the docs implied; the failure mode here is **drift and unverified claims**, not bad code. The collaboration model is built to kill both.

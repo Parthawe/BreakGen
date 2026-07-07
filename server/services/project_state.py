@@ -168,6 +168,18 @@ async def commit_project_mutation(
             change_summary=change_summary,
         )
     )
+    record_usage_event(
+        db,
+        event_type="revision_committed",
+        user_id=row.user_id,
+        project_id=project.project_id,
+        revision=project.revision,
+        metadata={
+            "change_summary": change_summary,
+            "family": project.product_family.value,
+            "domain": project.product_domain.value,
+        },
+    )
 
     try:
         await db.commit()

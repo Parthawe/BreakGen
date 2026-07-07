@@ -6,6 +6,13 @@ import { ActionRunway } from "../ActionRunway";
 import type { ExportPreview, ProjectRecords, ValidationReport } from "../../types/project";
 
 const STATUS_DOT: Record<string, string> = { pass: "#4ade80", warn: "#fbbf24", fail: "#f87171", skipped: "#52525b" };
+export const FIRMWARE_METADATA_LABEL = "QMK/VIA-compatible firmware metadata";
+const FIRMWARE_METADATA_FILES = [
+  "info.json",
+  "keymap.json",
+  "via.json",
+  "control-map.json",
+];
 
 function formatTime(value?: string | null) {
   if (!value) return "just now";
@@ -62,6 +69,8 @@ export function ExportPanel({
   const [preview, setPreview] = useState<ExportPreview | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [downloadingFirmwareFile, setDownloadingFirmwareFile] = useState<string | null>(null);
+  const [firmwareError, setFirmwareError] = useState<string | null>(null);
   const [billingIntentState, setBillingIntentState] = useState<"idle" | "saving" | "saved">("idle");
   const notify = useNotificationStore((s) => s.notify);
   const latestValidationForRevision = useMemo(() => {
@@ -198,6 +207,23 @@ export function ExportPanel({
         title: "Could not record pricing interest",
         message: "Try again after the backend connection is healthy.",
       });
+    }
+  };
+
+  const handleFirmwareDownload = async (fileName: string) => {
+    if (!project) return;
+    setFirmwareError(null);
+    setDownloadingFirmwareFile(fileName);
+    try {
+      await api.pcb.downloadFirmware(project.project_id, fileName);
+    } catch (error) {
+      setFirmwareError(
+        error instanceof Error
+          ? error.message
+          : "Firmware metadata download failed.",
+      );
+    } finally {
+      setDownloadingFirmwareFile(null);
     }
   };
 
@@ -416,10 +442,39 @@ export function ExportPanel({
         </div>
         <div className="text-[12px] leading-[1.7] text-[var(--text-secondary)]">
           {showExport
-            ? "Mechanical DXF/spec artifacts, firmware metadata, validation report, manifest, build guide, and review BOM. Current bundles are review-ready evidence, not complete fabrication packages."
+            ? "Mechanical DXF/spec artifacts, QMK/VIA-compatible firmware metadata, validation report, manifest, build guide, and review BOM. Current bundles are review-ready evidence, not complete fabrication packages."
             : copy.scope}
         </div>
       </div>
+
+      {showExport && (
+        <div className="glass glass-soft mt-5 rounded-xl px-4 py-3">
+          <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
+            {FIRMWARE_METADATA_LABEL}
+          </div>
+          <div className="text-[12px] leading-[1.6] text-[var(--text-secondary)]">
+            JSON metadata for QMK/VIA toolchains. These are not compiled firmware binaries.
+          </div>
+          {firmwareError && (
+            <div className="glass-danger mt-3 rounded-lg px-3 py-2 text-[11px] leading-[1.5]">
+              {firmwareError}
+            </div>
+          )}
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            {FIRMWARE_METADATA_FILES.map((fileName) => (
+              <button
+                key={fileName}
+                type="button"
+                onClick={() => void handleFirmwareDownload(fileName)}
+                disabled={downloadingFirmwareFile !== null}
+                className="surface-button min-h-9 rounded-lg px-3 text-[11px] font-semibold disabled:cursor-wait disabled:opacity-60"
+              >
+                {downloadingFirmwareFile === fileName ? "Downloading..." : fileName}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {project?.exports.bundle_id && (
         <div className="mt-3 text-[11px] text-[var(--text-tertiary)]">

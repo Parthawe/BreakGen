@@ -14,6 +14,7 @@ import type {
   MechanicalCompileResult,
   PanelMechanicalCompileResult,
   ProductDomainManifest,
+  ProjectEvidence,
   ProductFamilyManifest,
   ProjectRecords,
   QualityGateSummary,
@@ -380,6 +381,8 @@ export const api = {
 
   records: {
     get: (projectId: string) => request<ProjectRecords>(`/projects/${projectId}/records`),
+    evidence: (projectId: string) =>
+      request<ProjectEvidence>(`/projects/${projectId}/evidence`),
     usage: (projectId: string) =>
       request<NonNullable<ProjectRecords["usage"]>>(`/projects/${projectId}/usage`),
     billingIntent: (
