@@ -36,9 +36,13 @@ The MVP focuses on one narrow promise:
 - Family-aware mechanical panel outputs and handheld shell proof outputs
 - Validation reports tied to project revisions
 - Durable artifact and job records
+- Evidence ledger API and UI showing revision-linked artifacts, short SHA-256s, readiness, and export caveats
+- Deterministic first-run template proposals and a one-click sample Stream Deck project
+- Visible autonomy labels for appearance assets: proposed, in-build, rejected, and provider source
+- Funnel telemetry for activation, export, revision depth, billing intent, and time-to-first-bundle
 - Artifact storage abstraction with local private-alpha mode and R2 configuration guardrails
 - Usage-event and billing-intent telemetry for activation/pricing research without billing users
-- Export bundles with manifests, build guides, checksums, and validation lineage
+- Export bundles with manifests, build guides, checksums, validation lineage, and QMK/VIA-compatible firmware metadata
 - Private-alpha signup controls, seeded reviewer accounts, and JWT auth
 - Public client-only demo for browsing the product model
 - Deterministic reviewer proof command that creates a real Stream Deck project, compiles it, validates it, and exports a ZIP bundle
@@ -76,6 +80,9 @@ The export line means BreakGen produced a revision-linked, review-ready evidence
 bundle. It is not a fabrication-complete package yet; project status remains
 `validated` until future Gerber, supplier BOM, enclosure STL, and assembly
 outputs are complete enough to support fabrication claims.
+
+Firmware files in the bundle are QMK/VIA-compatible JSON metadata for external
+toolchains. They are not compiled firmware binaries.
 
 ## Local Development
 
@@ -133,7 +140,7 @@ flowchart LR
     D --> F["Validation"]
     E --> F
     F --> G["Export bundle"]
-    G --> H["Artifact and job records"]
+    G --> H["Artifact, job, and evidence records"]
     H --> I["Usage and billing-intent events"]
 ```
 

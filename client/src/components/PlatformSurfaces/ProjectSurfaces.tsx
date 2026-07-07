@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { api } from "../../lib/api";
+import { EvidencePanel } from "../EvidencePanel";
 import type {
   ArtifactAcceptanceState,
   ArtifactRecord,
@@ -344,6 +345,11 @@ export function ProjectSurfaces({
 
       <Section title="Alpha Path" eyebrow="source of truth">
         <div className="space-y-2">
+          <div className="glass-subcard rounded-lg px-3 py-2 text-[11px] leading-[1.55] text-[var(--text-secondary)]">
+            Appearance proposals only enter the build after acceptance. Electronics,
+            validation, mechanical outputs, and exports are deterministic compiles
+            from canonical project state.
+          </div>
           {alphaPath.map((step) => (
             <div key={step.key} className="glass-subcard rounded-lg px-3 py-2">
               <div className="flex items-center justify-between gap-2">
@@ -364,6 +370,10 @@ export function ProjectSurfaces({
             </div>
           ))}
         </div>
+      </Section>
+
+      <Section title="Evidence Ledger" eyebrow="revision linked">
+        <EvidencePanel projectId={project.project_id} />
       </Section>
 
       <Section title="Providers" eyebrow="enabled only">

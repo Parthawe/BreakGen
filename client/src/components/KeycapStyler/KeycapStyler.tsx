@@ -39,8 +39,26 @@ function stateTone(state: AcceptanceState): string {
   }
 }
 
-function stateLabel(state: AcceptanceState): string {
-  return state.replace(/_/g, " ");
+export function assetBuildStateLabel(state: AcceptanceState): string {
+  switch (state) {
+    case "preview_only":
+    case "candidate":
+      return "Proposed - not in your build";
+    case "accepted":
+    case "production_ready":
+      return "In your build";
+    case "rejected":
+      return "Rejected - kept for provenance";
+    default:
+      return String(state).replace(/_/g, " ");
+  }
+}
+
+export function assetProviderLabel(provider: string | null | undefined, source: string): string {
+  const id = provider ?? source;
+  if (id === "meshy") return "AI generated";
+  if (id === "shell_library") return "Deterministic library";
+  return id.replace(/_/g, " ");
 }
 
 export function KeycapStyler({
@@ -233,14 +251,14 @@ export function KeycapStyler({
                 {asset.prompt ?? asset.asset_id}
               </div>
               <div className="mt-1 text-[11px] text-[var(--text-tertiary)]">
-                {(asset.provider ?? asset.source).replace(/_/g, " ")} •{" "}
+                {assetProviderLabel(asset.provider, asset.source)} -{" "}
                 {asset.normalized ? "normalized" : "raw"}
               </div>
             </div>
             <span
-              className={`shrink-0 px-2 py-1 rounded-full border text-[10px] uppercase tracking-[0.08em] ${stateTone(asset.acceptance_state)}`}
+              className={`shrink-0 rounded-full border px-2 py-1 text-[10px] font-semibold leading-[1.35] ${stateTone(asset.acceptance_state)}`}
             >
-              {stateLabel(asset.acceptance_state)}
+              {assetBuildStateLabel(asset.acceptance_state)}
             </span>
           </div>
 
@@ -308,6 +326,11 @@ export function KeycapStyler({
           Generate cosmetic caps and surface variants, review them, then explicitly
           accept the ones that should become part of the canonical project.
         </p>
+        <div className="mt-4 surface-panel rounded-xl px-4 py-3 text-[12px] leading-[1.6] text-[var(--text-secondary)]">
+          Appearance proposals stay outside the build until accepted. Electronics,
+          validation, mechanical outputs, and exports are deterministic compiles from
+          canonical project state.
+        </div>
       </div>
 
       <div className="mb-5">

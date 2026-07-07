@@ -6,6 +6,7 @@ import argparse
 import asyncio
 import json
 import logging
+from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Any
 
@@ -48,6 +49,68 @@ async def _counts_by(db: AsyncSession, model: type, *columns: Any) -> list[dict[
         item["count"] = values["count"]
         rows.append(item)
     return rows
+
+
+def _seconds_between(start: datetime | None, end: datetime | None) -> float | None:
+    if not start or not end:
+        return None
+    if start.tzinfo is None:
+        start = start.replace(tzinfo=timezone.utc)
+    if end.tzinfo is None:
+        end = end.replace(tzinfo=timezone.utc)
+    seconds = (end - start).total_seconds()
+    return seconds if seconds >= 0 else None
+
+
+async def _funnel_metrics(db: AsyncSession) -> dict[str, Any]:
+    usage_result = await db.execute(
+        select(ProjectUsageEventRow).where(
+            ProjectUsageEventRow.event_type.in_(
+                [
+                    "project_created",
+                    "first_validation_passed",
+                    "export_created",
+                    "billing_intent",
+                ]
+            )
+        )
+    )
+    events = list(usage_result.scalars().all())
+    by_project: dict[str, dict[str, list[ProjectUsageEventRow]]] = defaultdict(lambda: defaultdict(list))
+    event_counts: dict[str, int] = defaultdict(int)
+    for event in events:
+        event_counts[event.event_type] += event.quantity
+        if event.project_id:
+            by_project[event.project_id][event.event_type].append(event)
+
+    ttfb_seconds: list[float] = []
+    for project_events in by_project.values():
+        created = min(
+            (event.created_at for event in project_events.get("project_created", []) if event.created_at),
+            default=None,
+        )
+        exported = min(
+            (event.created_at for event in project_events.get("export_created", []) if event.created_at),
+            default=None,
+        )
+        seconds = _seconds_between(created, exported)
+        if seconds is not None:
+            ttfb_seconds.append(seconds)
+
+    revision_result = await db.execute(select(ProjectRow.revision))
+    revisions = [int(value) for value in revision_result.scalars().all()]
+    return {
+        "activation_count": event_counts.get("first_validation_passed", 0),
+        "export_count": event_counts.get("export_created", 0),
+        "billing_intent_count": event_counts.get("billing_intent", 0),
+        "projects_with_revisions": len(revisions),
+        "average_revision_depth": round(sum(revisions) / len(revisions), 2) if revisions else 0,
+        "ttfb_seconds": {
+            "count": len(ttfb_seconds),
+            "average": round(sum(ttfb_seconds) / len(ttfb_seconds), 2) if ttfb_seconds else None,
+            "minimum": round(min(ttfb_seconds), 2) if ttfb_seconds else None,
+        },
+    }
 
 
 async def build_operator_snapshot(
@@ -105,6 +168,7 @@ async def build_operator_snapshot(
             ProjectJobRow.job_type,
             ProjectJobRow.status,
         ),
+        "funnel_metrics": await _funnel_metrics(db),
         "usage_by_event_type": await _counts_by(
             db,
             ProjectUsageEventRow,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -41,6 +42,7 @@ async def test_operator_snapshot_masks_lead_emails_and_groups_counts(tmp_path: P
                     product_family="streamdeck",
                     name="Demo",
                     status="validated",
+                    revision=3,
                     data={"project_id": "p1"},
                 )
             )
@@ -69,8 +71,41 @@ async def test_operator_snapshot_masks_lead_emails_and_groups_counts(tmp_path: P
                 ProjectUsageEventRow(
                     user_id=1,
                     project_id="p1",
+                    revision=1,
+                    event_type="project_created",
+                    quantity=1,
+                    event_metadata={},
+                    created_at=datetime(2026, 7, 6, 12, 0, tzinfo=timezone.utc),
+                )
+            )
+            db.add(
+                ProjectUsageEventRow(
+                    user_id=1,
+                    project_id="p1",
                     revision=2,
-                    event_type="export_bundle_created",
+                    event_type="first_validation_passed",
+                    quantity=1,
+                    event_metadata={},
+                    created_at=datetime(2026, 7, 6, 12, 5, tzinfo=timezone.utc),
+                )
+            )
+            db.add(
+                ProjectUsageEventRow(
+                    user_id=1,
+                    project_id="p1",
+                    revision=2,
+                    event_type="export_created",
+                    quantity=1,
+                    event_metadata={},
+                    created_at=datetime(2026, 7, 6, 12, 12, tzinfo=timezone.utc),
+                )
+            )
+            db.add(
+                ProjectUsageEventRow(
+                    user_id=1,
+                    project_id="p1",
+                    revision=2,
+                    event_type="billing_intent",
                     quantity=1,
                     event_metadata={},
                 )
@@ -98,5 +133,17 @@ async def test_operator_snapshot_masks_lead_emails_and_groups_counts(tmp_path: P
         ]
         assert snapshot["recent_leads"][0]["email"] == "ma***r@example.com"
         assert snapshot["recent_leads"][0]["utm_source"] == "discord"
+        assert snapshot["funnel_metrics"] == {
+            "activation_count": 1,
+            "export_count": 1,
+            "billing_intent_count": 1,
+            "projects_with_revisions": 1,
+            "average_revision_depth": 3,
+            "ttfb_seconds": {
+                "count": 1,
+                "average": 720,
+                "minimum": 720,
+            },
+        }
     finally:
         await engine.dispose()

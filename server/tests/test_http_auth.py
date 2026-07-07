@@ -157,6 +157,7 @@ async def test_project_routes_require_auth_and_enforce_owner_scope(tmp_path: Pat
                 ("GET", f"/api/projects/{project_id}/export/preview", None),
                 ("POST", f"/api/projects/{project_id}/export", None),
                 ("GET", f"/api/projects/{project_id}/records", None),
+                ("GET", f"/api/projects/{project_id}/evidence", None),
                 ("GET", f"/api/projects/{project_id}/artifacts", None),
                 ("GET", f"/api/projects/{project_id}/artifacts/missing_artifact/download", None),
                 ("GET", f"/api/projects/{project_id}/jobs", None),
@@ -183,6 +184,7 @@ async def test_project_routes_require_auth_and_enforce_owner_scope(tmp_path: Pat
                 ("GET", f"/api/projects/{project_id}/export/preview", None),
                 ("POST", f"/api/projects/{project_id}/export", None),
                 ("GET", f"/api/projects/{project_id}/records", None),
+                ("GET", f"/api/projects/{project_id}/evidence", None),
                 ("GET", f"/api/projects/{project_id}/artifacts", None),
                 ("GET", f"/api/projects/{project_id}/artifacts/missing_artifact/download", None),
                 ("GET", f"/api/projects/{project_id}/jobs", None),
@@ -223,6 +225,28 @@ async def test_project_routes_require_auth_and_enforce_owner_scope(tmp_path: Pat
             assert {
                 item["event_type"] for item in records.json()["usage"]["totals"]
             } >= {"project_created", "export_bundle"}
+
+            evidence = await client.get(f"/api/projects/{project_id}/evidence", headers=_auth(owner_token))
+            assert evidence.status_code == 200
+            evidence_payload = evidence.json()
+            assert evidence_payload["current_revision"] == created.json()["revision"]
+            assert evidence_payload["missing_outputs"]
+            event_times = [item["created_at"] for item in evidence_payload["events"] if item["created_at"]]
+            assert event_times == sorted(event_times, reverse=True)
+            artifact_events = [
+                artifact
+                for event in evidence_payload["events"]
+                for artifact in event["artifacts"]
+            ]
+            assert any(artifact["artifact_id"] == export_artifact["artifact_id"] for artifact in artifact_events)
+            assert all(
+                artifact["sha256"] and len(artifact["sha256"]) == 64
+                for artifact in artifact_events
+            )
+            assert all(
+                artifact["short_sha256"] == artifact["sha256"][:12]
+                for artifact in artifact_events
+            )
 
             billing_intent = await client.post(
                 f"/api/projects/{project_id}/billing-intent",
